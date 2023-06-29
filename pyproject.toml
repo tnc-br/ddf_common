@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ddf_common"
-version = "prototype"
+version = "0.0.1"
 authors = [
     { name="Juan Miguel Ogarrio", email="omj@google.com" },
 ]
