@@ -43,3 +43,6 @@ def print_split(dataset: PartitionedDataset) -> None:
   print(f"Train: {100*len(dataset.train)/total_len:.2f}% ({len(dataset.train)})")
   print(f"Test: {100*len(dataset.test)/total_len:.2f}% ({len(dataset.test)})")
   print(f"Validation: {100*len(dataset.validation)/total_len:.2f}% ({len(dataset.validation)})")
+
+def test_method():
+  return "This is another test for commit pane."
