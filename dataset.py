@@ -104,6 +104,7 @@ per-loc features"""
 
   # means is the reference sample calculated mean of d18O at each lat/lon
   means = grouped.mean().reset_index()
+
   # locations is now the list of unique lat and longs
   locations = list(zip(means["long"], means["lat"]))
 
