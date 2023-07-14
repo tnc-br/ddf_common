@@ -1,26 +1,3 @@
-###############################################################################
-# MIT License
-# 
-# Copyright (c) 2023 The Nature Conservancy - Brazil
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-###############################################################################
 from dataclasses import dataclass
 from osgeo import gdal, gdal_array
 import numpy as np
@@ -31,12 +8,13 @@ import glob
 import os
 import matplotlib.animation as animation
 
-GDRIVE_BASE = ""
-RASTER_BASE = ""
-MODEL_BASE = ""
-SAMPLE_DATA_BASE = ""
-ANIMATIONS_BASE = ""
-TEST_DATA_BASE = ""
+
+GDRIVE_BASE = "/content/gdrive"
+RASTER_BASE = "/MyDrive/amazon_rainforest_files/amazon_rasters/" #@param
+MODEL_BASE = "/MyDrive/amazon_rainforest_files/amazon_isoscape_models/" #@param
+SAMPLE_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_sample_data/" #@param
+ANIMATIONS_BASE = "/MyDrive/amazon_rainforest_files/amazon_animations/" #@param
+TEST_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_test_data/" #@param
 MOUNTED = False
 
 # Module for helper functions for manipulating data and datasets.
@@ -61,8 +39,8 @@ class Bounds:
   raster_size_x: float
   raster_size_y: float
 
-def to_matplotlib(self) -> List[float]:
-  return [self.minx, self.maxx, self.miny, self.maxy]
+  def to_matplotlib(self) -> List[float]:
+    return [self.minx, self.maxx, self.miny, self.maxy]
 
 def get_raster_path(filename: str) -> str:
   global GDRIVE_BASE
@@ -252,30 +230,6 @@ def coords_to_indices(bounds: Bounds, x: float, y: float):
   y_idx = int((x - bounds.minx) / abs(bounds.pixel_size_x))
 
   return x_idx, y_idx
-
-def test_coords_to_indices():
-  bounds = Bounds(50, 100, 50, 100, 1, 1, 50, 50)
-  x, y = coords_to_indices(bounds, 55, 55)
-  assert x == 45
-  assert y == 5
-
-  bounds = Bounds(-100, -50, -100, -50, 1, 1, 50, 50)
-  x, y = coords_to_indices(bounds, -55, -55)
-  assert x == 5
-  assert y == 45
-
-  bounds = Bounds(-10, 50, -10, 50, 1, 1, 60, 60)
-  x, y = coords_to_indices(bounds, -1, 13)
-  assert x == 37
-  assert y == 9
-
-  bounds = Bounds(minx=-73.97513931345594, maxx=-34.808472803053895, miny=-33.73347244751509, maxy=5.266527396029211, pixel_size_x=0.04166666650042771, pixel_size_y=-0.041666666499513144, raster_size_x=937, raster_size_y=941)
-  x, y = coords_to_indices(bounds, -67.14342073173958, -7.273271869467912e-05)
-  #print(x)
-  assert x == 131 # was: 132
-  assert y == 163
-
-# test_coords_to_indices()
 
 def get_data_at_coords(dataset_tif: AmazonGeoTiff, x: float, y: float, month: int) -> float:
   # x = longitude

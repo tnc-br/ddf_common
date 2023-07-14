@@ -1,27 +1,3 @@
-###############################################################################
-# MIT License
-# 
-# Copyright (c) 2023 The Nature Conservancy - Brazil
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-###############################################################################
-
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
 import pandas as pd
@@ -111,13 +87,14 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
 
   return samples
 
-"""This method loads reference sample data from a CSV, determines the unique
+def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
+  """This method loads reference sample data from a CSV, determines the unique
 locations in that CSV and then calls the existing method
 gen_tabular_dataset_with_coords to enrich those locations with features for
 "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio".
 Finally, it joins the CSV provided d18O means values from the CSV with the
 per-loc features"""
-def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
+
   df = pd.read_csv(raster.get_sample_db_path(reference_csv_filename),
    encoding="ISO-8859-1", sep=',')
   df = df[['Code', 'lat', 'long', 'd18O_cel']]
