@@ -110,8 +110,8 @@ per-loc features"""
 
   sample_data = gen_tabular_dataset_with_coords(monthly=False,
    samples_per_site=1, sample_site_coordinates=locations, sample_radius = 0)
-  # drop the simulated cellulose_oxygen_ratio. TODO, refactor the code so that
-  # it only does features.
+  # drop the simulated cellulose_oxygen_ratio.
+  # TODO(https://github.com/tnc-br/ddf_common/issues/5), refactor the code to only do features.
   sample_data = sample_data.drop('cellulose_oxygen_ratio', axis = 1)
 
   # Here we merge the features "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio"
