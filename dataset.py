@@ -126,14 +126,14 @@ per-loc features"""
   return sample_data
 
 # If a reference_csv_filename is requested, we use that over any simulated data.
-def yearly_data_255_trees(reference_csv_filename: str) -> pd.DataFrame:
+def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
   if reference_csv_filename:
     return load_sample_data(reference_csv_filename)
   # This is the historical simulated input that has 17 samples x 15 sites
   return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
-def yearly_255_trees_partitioned(reference_csv_filename: str) -> PartitionedDataset:
-  partition_data = partition(yearly_data_255_trees(reference_csv_filename))
+def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
+  partition_data = partition(aggregate_reference_data(reference_csv_filename))
   print_split(partition_data)
   return partition_data
 
