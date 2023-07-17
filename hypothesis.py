@@ -15,11 +15,15 @@ def element_ttest(sample_data: pd.DataFrame,
                   sample_size_per_location: int,
                   p_value_target: float):
     '''
-    Calculates the true positives and negatives, and the false positive and negatives. (go/ddf-glossary)
+    Calculates the accuracy, precision, recall based on true positives and negatives,
+    and the false positive and negatives. (go/ddf-glossary)
+
     sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
     means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
-    variances_isoscape: Isoscape that maps geographic coordinates to the variance of isotope values at that location.
-    sample_size_per_location: Number of samples per geographic location used to calculate mean and variance in isoscapes.
+    variances_isoscape: Isoscape that maps geographic coordinates to the variance of
+                        isotope valuesat that location.
+    sample_size_per_location: Number of samples per geographic location used to calculate
+                              mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
     sample_data = sample_data.groupby([
@@ -37,6 +41,7 @@ def element_ttest(sample_data: pd.DataFrame,
     for group_key, isotope_values in sample_data:
         if isotope_values.size <= 1:
             continue
+        rows += 1
 
         # Values from sample.
         longitude = group_key[0]
