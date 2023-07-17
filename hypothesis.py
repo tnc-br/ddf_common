@@ -81,6 +81,9 @@ def element_ttest(sample_data: pd.DataFrame,
             else:
                 true_positive += 1
 
+    if rows == 0:
+        return (0, 0, 0)
+
     accuracy = (true_negative + true_positive)/rows
 
     precision = 0
