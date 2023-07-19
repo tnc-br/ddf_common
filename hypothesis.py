@@ -66,6 +66,8 @@ def sample_ttest(longitude: float,
 
     return HypothesisTest(longitude, latitude, p_value, p_value_target)
 
+def hello_world():
+  print("Hello")
 
 def fraud_metrics(sample_data: pd.DataFrame,
                   isotope_column_name: str,
