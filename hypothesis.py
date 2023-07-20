@@ -40,7 +40,7 @@ def sample_ttest(longitude: float,
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
-    if isotope_values.size <= 1:
+    if len(isotope_values) <= 1:
         raise ValueError  # Isotope values needs to be more than 1.
 
     isotope_mean = np.mean(isotope_values)
