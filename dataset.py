@@ -49,11 +49,11 @@ _TRAIN_VALIDATION_TEST_BOUNDS = [
     _TRAIN_FIXED_BOUNDS, _VALIDATION_FIXED_BOUNDS, _TEST_FIXED_BOUNDS]
 
 
-def partition_data_fixed(sample_data: pd.DataFrame,
+def _partition_data_fixed(sample_data: pd.DataFrame,
                          train_validation_test_bounds: list[DatasetGeographicPartitions]) -> PartitionedDataset:
     '''
     Return data split between the fixed rectangle train_validation_test_bounds
-    of lattitude and longitude for each of the rows in sample_data.
+    of lattitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
     '''
     train_bounds = train_validation_test_bounds[0]
     validation_bounds = train_validation_test_bounds[1]
@@ -61,13 +61,13 @@ def partition_data_fixed(sample_data: pd.DataFrame,
 
     train_data = sample_data[
         (sample_data['lat'] >= train_bounds.min_lattitude) & (sample_data['long'] >= train_bounds.min_longitude) &
-        (sample_data['lat'] <= train_bounds.max_lattitude) & (sample_data['long'] <= train_bounds.max_longitude)]
+        (sample_data['lat'] < train_bounds.max_lattitude) & (sample_data['long'] < train_bounds.max_longitude)]
     validation_data = sample_data[
         (sample_data['lat'] >= validation_bounds.min_lattitude) & (sample_data['long'] >= validation_bounds.min_longitude) &
-        (sample_data['lat'] <= validation_bounds.max_lattitude) & (sample_data['long'] <= validation_bounds.max_longitude)]
+        (sample_data['lat'] < validation_bounds.max_lattitude) & (sample_data['long'] < validation_bounds.max_longitude)]
     test_data = sample_data[
         (sample_data['lat'] >= test_bounds.min_lattitude) & (sample_data['long'] >= test_bounds.min_longitude) &
-        (sample_data['lat'] <= test_bounds.max_lattitude) & (sample_data['long'] <= test_bounds.max_longitude)]
+        (sample_data['lat'] < test_bounds.max_lattitude) & (sample_data['long'] < test_bounds.max_longitude)]
 
     return PartitionedDataset(train_data, test_data, validation_data)
 
@@ -79,7 +79,7 @@ def partition(sample_data: pd.DataFrame,
     Valid argument values: "FIXED"
     '''
     if partition_strategy == "FIXED":
-        return partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
+        return _partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
     else:
         raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
