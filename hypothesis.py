@@ -44,7 +44,7 @@ def sample_ttest(longitude: float,
         raise ValueError  # Isotope values needs to be more than 1.
 
     isotope_mean = np.mean(isotope_values)
-    isotope_variance = np.var(isotope_values)*(len(isotope_values.size) /
+    isotope_variance = np.var(isotope_values)*(len(isotope_values) /
                                                (len(isotope_values) - 1))
     isotope_sample_count = len(isotope_values)
 
