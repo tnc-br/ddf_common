@@ -5,17 +5,48 @@ import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 from tqdm import tqdm
 
+_TRAIN_FIXED_BOUNDS = [(-5, -62.5), (float('inf'), float('inf'))]
+_VALIDATION_FIXED_BOUNDS = [(-5, float('-inf')), (float('inf'), -62.5)]
+_TEST_FIXED = BOUNDS = [(float('-inf'), float('-inf')), (-5, float('inf'))]
+_TRAIN_VALIDATION_TEST_BOUNDS = [_TRAIN_FIXED_BOUNDS, _VALIDATION_FIXED_BOUNDS, _TEST_FIXED]
+
 @dataclass
 class PartitionedDataset:
   train: pd.DataFrame
   test: pd.DataFrame
   validation: pd.DataFrame
 
-def partition(df) -> PartitionedDataset:
-  train = df[df["lon"] < -55]
-  test = df[(df["lon"] >= -55) & (df["lat"] > -2.85)]
-  validation = df[(df["lon"] >= -55) & (df["lat"] <= -2.85)]
-  return PartitionedDataset(train, test, validation)
+def partition_data_fixed(sample_data, train_validation_test_bounds):
+  '''
+  Return data split between the fixed rectangle train_validation_test_bounds
+  of lattitude and longitude for each of the rows in sample_data.
+  '''
+  train_bounds = train_validation_test_bounds[0]
+  validation_bounds = train_validation_test_bounds[1]
+  test_bounds = train_validation_test_bounds[2]
+
+  train_data = sample_data[
+      (sample_data['lat'] >= train_bounds[0][0]) & (sample_data['long'] >= train_bounds[0][1]) &
+      (sample_data['lat'] <= train_bounds[1][0]) & (sample_data['long'] <= train_bounds[1][1])]
+  validation_data = sample_data[
+      (sample_data['lat'] >= validation_bounds[0][0]) & (sample_data['long'] >= validation_bounds[0][1]) &
+      (sample_data['lat'] <= validation_bounds[1][0]) & (sample_data['long'] <= validation_bounds[1][1])]
+  test_data = sample_data[
+      (sample_data['lat'] >= test_bounds[0][0]) & (sample_data['long'] >= test_bounds[0][1]) &
+      (sample_data['lat'] <= test_bounds[1][0]) & (sample_data['long'] <= test_bounds[1][1])]
+
+  return PartitionedDataset(train_data, test_data, validation_data)
+
+
+def partition(df, partition_strategy) -> PartitionedDataset:
+  '''
+  Splits pd.DataFrame df based on the partition_strategy provided.
+  Valid argument values: "FIXED"
+  '''
+  if partition_strategy == "FIXED":
+    return partition_data_fixed(df, _TRAIN_VALIDATION_TEST_BOUNDS)
+  else:
+    raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
 def print_split(dataset: PartitionedDataset) -> None:
   total_len = len(dataset.train)+len(dataset.validation)+len(dataset.test)
