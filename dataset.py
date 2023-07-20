@@ -72,14 +72,14 @@ def partition_data_fixed(sample_data: pd.DataFrame,
     return PartitionedDataset(train_data, test_data, validation_data)
 
 
-def partition(df: pd.DataFrame,
+def partition(sample_data: pd.DataFrame,
               partition_strategy: str) -> PartitionedDataset:
     '''
-    Splits pd.DataFrame df based on the partition_strategy provided.
+    Splits pd.DataFrame sample_data based on the partition_strategy provided.
     Valid argument values: "FIXED"
     '''
     if partition_strategy == "FIXED":
-        return partition_data_fixed(df, _TRAIN_VALIDATION_TEST_BOUNDS)
+        return partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
     else:
         raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
