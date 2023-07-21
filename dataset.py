@@ -139,7 +139,11 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   return partition_data
 
 
-def preprocess_sample_data(df, feature_columns, label_columns, aggregate_columns, keep_grouping) -> pd.DataFrame:
+def preprocess_sample_data(df: pd.DataFrame,
+                           feature_columns: list[str],
+                           label_columns: list[str],
+                           aggregate_columns: list[str],
+                           keep_grouping: bool) -> pd.DataFrame:
   '''
   Given a pd.DataFRame df:
   1. Filters in relevant columns using feature_columns, label_columns
