@@ -15,7 +15,6 @@ MODEL_BASE = "/MyDrive/amazon_rainforest_files/amazon_isoscape_models/" #@param
 SAMPLE_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_sample_data/" #@param
 ANIMATIONS_BASE = "/MyDrive/amazon_rainforest_files/amazon_animations/" #@param
 TEST_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_test_data/" #@param
-MOUNTED = False
 
 # Module for helper functions for manipulating data and datasets.
 @dataclass
@@ -70,17 +69,19 @@ def get_animations_path(filename: str) -> str:
   return f"{root}{ANIMATIONS_BASE}{filename}"
 
 def mount_gdrive():
-  global MOUNTED
-  if not MOUNTED:
-    MOUNTED = True
+  if not os.path.exists(GDRIVE_BASE):
     # Access data stored on Google Drive
     if GDRIVE_BASE:
       try:
         from google.colab import drive
         drive.mount(GDRIVE_BASE)
       except:
-        os.makedirs(GDRIVE_BASE, exist_ok=True)
         print('WARNING, GDRIVE NOT MOUNTED! USING LOCAL FS!!!')
+
+      if not os.path.exists(GDRIVE_BASE):
+        print('CREATING A LOCAL FOLDER FOR SOURCE!!!!')
+        os.makedirs(GDRIVE_BASE, exist_ok=True)
+
 
 def print_raster_info(raster):
   dataset = raster
