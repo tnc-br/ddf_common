@@ -75,8 +75,12 @@ def mount_gdrive():
     MOUNTED = True
     # Access data stored on Google Drive
     if GDRIVE_BASE:
+      try:
         from google.colab import drive
         drive.mount(GDRIVE_BASE)
+      except:
+        os.makedirs(GDRIVE_BASE, exist_ok=True)
+        print('WARNING, GDRIVE NOT MOUNTED! USING LOCAL FS!!!')
 
 def print_raster_info(raster):
   dataset = raster
