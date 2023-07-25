@@ -247,6 +247,9 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
   else:
     return value
 
+def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff):
+  return True if get_data_at_coords(reference_isocape, lon, lat, 0) else False
+
 brazil_map_geotiff_ = None
 def brazil_map_geotiff() -> AmazonGeoTiff:
   global brazil_map_geotiff_
