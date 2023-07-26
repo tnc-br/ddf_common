@@ -75,7 +75,7 @@ def mount_gdrive():
       try:
         from google.colab import drive
         drive.mount(GDRIVE_BASE)
-      except:
+      except ModuleNotFoundError:
         print('WARNING, GDRIVE NOT MOUNTED! USING LOCAL FS!!!')
 
       if not os.path.exists(GDRIVE_BASE):
