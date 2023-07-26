@@ -4,6 +4,11 @@ import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 from tqdm import tqdm
+from geopy import distance
+import math
+import pytest
+import numpy as np
+import random
 
 @dataclass
 class PartitionedDataset:
@@ -136,4 +141,92 @@ def yearly_255_trees_partitioned(reference_csv_filename: str) -> PartitionedData
   partition_data = partition(yearly_data_255_trees(reference_csv_filename))
   print_split(partition_data)
   return partition_data
+
+#Utility function for randomly sampling a point around a sample site
+def is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
+  return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
+
+# Pick a random point around (lat, lon) within max_distance_km. If edge_only is
+# true, only pick points exactly max_distance_km away from (lat, lon).
+def random_nearby_point(lat, lon, max_distance_km, edge_only=False):
+  # Pick a random angle pointing outward from the origin.
+  # 0 == North, 90 == East, 180 == South, 270 == West
+  angle = 360 * random.random()
+
+  # sqrt() is required for an equal radial distribution, otherwise samples
+  # cluster around origin.
+  dist = max_distance_km if edge_only else max_distance_km * math.sqrt(random.random())
+
+  # WGS-84 is the most accurate ellipsoidal model of Earth, but we should double
+  # check to make sure this matches the model used by our sample collectors.
+  point = distance.geodesic(
+      ellipsoid='WGS-84', kilometers=dist).destination((lat, lon), bearing=angle)
+  return point.latitude, point.longitude
+
+# Given a list of real_points, returns true if (lat, lon) is within threshold
+# of any of those points.
+def is_nearby_real_point(lat, lon, real_points, threshold_km):
+  for point, _ in real_points:
+    if distance.geodesic((lat, lon), point).km < threshold_km:
+      return True
+  return False
+
+
+#This function creates a dataset based on real samples adding a Fraud column
+def create_fraudulent_samples(real_samples_data, mean_iso,element,max_trusted_radius,max_fraud_radius,min_fraud_radius):
+  '''
+  This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
+  Input:
+  - real_samples_data: real samples
+  - element: element e.g d18O_cel
+  - mean_iso: isoscape averages
+  - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
+  - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
+  - min_fraud_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  Output: 
+  - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
+  '''
+
+  real_samples_data.dropna(subset=[element], how='all', inplace=True)
+  real_samples = real_samples_data.groupby(['lat','long'])[element]
+  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[element]
+
+  count = 0
+  lab_samp = real_samples
+  #start number for fake code
+  fake_code_start = 5000
+
+  if max_fraud_radius <= min_fraud_radius:
+    raise ValueError("max_fraud_radius {} <= min_fraud_radius {}".format(
+        max_fraud_radius, min_fraud_radius))
+    
+  fake_sample = pd.DataFrame(columns=['Code',
+          'lat',
+          'long',
+          element,
+          'fraud'])
+
+  # Max number of times to attempt to generate random coordinates.
+  MAX_RANDOM_SAMPLE_ATTEMPTS = 1000
+  count = 0
+
+  for coord, lab_samp in real_samples_code:
+    if lab_samp.size <= 1 :
+      continue
+    count += 1
+    lat, lon, attempts = 0, 0, 0
+    while((not is_valid_point(lat, lon, mean_iso) or
+          is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
+          attempts < MAX_RANDOM_SAMPLE_ATTEMPTS):
+      lat, lon = random_nearby_point(coord[0], coord[1], max_fraud_radius)
+      if lab_samp.size < 5:
+        pass
+      else:
+      #generating 5 samples per code
+        for i in range(5):
+          new_row = {'Code': 'mad'+str(fake_code_start+count), 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
+          fake_sample.loc[len(fake_sample)] = new_row
+      attempts += 1
+
+  return(fake_sample)
 

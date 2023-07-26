@@ -66,9 +66,6 @@ def sample_ttest(longitude: float,
 
     return HypothesisTest(longitude, latitude, p_value, p_value_target)
 
-def hello_world():
-  print("Hello")
-
 def fraud_metrics(sample_data: pd.DataFrame,
                   isotope_column_name: str,
                   means_isoscape: raster.AmazonGeoTiff,
@@ -91,6 +88,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
         _LONGITUDE_COLUMN_NAME,
         _LATITUDE_COLUMN_NAME,
         _FRAUDULENT_COLUMN_NAME])[isotope_column_name]
+      
 
     # Counts the number of locations in the sample have more than one row in dataset.
     rows = 0
