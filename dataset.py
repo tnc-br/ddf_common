@@ -229,7 +229,8 @@ def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
   return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
 def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
-  partition_data = partition(aggregate_reference_data(reference_csv_filename))
+  partition_data = partition(aggregate_reference_data(reference_csv_filename),
+                             PartitionStrategy.FIXED)
   print_split(partition_data)
   return partition_data
 
