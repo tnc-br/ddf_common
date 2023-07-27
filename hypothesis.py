@@ -89,7 +89,6 @@ def fraud_metrics(sample_data: pd.DataFrame,
         _LATITUDE_COLUMN_NAME,
         _FRAUDULENT_COLUMN_NAME])[isotope_column_name]
       
-
     # Counts the number of locations in the sample have more than one row in dataset.
     rows = 0
 
