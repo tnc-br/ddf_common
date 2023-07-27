@@ -28,45 +28,76 @@ class DatasetGeographicPartitions:
     max_lattitude: float
 
 # Defines the ways we can partition a dataset.
+
+
 class PartitionStrategy(Enum):
+    '''
+    The strategies you can partition datasets to.
+    '''
     FIXED = 1
     RANDOM = 2
 
-# For FIXED data partition only, the bounds of each partition for the split
-_TRAIN_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=-62.5,
-    max_longitude=float('inf'),
-    min_lattitude=-5,
-    max_lattitude=float('inf'),
-)
-_VALIDATION_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
-    max_longitude=-62.5,
-    min_lattitude=-5,
-    max_lattitude=float('inf')
-)
-_TEST_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
-    max_longitude=float('inf'),
-    min_lattitude=float('-inf'),
-    max_lattitude=-5
-)
-_TRAIN_VALIDATION_TEST_BOUNDS = [
-    _TRAIN_FIXED_BOUNDS, _VALIDATION_FIXED_BOUNDS, _TEST_FIXED_BOUNDS]
 
-# For RANDOM data partition only, the fraction of the dataset allocated for train, validation
-# and test sets.
-TRAIN_VALIDATION_TEST_RATIOS = [0.8, 0.1, 0.1]
+@dataclass
+class FixedPartitionStrategy:
+    '''
+    Defines the parameters for the FIXED partition strategy
+    '''
+    train_fixed_bounds: DatasetGeographicPartitions
+    validation_fixed_bounds: DatasetGeographicPartitions
+    test_fixed_bounds: DatasetGeographicPartitions
+
+
+_FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
+    # Train
+    DatasetGeographicPartitions(
+        min_longitude=-62.5,
+        max_longitude=float('inf'),
+        min_lattitude=-5,
+        max_lattitude=float('inf'),
+    ),
+    # Validation
+    DatasetGeographicPartitions(
+        min_longitude=float('-inf'),
+        max_longitude=-62.5,
+        min_lattitude=-5,
+        max_lattitude=float('inf')
+    ),
+    # Test
+    DatasetGeographicPartitions(
+        min_longitude=float('-inf'),
+        max_longitude=float('inf'),
+        min_lattitude=float('-inf'),
+        max_lattitude=-5
+    )
+)
+
+
+@dataclass
+class RandomPartitionStrategy:
+    '''
+    Defines the parameters for the RANDOM partition strategy
+    '''
+    train_fraction: float
+    validation_fraction: float
+    test_fraction: float
+    random_seed: int
+
+
+_RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
+    0.8, 0.1, 0.1, None
+)
+
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
-                          train_validation_test_bounds: list[DatasetGeographicPartitions]) -> PartitionedDataset:
+                          strategy: FixedPartitionStrategy) -> PartitionedDataset:
     '''
     Return data split between the fixed rectangle train_validation_test_bounds
     of lattitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
     '''
-    train_bounds = train_validation_test_bounds[0]
-    validation_bounds = train_validation_test_bounds[1]
-    test_bounds = train_validation_test_bounds[2]
+    train_bounds = strategy.train_fixed_bounds
+    validation_bounds = strategy.validation_fixed_bounds
+    test_bounds = strategy.test_fixed_bounds
 
     train_data = sample_data[
         (sample_data['lat'] >= train_bounds.min_lattitude) & (sample_data['long'] >= train_bounds.min_longitude) &
@@ -82,14 +113,14 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
 
 
 def _partition_data_random(sample_data: pd.DataFrame,
-                           train_validation_test_ratios: list[float]):
+                           strategy: RandomPartitionStrategy):
     '''
     Return sample_data split randomly into train/validation/test buckets based on
-    train_validation_test_ratios.
+    the provided strategy.
     '''
-    sample_data.sample(frac=1)
-    n_train = int(sample_data.shape[0] * train_validation_test_ratios[0])
-    n_validation = int(sample_data.shape[0] * train_validation_test_ratios[1])
+    sample_data.sample(frac=1, random_state=strategy.random_seed)
+    n_train = int(sample_data.shape[0] * strategy.train_fraction)
+    n_validation = int(sample_data.shape[0] * strategy.validation_fraction)
 
     train_data = sample_data.iloc[:n_train]
     validation_data = sample_data.iloc[n_train:n_train+n_validation]
@@ -104,9 +135,9 @@ def partition(sample_data: pd.DataFrame,
     Splits pd.DataFrame sample_data based on the partition_strategy provided.
     '''
     if partition_strategy == PartitionStrategy.FIXED:
-        return _partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
+        return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
     elif partition_strategy == PartitionStrategy.RANDOM:
-        return _partition_data_random(sample_data, TRAIN_VALIDATION_TEST_RATIOS)
+        return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
     else:
         raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
