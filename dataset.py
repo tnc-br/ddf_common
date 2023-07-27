@@ -1,5 +1,6 @@
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
+from enum import Enum
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
@@ -26,38 +27,71 @@ class DatasetGeographicPartitions:
     min_lattitude: float
     max_lattitude: float
 
+# Defines the ways we can partition a dataset.
 
-_TRAIN_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=-62.5,
-    max_longitude=float('inf'),
-    min_lattitude=-5,
-    max_lattitude=float('inf'),
+
+class PartitionStrategy(Enum):
+    '''
+    The strategies you can partition datasets to.
+    '''
+    FIXED = 1
+
+
+@dataclass
+class FixedPartitionStrategy:
+    '''
+    Defines the parameters for the FIXED partition strategy
+    '''
+    train_fixed_bounds: DatasetGeographicPartitions
+    validation_fixed_bounds: DatasetGeographicPartitions
+    test_fixed_bounds: DatasetGeographicPartitions
+
+
+_FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
+    # Train
+    DatasetGeographicPartitions(
+        min_longitude=-62.5,
+        max_longitude=float('inf'),
+        min_lattitude=-5,
+        max_lattitude=float('inf'),
+    ),
+    # Validation
+    DatasetGeographicPartitions(
+        min_longitude=float('-inf'),
+        max_longitude=-62.5,
+        min_lattitude=-5,
+        max_lattitude=float('inf')
+    ),
+    # Test
+    DatasetGeographicPartitions(
+        min_longitude=float('-inf'),
+        max_longitude=float('inf'),
+        min_lattitude=float('-inf'),
+        max_lattitude=-5
+    )
 )
-_VALIDATION_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
-    max_longitude=-62.5,
-    min_lattitude=-5,
-    max_lattitude=float('inf')
-)
-_TEST_FIXED_BOUNDS = DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
-    max_longitude=float('inf'),
-    min_lattitude=float('-inf'),
-    max_lattitude=-5
-)
-_TRAIN_VALIDATION_TEST_BOUNDS = [
-    _TRAIN_FIXED_BOUNDS, _VALIDATION_FIXED_BOUNDS, _TEST_FIXED_BOUNDS]
+
+
+@dataclass
+class RandomPartitionStrategy:
+    '''
+    Defines the parameters for the RANDOM partition strategy
+    '''
+    train_fraction: float
+    validation_fraction: float
+    test_fraction: float
+    random_seed: int
 
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
-                         train_validation_test_bounds: list[DatasetGeographicPartitions]) -> PartitionedDataset:
+                          strategy: FixedPartitionStrategy) -> PartitionedDataset:
     '''
     Return data split between the fixed rectangle train_validation_test_bounds
     of lattitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
     '''
-    train_bounds = train_validation_test_bounds[0]
-    validation_bounds = train_validation_test_bounds[1]
-    test_bounds = train_validation_test_bounds[2]
+    train_bounds = strategy.train_fixed_bounds
+    validation_bounds = strategy.validation_fixed_bounds
+    test_bounds = strategy.test_fixed_bounds
 
     train_data = sample_data[
         (sample_data['lat'] >= train_bounds.min_lattitude) & (sample_data['long'] >= train_bounds.min_longitude) &
@@ -69,17 +103,15 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
         (sample_data['lat'] >= test_bounds.min_lattitude) & (sample_data['long'] >= test_bounds.min_longitude) &
         (sample_data['lat'] < test_bounds.max_lattitude) & (sample_data['long'] < test_bounds.max_longitude)]
 
-    return PartitionedDataset(train_data, test_data, validation_data)
-
+    return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
 def partition(sample_data: pd.DataFrame,
-              partition_strategy: str) -> PartitionedDataset:
+              partition_strategy: PartitionStrategy) -> PartitionedDataset:
     '''
     Splits pd.DataFrame sample_data based on the partition_strategy provided.
-    Valid argument values: "FIXED"
     '''
-    if partition_strategy == "FIXED":
-        return _partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
+    if partition_strategy == PartitionStrategy.FIXED:
+        return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
     else:
         raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
