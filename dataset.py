@@ -1,5 +1,6 @@
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
+from enum import Enum
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
@@ -26,6 +27,10 @@ class DatasetGeographicPartitions:
     min_lattitude: float
     max_lattitude: float
 
+# Defines the ways we can partition a dataset.
+class PartitionStrategy(Enum):
+    FIXED = 1
+    RANDOM = 2
 
 # For FIXED data partition only, the bounds of each partition for the split
 _TRAIN_FIXED_BOUNDS = DatasetGeographicPartitions(
@@ -53,7 +58,6 @@ _TRAIN_VALIDATION_TEST_BOUNDS = [
 # and test sets.
 TRAIN_VALIDATION_TEST_RATIOS = [0.8, 0.1, 0.1]
 
-
 def _partition_data_fixed(sample_data: pd.DataFrame,
                           train_validation_test_bounds: list[DatasetGeographicPartitions]) -> PartitionedDataset:
     '''
@@ -77,7 +81,8 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
     return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
 
-def _partition_data_random(sample_data, train_validation_test_ratios):
+def _partition_data_random(sample_data: pd.DataFrame,
+                           train_validation_test_ratios: list[float]):
     '''
     Return sample_data split randomly into train/validation/test buckets based on
     train_validation_test_ratios.
@@ -94,14 +99,13 @@ def _partition_data_random(sample_data, train_validation_test_ratios):
 
 
 def partition(sample_data: pd.DataFrame,
-              partition_strategy: str) -> PartitionedDataset:
+              partition_strategy: PartitionStrategy) -> PartitionedDataset:
     '''
     Splits pd.DataFrame sample_data based on the partition_strategy provided.
-    Valid argument values: "FIXED", "RANDOM"
     '''
-    if partition_strategy == "FIXED":
+    if partition_strategy == PartitionStrategy.FIXED:
         return _partition_data_fixed(sample_data, _TRAIN_VALIDATION_TEST_BOUNDS)
-    elif partition_strategy == "RANDOM":
+    elif partition_strategy == PartitionStrategy.RANDOM:
         return _partition_data_random(sample_data, TRAIN_VALIDATION_TEST_RATIOS)
     else:
         raise ValueError(f"Unknown partition strategy: {partition_strategy}")
