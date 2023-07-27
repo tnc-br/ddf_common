@@ -24,8 +24,8 @@ class DatasetGeographicPartitions:
     '''
     min_longitude: float
     max_longitude: float
-    min_lattitude: float
-    max_lattitude: float
+    min_latitude: float
+    max_latitude: float
 
 # Defines the ways we can partition a dataset.
 
@@ -52,22 +52,22 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
     DatasetGeographicPartitions(
         min_longitude=-62.5,
         max_longitude=float('inf'),
-        min_lattitude=-5,
-        max_lattitude=float('inf'),
+        min_latitude=-5,
+        max_latitude=float('inf'),
     ),
     # Validation
     DatasetGeographicPartitions(
         min_longitude=float('-inf'),
         max_longitude=-62.5,
-        min_lattitude=-5,
-        max_lattitude=float('inf')
+        min_latitude=-5,
+        max_latitude=float('inf')
     ),
     # Test
     DatasetGeographicPartitions(
         min_longitude=float('-inf'),
         max_longitude=float('inf'),
-        min_lattitude=float('-inf'),
-        max_lattitude=-5
+        min_latitude=float('-inf'),
+        max_latitude=-5
     )
 )
 
@@ -87,21 +87,21 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
                           strategy: FixedPartitionStrategy) -> PartitionedDataset:
     '''
     Return data split between the fixed rectangle train_validation_test_bounds
-    of lattitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
+    of latitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
     '''
     train_bounds = strategy.train_fixed_bounds
     validation_bounds = strategy.validation_fixed_bounds
     test_bounds = strategy.test_fixed_bounds
 
     train_data = sample_data[
-        (sample_data['lat'] >= train_bounds.min_lattitude) & (sample_data['long'] >= train_bounds.min_longitude) &
-        (sample_data['lat'] < train_bounds.max_lattitude) & (sample_data['long'] < train_bounds.max_longitude)]
+        (sample_data['lat'] >= train_bounds.min_latitude) & (sample_data['long'] >= train_bounds.min_longitude) &
+        (sample_data['lat'] < train_bounds.max_latitude) & (sample_data['long'] < train_bounds.max_longitude)]
     validation_data = sample_data[
-        (sample_data['lat'] >= validation_bounds.min_lattitude) & (sample_data['long'] >= validation_bounds.min_longitude) &
-        (sample_data['lat'] < validation_bounds.max_lattitude) & (sample_data['long'] < validation_bounds.max_longitude)]
+        (sample_data['lat'] >= validation_bounds.min_latitude) & (sample_data['long'] >= validation_bounds.min_longitude) &
+        (sample_data['lat'] < validation_bounds.max_latitude) & (sample_data['long'] < validation_bounds.max_longitude)]
     test_data = sample_data[
-        (sample_data['lat'] >= test_bounds.min_lattitude) & (sample_data['long'] >= test_bounds.min_longitude) &
-        (sample_data['lat'] < test_bounds.max_lattitude) & (sample_data['long'] < test_bounds.max_longitude)]
+        (sample_data['lat'] >= test_bounds.min_latitude) & (sample_data['long'] >= test_bounds.min_longitude) &
+        (sample_data['lat'] < test_bounds.max_latitude) & (sample_data['long'] < test_bounds.max_longitude)]
 
     return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
