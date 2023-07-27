@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from IPython.utils.text import string
 from osgeo import gdal, gdal_array
 import numpy as np
 from typing import List
@@ -25,6 +26,11 @@ class AmazonGeoTiff:
   image_mask_array: np.ndarray # ndarray of uint8
   masked_image: np.ma.masked_array
   yearly_masked_image: np.ma.masked_array
+  name: str = ""
+
+  def value_at(self, x: float, y: float) -> float:
+    return get_data_at_coords(self, x, y, -1)
+
 
 @dataclass
 class Bounds:
@@ -111,6 +117,11 @@ def print_raster_info(raster):
 
     if band.GetRasterColorTable():
         print("Band has a color table with {} entries".format(band.GetRasterColorTable().GetCount()))
+
+def load_named_raster(path: str, name: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
+  raster = load_raster(path, use_only_band_index)
+  raster.name = name
+  return raster
 
 def load_raster(path: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
   """
@@ -261,35 +272,35 @@ relative_humidity_geotiff_ = None
 def relative_humidity_geotiff() -> AmazonGeoTiff:
   global relative_humidity_geotiff_
   if not relative_humidity_geotiff_:
-    relative_humidity_geotiff_ = load_raster(get_raster_path("R.rh_Stack.tif"))
+    relative_humidity_geotiff_ = load_named_raster(get_raster_path("R.rh_Stack.tif"), "rh")
   return relative_humidity_geotiff_
 
 temperature_geotiff_ = None
 def temperature_geotiff() -> AmazonGeoTiff:
   global temperature_geotiff_
   if not temperature_geotiff_:
-    temperature_geotiff_ = load_raster(get_raster_path("Temperatura_Stack.tif"))
+    temperature_geotiff_ = load_named_raster(get_raster_path("Temperatura_Stack.tif"), "temp")
   return temperature_geotiff_
 
 vapor_pressure_deficit_geotiff_ = None
 def vapor_pressure_deficit_geotiff() -> AmazonGeoTiff:
   global vapor_pressure_deficit_geotiff_
   if not vapor_pressure_deficit_geotiff_:
-    vapor_pressure_deficit_geotiff_ = load_raster(get_raster_path("R.vpd_Stack.tif"))
+    vapor_pressure_deficit_geotiff_ = load_named_raster(get_raster_path("R.vpd_Stack.tif"), "vpd")
   return vapor_pressure_deficit_geotiff_
 
 atmosphere_isoscape_geotiff_ = None
 def atmosphere_isoscape_geotiff() -> AmazonGeoTiff:
   global atmosphere_isoscape_geotiff_
   if not atmosphere_isoscape_geotiff_:
-    atmosphere_isoscape_geotiff_ = load_raster(get_raster_path("Iso_Oxi_Stack.tif"))
+    atmosphere_isoscape_geotiff_ = load_named_raster(get_raster_path("Iso_Oxi_Stack.tif"), "atmosphere_oxygen_ratio")
   return atmosphere_isoscape_geotiff_
 
 cellulose_isoscape_geotiff_ = None
 def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
   global cellulose_isoscape_geotiff_
   if not cellulose_isoscape_geotiff_:
-    cellulose_isoscape_geotiff_ = load_raster(get_raster_path("iso_O_cellulose.tif"))
+    cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
   return cellulose_isoscape_geotiff_
 
 

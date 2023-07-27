@@ -32,6 +32,27 @@ def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
                                (-55,-3.5,),(-54,-1,),(-52.5,-13,),(-51.5,-2.5,)],
                                          0.5)
 
+def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
+  '''
+  Given a pd.DataFrame df:
+  1. enumerates each row looking for a 'lat' and 'lon' column
+  2.   for each raster, looks up the lat and lon value
+  3.     adds that value to a new feature_df
+  4. returns the concat of both original df and new feature_df
+  '''
+  feature_dict = {}
+  for raster in rasters:
+    feature_dict[raster.name] = []
+  
+  for row in df.itertuples():
+    lat = getattr(row, "lat")
+    lon = getattr(row, "lon")
+    for raster in rasters:
+      feature_dict[raster.name].append(raster.value_at(lon, lat))
+
+  return pd.concat([pd.DataFrame(feature_dict), df], axis=1)
+
+
 def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int, 
   sample_site_coordinates: list, sample_radius: float) -> pd.DataFrame:
   features = [raster.relative_humidity_geotiff(), 
