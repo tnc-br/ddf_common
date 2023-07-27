@@ -86,10 +86,9 @@ def _partition_data_random(sample_data, train_validation_test_ratios):
     n_train = int(sample_data.shape[0] * train_validation_test_ratios[0])
     n_validation = int(sample_data.shape[0] * train_validation_test_ratios[1])
 
-    # Note that contrary to usual python slices, both the start and the stop are included
-    train_data = sample_data.loc[:n_train-1]
-    validation_data = sample_data.loc[n_train:n_train+n_validation-1]
-    test_data = sample_data.loc[n_train+n_validation:]
+    train_data = sample_data.iloc[:n_train]
+    validation_data = sample_data.iloc[n_train:n_train+n_validation]
+    test_data = sample_data.iloc[n_train+n_validation:]
 
     return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
