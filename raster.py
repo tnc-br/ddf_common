@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from IPython.utils.text import string
 from osgeo import gdal, gdal_array
 import numpy as np
 from typing import List

@@ -38,7 +38,7 @@ def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
   1. enumerates each row looking for a 'lat' and 'lon' column
   2.   for each raster, looks up the lat and lon value
   3.     adds that value to the feature_df
-  4. returns the concat of both original df and new feature_df
+  4. returns the concat of new feature_df with original df
   '''
   feature_dict = {}
   for raster in rasters:
