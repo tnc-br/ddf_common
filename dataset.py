@@ -71,7 +71,7 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
 
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
-_LATITUDE_COLUMN_NAME = "lat"
+_LATITUDE_COLUMN_NAME = "lat" 
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
                           strategy: FixedPartitionStrategy) -> PartitionedDataset:
@@ -213,7 +213,7 @@ per-loc features"""
   sample_data = pd.merge(sample_data, means, how="inner", 
     left_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME],
     right_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
-  sample_data = sample_data.drop(_LONGITUDE_COLUMN_NAME, axis=1).rename(
+  sample_data = sample_data.rename(
     columns={'d18O_cel': 'cellulose_oxygen_ratio' }).reset_index()
   sample_data.drop('index', inplace=True, axis=1)
 
