@@ -69,17 +69,9 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
   )
 )
 
-
-@dataclass
-class RandomPartitionStrategy:
-  '''
-  Defines the parameters for the RANDOM partition strategy
-  '''
-  train_fraction: float
-  validation_fraction: float
-  test_fraction: float
-  random_seed: int
-
+# Standard column names in reference samples.
+_LONGITUDE_COLUMN_NAME = "long"
+_LATITUDE_COLUMN_NAME = "lat" 
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
                           strategy: FixedPartitionStrategy) -> PartitionedDataset:
@@ -92,14 +84,20 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
   test_bounds = strategy.test_fixed_bounds
 
   train_data = sample_data[
-      (sample_data['lat'] >= train_bounds.min_latitude) & (sample_data['long'] >= train_bounds.min_longitude) &
-      (sample_data['lat'] < train_bounds.max_latitude) & (sample_data['long'] < train_bounds.max_longitude)]
+      (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
   validation_data = sample_data[
-      (sample_data['lat'] >= validation_bounds.min_latitude) & (sample_data['long'] >= validation_bounds.min_longitude) &
-      (sample_data['lat'] < validation_bounds.max_latitude) & (sample_data['long'] < validation_bounds.max_longitude)]
+      (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
   test_data = sample_data[
-      (sample_data['lat'] >= test_bounds.min_latitude) & (sample_data['long'] >= test_bounds.min_longitude) &
-      (sample_data['lat'] < test_bounds.max_latitude) & (sample_data['long'] < test_bounds.max_longitude)]
+      (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
 
   return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
@@ -135,7 +133,7 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
     raster.atmosphere_isoscape_geotiff(), 
     raster.cellulose_isoscape_geotiff()]
   image_feature_names = ["rh", "temp", "vpd", "atmosphere_oxygen_ratio", "cellulose_oxygen_ratio"]
-  feature_names = ["lat", "lon", "month_of_year"] + image_feature_names
+  feature_names = [_LATITUDE_COLUMN_NAME,_LONGITUDE_COLUMN_NAME, "month_of_year"] + image_feature_names
   rs = RandomState(MT19937(SeedSequence(42)))
 
   feature_values = {}
@@ -159,7 +157,7 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
               feature, sample_x, sample_y, month)
           row["month_of_year"] = month
           row["lon"] = sample_x
-          row["lat"] = sample_y
+          row[_LATITUDE_COLUMN_NAME] = sample_y
           samples_collected += 1
 
         except ValueError as e:
@@ -193,16 +191,16 @@ per-loc features"""
 
   df = pd.read_csv(raster.get_sample_db_path(reference_csv_filename),
    encoding="ISO-8859-1", sep=',')
-  df = df[['Code', 'lat', 'long', 'd18O_cel']]
+  df = df[['Code', _LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME, 'd18O_cel']]
   df = df[df['d18O_cel'].notna()]
 
-  grouped = df.groupby(['lat', 'long'])
+  grouped = df.groupby([_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
 
   # means is the reference sample calculated mean of d18O at each lat/lon
   means = grouped.mean().reset_index()
 
   # locations is now the list of unique lat and longs
-  locations = list(zip(means["long"], means["lat"]))
+  locations = list(zip(means[_LONGITUDE_COLUMN_NAME], means[_LATITUDE_COLUMN_NAME]))
 
   sample_data = gen_tabular_dataset_with_coords(monthly=False,
    samples_per_site=1, sample_site_coordinates=locations, sample_radius = 0)
@@ -213,8 +211,9 @@ per-loc features"""
   # Here we merge the features "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio"
   # with the means based on lat/long
   sample_data = pd.merge(sample_data, means, how="inner", 
-    left_on=['lat', 'lon'], right_on=['lat', 'long'])
-  sample_data = sample_data.drop('long', axis=1).rename(
+    left_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME],
+    right_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
+  sample_data = sample_data.drop(_LONGITUDE_COLUMN_NAME, axis=1).rename(
     columns={'d18O_cel': 'cellulose_oxygen_ratio' }).reset_index()
   sample_data.drop('index', inplace=True, axis=1)
 
