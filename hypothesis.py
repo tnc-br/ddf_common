@@ -3,7 +3,9 @@ import raster
 import scipy.stats
 import math
 import pandas as pd
+import numpy as np
 
+_TREE_CODE_COLUMN_NAME = 'Code'
 _LONGITUDE_COLUMN_NAME = 'long'
 _LATITUDE_COLUMN_NAME = 'lat'
 _FRAUDULENT_COLUMN_NAME = 'fraud'
@@ -22,11 +24,11 @@ class HypothesisTest:
 
 def sample_ttest(longitude: float,
                  latitude: float,
-                 isotope_values: pd.Series,
+                 isotope_values: list[float],
                  means_isoscape: raster.AmazonGeoTiff,
                  variances_isoscape: raster.AmazonGeoTiff,
                  sample_size_per_location: int,
-                 p_value_target: float):
+                 p_value_target: float) -> HypothesisTest:
     '''
     longitude: Of the sample
     latitude: Of the sample
@@ -38,13 +40,13 @@ def sample_ttest(longitude: float,
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
-    if isotope_values.size <= 1:
+    if len(isotope_values) <= 1:
         raise ValueError  # Isotope values needs to be more than 1.
 
-    isotope_mean = isotope_values.mean()
-    isotope_variance = isotope_values.var()*(isotope_values.size /
-                                             (isotope_values.size - 1))
-    isotope_sample_count = isotope_values.size
+    isotope_mean = np.mean(isotope_values)
+    isotope_variance = np.var(isotope_values)*(len(isotope_values) /
+                                               (len(isotope_values) - 1))
+    isotope_sample_count = len(isotope_values)
 
     # Values from prediction.
     predicted_isotope_mean = raster.get_data_at_coords(
@@ -55,12 +57,12 @@ def sample_ttest(longitude: float,
 
     # t-student Test
     _, p_value = scipy.stats.ttest_ind_from_stats(
-        predicted_isotope_mean,
-        math.sqrt(predicted_isotope_variance),
-        predicted_isotope_sample_count,
-        isotope_mean,
-        math.sqrt(isotope_variance),
-        isotope_sample_count,
+        mean1=predicted_isotope_mean,
+        std1=math.sqrt(predicted_isotope_variance),
+        nobs1=predicted_isotope_sample_count,
+        mean2=isotope_mean,
+        std2=math.sqrt(isotope_variance),
+        nobs2=isotope_sample_count,
         equal_var=False, alternative="two-sided"
     )
 
@@ -86,6 +88,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
     sample_data = sample_data.groupby([
+        _TREE_CODE_COLUMN_NAME,
         _LONGITUDE_COLUMN_NAME,
         _LATITUDE_COLUMN_NAME,
         _FRAUDULENT_COLUMN_NAME])[isotope_column_name]
@@ -100,10 +103,10 @@ def fraud_metrics(sample_data: pd.DataFrame,
     for group_key, isotope_values in sample_data:
         if isotope_values.size <= 1:
             continue
-        hypothesis_test = sample_ttest(group_key[0], group_key[1], isotope_values, means_isoscape,
+        hypothesis_test = sample_ttest(group_key[1], group_key[2], isotope_values, means_isoscape,
                                        variances_isoscape, sample_size_per_location, p_value_target)
 
-        if not group_key[2]:
+        if not group_key[3]:
             if hypothesis_test.p_value >= p_value_target:
                 true_negative += 1
             else:
