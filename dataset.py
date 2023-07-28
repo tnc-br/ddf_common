@@ -71,7 +71,7 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
 
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
-_LATITUDE_COLUMN_NAME = "lat" 
+_LATITUDE_COLUMN_NAME = "lat"
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
                           strategy: FixedPartitionStrategy) -> PartitionedDataset:
@@ -156,7 +156,7 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
             row[feature_name] = raster.get_data_at_coords(
               feature, sample_x, sample_y, month)
           row["month_of_year"] = month
-          row["lon"] = sample_x
+          row[_LONGITUDE_COLUMN_NAME] = sample_x
           row[_LATITUDE_COLUMN_NAME] = sample_y
           samples_collected += 1
 
