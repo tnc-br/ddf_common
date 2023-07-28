@@ -25,7 +25,7 @@ class AmazonGeoTiff:
   image_mask_array: np.ndarray # ndarray of uint8
   masked_image: np.ma.masked_array
   yearly_masked_image: np.ma.masked_array
-  name: str = ""
+  name: str = "" # The name of the raster and column for dataframe.
 
   def value_at(self, x: float, y: float) -> float:
     return get_data_at_coords(self, x, y, -1)
