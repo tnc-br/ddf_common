@@ -1,26 +1,118 @@
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
+from enum import Enum
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
+import numpy as np
 from tqdm import tqdm
-from geopy import distance
 import math
 import pytest
-import numpy as np
 import random
 
 @dataclass
 class PartitionedDataset:
+  '''
+  Container of dataframes representing the train, test and validation sets of a sample.
+  '''
   train: pd.DataFrame
   test: pd.DataFrame
   validation: pd.DataFrame
 
-def partition(df) -> PartitionedDataset:
-  train = df[df["lon"] < -55]
-  test = df[(df["lon"] >= -55) & (df["lat"] > -2.85)]
-  validation = df[(df["lon"] >= -55) & (df["lat"] <= -2.85)]
-  return PartitionedDataset(train, test, validation)
+
+@dataclass
+class DatasetGeographicPartitions:
+  '''
+  Describes the bounds of a geographic area within a dataset.
+  '''
+  min_longitude: float
+  max_longitude: float
+  min_latitude: float
+  max_latitude: float
+
+
+class PartitionStrategy(Enum):
+  '''
+  The strategies you can partition datasets to.
+  '''
+  FIXED = 1
+
+
+@dataclass
+class FixedPartitionStrategy:
+  '''
+  Defines the parameters for the FIXED partition strategy
+  '''
+  train_fixed_bounds: DatasetGeographicPartitions
+  validation_fixed_bounds: DatasetGeographicPartitions
+  test_fixed_bounds: DatasetGeographicPartitions
+
+
+_FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
+  # Train
+  DatasetGeographicPartitions(
+    min_longitude=-62.5,
+    max_longitude=float('inf'),
+    min_latitude=-5,
+    max_latitude=float('inf'),
+  ),
+  # Validation
+  DatasetGeographicPartitions(
+    min_longitude=float('-inf'),
+    max_longitude=-62.5,
+    min_latitude=-5,
+    max_latitude=float('inf')
+  ),
+  # Test
+  DatasetGeographicPartitions(
+    min_longitude=float('-inf'),
+    max_longitude=float('inf'),
+    min_latitude=float('-inf'),
+    max_latitude=-5
+  )
+)
+
+# Standard column names in reference samples.
+_LONGITUDE_COLUMN_NAME = "long"
+_LATITUDE_COLUMN_NAME = "lat" 
+
+def _partition_data_fixed(sample_data: pd.DataFrame,
+                          strategy: FixedPartitionStrategy) -> PartitionedDataset:
+  '''
+  Return data split between the fixed rectangle train_validation_test_bounds
+  of latitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
+  '''
+  train_bounds = strategy.train_fixed_bounds
+  validation_bounds = strategy.validation_fixed_bounds
+  test_bounds = strategy.test_fixed_bounds
+
+  train_data = sample_data[
+      (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
+  validation_data = sample_data[
+      (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
+  test_data = sample_data[
+      (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
+      (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
+      (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
+
+  return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
+
+def partition(sample_data: pd.DataFrame,
+              partition_strategy: PartitionStrategy) -> PartitionedDataset:
+  '''
+  Splits pd.DataFrame sample_data based on the partition_strategy provided.
+  '''
+  if partition_strategy == PartitionStrategy.FIXED:
+    return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
+  else:
+    raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
 def print_split(dataset: PartitionedDataset) -> None:
   total_len = len(dataset.train)+len(dataset.validation)+len(dataset.test)
@@ -36,6 +128,27 @@ def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
                                (-55,-3.5,),(-54,-1,),(-52.5,-13,),(-51.5,-2.5,)],
                                          0.5)
 
+def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
+  '''
+  Given a pd.DataFrame df:
+  1. enumerates each row looking for a 'lat' and 'lon' column
+  2.   for each raster, looks up the lat and lon value
+  3.     adds that value to the feature_df
+  4. returns the concat of new feature_df with original df
+  '''
+  feature_dict = {}
+  for raster in rasters:
+    feature_dict[raster.name] = []
+  
+  for row in df.itertuples():
+    lat = getattr(row, "lat")
+    lon = getattr(row, "lon")
+    for raster in rasters:
+      feature_dict[raster.name].append(raster.value_at(lon, lat))
+
+  return pd.concat([pd.DataFrame(feature_dict), df], axis=1)
+
+
 def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int, 
   sample_site_coordinates: list, sample_radius: float) -> pd.DataFrame:
   features = [raster.relative_humidity_geotiff(), 
@@ -44,7 +157,7 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
     raster.atmosphere_isoscape_geotiff(), 
     raster.cellulose_isoscape_geotiff()]
   image_feature_names = ["rh", "temp", "vpd", "atmosphere_oxygen_ratio", "cellulose_oxygen_ratio"]
-  feature_names = ["lat", "lon", "month_of_year"] + image_feature_names
+  feature_names = [_LATITUDE_COLUMN_NAME,_LONGITUDE_COLUMN_NAME, "month_of_year"] + image_feature_names
   rs = RandomState(MT19937(SeedSequence(42)))
 
   feature_values = {}
@@ -67,8 +180,8 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
             row[feature_name] = raster.get_data_at_coords(
               feature, sample_x, sample_y, month)
           row["month_of_year"] = month
-          row["lon"] = sample_x
-          row["lat"] = sample_y
+          row[_LONGITUDE_COLUMN_NAME] = sample_x
+          row[_LATITUDE_COLUMN_NAME] = sample_y
           samples_collected += 1
 
         except ValueError as e:
@@ -102,28 +215,29 @@ per-loc features"""
 
   df = pd.read_csv(raster.get_sample_db_path(reference_csv_filename),
    encoding="ISO-8859-1", sep=',')
-  df = df[['Code', 'lat', 'long', 'd18O_cel']]
+  df = df[['Code', _LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME, 'd18O_cel']]
   df = df[df['d18O_cel'].notna()]
 
-  grouped = df.groupby(['lat', 'long'])
+  grouped = df.groupby([_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
 
   # means is the reference sample calculated mean of d18O at each lat/lon
   means = grouped.mean().reset_index()
 
   # locations is now the list of unique lat and longs
-  locations = list(zip(means["long"], means["lat"]))
+  locations = list(zip(means[_LONGITUDE_COLUMN_NAME], means[_LATITUDE_COLUMN_NAME]))
 
   sample_data = gen_tabular_dataset_with_coords(monthly=False,
    samples_per_site=1, sample_site_coordinates=locations, sample_radius = 0)
-  # drop the simulated cellulose_oxygen_ratio. TODO, refactor the code so that
-  # it only does features.
+  # drop the simulated cellulose_oxygen_ratio.
+  # TODO(https://github.com/tnc-br/ddf_common/issues/5), refactor the code to only do features.
   sample_data = sample_data.drop('cellulose_oxygen_ratio', axis = 1)
 
   # Here we merge the features "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio"
   # with the means based on lat/long
   sample_data = pd.merge(sample_data, means, how="inner", 
-    left_on=['lat', 'lon'], right_on=['lat', 'long'])
-  sample_data = sample_data.drop('long', axis=1).rename(
+    left_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME],
+    right_on=[_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
+  sample_data = sample_data.rename(
     columns={'d18O_cel': 'cellulose_oxygen_ratio' }).reset_index()
   sample_data.drop('index', inplace=True, axis=1)
 
@@ -131,24 +245,64 @@ per-loc features"""
   return sample_data
 
 # If a reference_csv_filename is requested, we use that over any simulated data.
-def yearly_data_255_trees(reference_csv_filename: str) -> pd.DataFrame:
+def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
   if reference_csv_filename:
     return load_sample_data(reference_csv_filename)
   # This is the historical simulated input that has 17 samples x 15 sites
   return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
-def yearly_255_trees_partitioned(reference_csv_filename: str) -> PartitionedDataset:
-  partition_data = partition(yearly_data_255_trees(reference_csv_filename))
+def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
+  partition_data = partition(aggregate_reference_data(reference_csv_filename),
+                             PartitionStrategy.FIXED)
   print_split(partition_data)
   return partition_data
 
+
+def preprocess_sample_data(df: pd.DataFrame,
+                           feature_columns: list[str],
+                           label_columns: list[str],
+                           aggregate_columns: list[str],
+                           keep_grouping: bool) -> pd.DataFrame:
+  '''
+  Given a pd.DataFRame df:
+  1. Filters in relevant columns using feature_columns, label_columns
+  2. Calculates the mean and variance of each column in label_columns grouping
+     by a key made of aggregate_columns
+  3. If keep_grouping = True, we export groupings by key aggregate_columns
+     otherwise we return the original sample with their matching means/variances.
+  '''
+  df.dropna(subset=feature_columns + label_columns, inplace=True)
+  df = df[feature_columns + label_columns]
+
+  if aggregate_columns:
+    grouped = df.groupby(aggregate_columns)
+
+    for col in label_columns:
+      means = grouped.mean().reset_index()
+      means.rename(columns={col: f"{col}_mean"}, inplace=True)
+      means = means[aggregate_columns + [f"{col}_mean"]]
+
+      variances = grouped.var().reset_index()
+      variances.rename(columns={col: f"{col}_variance"}, inplace=True)
+      variances = variances[aggregate_columns + [f"{col}_variance"]]
+
+      df = pd.merge(df, means, how="inner",
+                    left_on=aggregate_columns, right_on=aggregate_columns)
+      df = pd.merge(df, variances, how="inner",
+                    left_on=aggregate_columns, right_on=aggregate_columns)
+      df.drop(columns=[col], inplace=True)
+
+    if keep_grouping:
+      # The first entry is the same as all entries in the grouping for the
+      # aggregate_columns. Any other column will have different values but
+      # we only take the first one.
+      df = df.groupby(aggregate_columns).first().reset_index()
+
+  return df
+
 #Utility function for randomly sampling a point around a sample site
 def _is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
-  try:
-    raster.get_data_at_coords(reference_isocape, lon, lat, 0)
-    return True
-  except ValueError:
-    return False
+  return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
 
 # Pick a random point around (lat, lon) within max_distance_km. If edge_only is
 # true, only pick points exactly max_distance_km away from (lat, lon).
@@ -231,4 +385,6 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
       attempts += 1
 
   return fake_sample
+
+
 
