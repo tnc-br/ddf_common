@@ -99,20 +99,20 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
   test_bounds = strategy.test_fixed_bounds
 
   train_data = sample_data[
-  (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
-  (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
   validation_data = sample_data[
-  (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
-  (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
   test_data = sample_data[
-  (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
-  (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
-  (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
 
   return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
