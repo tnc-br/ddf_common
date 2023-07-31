@@ -6,6 +6,7 @@ import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
+from geopy import distance
 import math
 import pytest
 import random
