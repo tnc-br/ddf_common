@@ -71,17 +71,17 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
 
 @dataclass
 class RandomPartitionStrategy:
-    '''
-    Defines the parameters for the RANDOM partition strategy
-    '''
-    train_fraction: float
-    validation_fraction: float
-    test_fraction: float
-    random_seed: int
+  '''
+  Defines the parameters for the RANDOM partition strategy
+  '''
+  train_fraction: float
+  validation_fraction: float
+  test_fraction: float
+  random_seed: int
 
 
 _RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
-    0.8, 0.1, 0.1, None
+  0.8, 0.1, 0.1, None
 )
 
 # Standard column names in reference samples.
@@ -99,70 +99,65 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
   test_bounds = strategy.test_fixed_bounds
 
   train_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
+  (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
+  (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
   validation_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
+  (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
+  (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
   test_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
+  (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
+  (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
+  (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
 
   return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
 def _partition_data_random(sample_data: pd.DataFrame,
                            strategy: RandomPartitionStrategy):
-    '''
-    Return sample_data split randomly into train/validation/test buckets based on
-    the provided strategy.
-    '''
-    sample_data.sample(frac=1, random_state=strategy.random_seed)
-    n_train = int(sample_data.shape[0] * strategy.train_fraction)
-    n_validation = int(sample_data.shape[0] * strategy.validation_fraction)
+  '''
+  Return sample_data split randomly into train/validation/test buckets based on
+  the provided strategy.
+  '''
+  sample_data.sample(frac=1, random_state=strategy.random_seed)
+  n_train = int(sample_data.shape[0] * strategy.train_fraction)
+  n_validation = int(sample_data.shape[0] * strategy.validation_fraction)
 
-    train_data = sample_data.iloc[:n_train]
-    validation_data = sample_data.iloc[n_train:n_train+n_validation]
-    test_data = sample_data.iloc[n_train+n_validation:]
+  train_data = sample_data.iloc[:n_train]
+  validation_data = sample_data.iloc[n_train:n_train+n_validation]
+  test_data = sample_data.iloc[n_train+n_validation:]
 
-    return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
+  return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
 
 def partition(sample_data: pd.DataFrame,
               partition_strategy: PartitionStrategy) -> PartitionedDataset:
-    '''
-    Splits pd.DataFrame sample_data based on the partition_strategy provided.
-    '''
-    if partition_strategy == PartitionStrategy.FIXED:
-        return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
-    elif partition_strategy == PartitionStrategy.RANDOM:
-        return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
-    else:
-        raise ValueError(f"Unknown partition strategy: {partition_strategy}")
+  '''
+  Splits pd.DataFrame sample_data based on the partition_strategy provided.
+  '''
+  if partition_strategy == PartitionStrategy.FIXED:
+    return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
+  elif partition_strategy == PartitionStrategy.RANDOM:
+    return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
+  else:
+    raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
 def print_split(dataset: PartitionedDataset) -> None:
-    total_len = len(dataset.train)+len(dataset.validation)+len(dataset.test)
-    print(
-        f"Train: {100*len(dataset.train)/total_len:.2f}% ({len(dataset.train)})")
-    print(f"Test: {100*len(dataset.test)/total_len:.2f}% ({len(dataset.test)})")
-    print(
-        f"Validation: {100*len(dataset.validation)/total_len:.2f}% ({len(dataset.validation)})")
-
+  total_len = len(dataset.train)+len(dataset.validation)+len(dataset.test)
+  print(f"Train: {100*len(dataset.train)/total_len:.2f}% ({len(dataset.train)})")
+  print(f"Test: {100*len(dataset.test)/total_len:.2f}% ({len(dataset.test)})")
+  print(f"Validation: {100*len(dataset.validation)/total_len:.2f}% ({len(dataset.validation)})")
 
 def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
-    return gen_tabular_dataset_with_coords(monthly, samples_per_site,
-                                           [(-70, -5,), (-67.5, 0,), (-66, -4.5,), (-63, -9.5,),
-                                            (-63, -9,), (-62, -6,
-                                                         ), (-60, -2.5,), (-60, 1,),
-                                               (-60, -12.5,), (-59, -
-                                                               2.5,), (-57.5, -4,),
-                                               (-55, -3.5,), (-54, -1,), (-52.5, -13,), (-51.5, -2.5,)],
-                                           0.5)
+  return gen_tabular_dataset_with_coords(monthly, samples_per_site,
+                            [(-70,-5,),(-67.5,0,),(-66,-4.5,),(-63,-9.5,),
+                             (-63,-9,),(-62,-6,),(-60,-2.5,),(-60,1,),
+                              (-60,-12.5,),(-59,-2.5,),(-57.5,-4,),
+                               (-55,-3.5,),(-54,-1,),(-52.5,-13,),(-51.5,-2.5,)],
+                                         0.5)
 
 def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
   '''
@@ -196,20 +191,20 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
   feature_names = [_LATITUDE_COLUMN_NAME,_LONGITUDE_COLUMN_NAME, "month_of_year"] + image_feature_names
   rs = RandomState(MT19937(SeedSequence(42)))
 
-    feature_values = {}
-    for name in feature_names:
-        feature_values[name] = []
+  feature_values = {}
+  for name in feature_names:
+    feature_values[name] = []
 
-    for coord in tqdm(sample_site_coordinates):
-        month_start = 0 if monthly else -1
-        month_end = 12 if monthly else 0
-        for month in range(month_start, month_end):
-            samples_collected = 0
-            while samples_collected < samples_per_site:
-                row = {}
-                sample_x, sample_y = 2*(rs.rand(2) - 0.5) * sample_radius
-                sample_x += coord[0]
-                sample_y += coord[1]
+  for coord in tqdm(sample_site_coordinates):
+    month_start = 0 if monthly else -1
+    month_end = 12 if monthly else 0
+    for month in range(month_start, month_end):
+      samples_collected = 0
+      while samples_collected < samples_per_site:
+        row = {}
+        sample_x, sample_y = 2*(rs.rand(2) - 0.5) * sample_radius
+        sample_x += coord[0]
+        sample_y += coord[1]
 
         try:
           for feature, feature_name in zip(features, image_feature_names):
@@ -220,30 +215,29 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
           row[_LATITUDE_COLUMN_NAME] = sample_y
           samples_collected += 1
 
-                except ValueError as e:
-                    # masked and out-of-bounds coordinates
-                    # note that if sample_radius is zero, we know that looping again
-                    # will still result in a ValueError. In this case, we trigger the
-                    # loop to finish by incrementing the end condition (samples_collected)
-                    # In that case, we end up ignoring the point.
-                    # This can also happen with a small positive radius, but one whose
-                    # coords return all masked/out of bounds, but this is less likely.
-                    if sample_radius == 0:
-                        samples_collected += 1
-                    continue
-                for key, value in row.items():
-                    feature_values[key].append(value)
+        except ValueError as e:
+          # masked and out-of-bounds coordinates
+          # note that if sample_radius is zero, we know that looping again
+          # will still result in a ValueError. In this case, we trigger the
+          # loop to finish by incrementing the end condition (samples_collected)
+          # In that case, we end up ignoring the point.
+          # This can also happen with a small positive radius, but one whose
+          # coords return all masked/out of bounds, but this is less likely.
+          if sample_radius == 0:
+            samples_collected += 1
+          continue
+        for key, value in row.items():
+          feature_values[key].append(value)
 
-    samples = pd.DataFrame(feature_values)
+  samples = pd.DataFrame(feature_values)
 
-    if not monthly:
-        samples.drop("month_of_year", axis=1, inplace=True)
+  if not monthly:
+    samples.drop("month_of_year", axis=1, inplace=True)
 
-    return samples
-
+  return samples
 
 def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
-    """This method loads reference sample data from a CSV, determines the unique
+  """This method loads reference sample data from a CSV, determines the unique
   locations in that CSV and then calls the existing method
   gen_tabular_dataset_with_coords to enrich those locations with features for
   "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio".
@@ -257,17 +251,17 @@ def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
 
   grouped = df.groupby([_LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME])
 
-    # means is the reference sample calculated mean of d18O at each lat/lon
-    means = grouped.mean().reset_index()
+  # means is the reference sample calculated mean of d18O at each lat/lon
+  means = grouped.mean().reset_index()
 
   # locations is now the list of unique lat and longs
   locations = list(zip(means[_LONGITUDE_COLUMN_NAME], means[_LATITUDE_COLUMN_NAME]))
 
-    sample_data = gen_tabular_dataset_with_coords(monthly=False,
-                                                  samples_per_site=1, sample_site_coordinates=locations, sample_radius=0)
-    # drop the simulated cellulose_oxygen_ratio.
-    # TODO(https://github.com/tnc-br/ddf_common/issues/5), refactor the code to only do features.
-    sample_data = sample_data.drop('cellulose_oxygen_ratio', axis=1)
+  sample_data = gen_tabular_dataset_with_coords(monthly=False,
+   samples_per_site=1, sample_site_coordinates=locations, sample_radius = 0)
+  # drop the simulated cellulose_oxygen_ratio.
+  # TODO(https://github.com/tnc-br/ddf_common/issues/5), refactor the code to only do features.
+  sample_data = sample_data.drop('cellulose_oxygen_ratio', axis = 1)
 
   # Here we merge the features "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio"
   # with the means based on lat/long
@@ -279,17 +273,14 @@ def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
   sample_data.drop('index', inplace=True, axis=1)
 
 
-    return sample_data
+  return sample_data
 
 # If a reference_csv_filename is requested, we use that over any simulated data.
-
-
 def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
-    if reference_csv_filename:
-        return load_sample_data(reference_csv_filename)
-    # This is the historical simulated input that has 17 samples x 15 sites
-    return gen_tabular_dataset(monthly=False, samples_per_site=17)
-
+  if reference_csv_filename:
+    return load_sample_data(reference_csv_filename)
+  # This is the historical simulated input that has 17 samples x 15 sites
+  return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
 def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
   partition_data = partition(aggregate_reference_data(reference_csv_filename),
