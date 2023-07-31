@@ -33,6 +33,7 @@ class PartitionStrategy(Enum):
   The strategies you can partition datasets to.
   '''
   FIXED = 1
+  RANDOM = 2
 
 
 @dataclass
