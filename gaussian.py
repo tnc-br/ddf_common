@@ -18,10 +18,10 @@ def get_2d_gaussian(center_lon: float, center_lat: float, stdev: float):
 
   return rv
 
-# x = longitude
-# y = latitude
 def plot_gaussian(rv, shape: raster.Bounds):
   """Informative, for debugging and visualizing get_2d_gaussian()."""
+  # x = longitude
+  # y = latitude
   x = np.linspace(shape.minx, shape.maxx, shape.raster_size_x)
   y = np.linspace(shape.maxy, shape.miny, shape.raster_size_y) # inverted y axis
   X, Y = np.meshgrid(x,y)
@@ -32,9 +32,6 @@ def plot_gaussian(rv, shape: raster.Bounds):
   plt.imshow(pd)
   plt.colorbar()
 
-# TODO: For each pixel in the predicted isoscape
-# Yeah, this is basically Gaussian blur, huh...
-# BUT, it does give us a distribution.
 def gaussian_kernel(input: raster.AmazonGeoTiff, stdev_in_degrees: float=1):
   bounds = raster.get_extent(input.gdal_dataset)
   means = np.ma.zeros((bounds.raster_size_x, bounds.raster_size_y,), dtype=float)
