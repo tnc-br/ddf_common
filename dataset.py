@@ -139,12 +139,15 @@ def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
   for raster in rasters:
     feature_dict[raster.name] = []
   
+  dupe_columns = []
   for row in df.itertuples():
     lat = getattr(row, _LATITUDE_COLUMN_NAME)
     lon = getattr(row, _LONGITUDE_COLUMN_NAME)
     for raster in rasters:
       feature_dict[raster.name].append(raster.value_at(lon, lat))
 
+  # prefer the rasters as the source
+  df = df.drop([r.name for r in rasters], axis=1, errors='ignore')
   return pd.concat([pd.DataFrame(feature_dict), df], axis=1)
 
 
