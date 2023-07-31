@@ -15,7 +15,6 @@ MODEL_BASE = "/MyDrive/amazon_rainforest_files/amazon_isoscape_models/" #@param
 SAMPLE_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_sample_data/" #@param
 ANIMATIONS_BASE = "/MyDrive/amazon_rainforest_files/amazon_animations/" #@param
 TEST_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_test_data/" #@param
-MOUNTED = False
 
 # Module for helper functions for manipulating data and datasets.
 @dataclass
@@ -26,6 +25,11 @@ class AmazonGeoTiff:
   image_mask_array: np.ndarray # ndarray of uint8
   masked_image: np.ma.masked_array
   yearly_masked_image: np.ma.masked_array
+  name: str = "" # The name of the raster and column for dataframe.
+
+  def value_at(self, x: float, y: float) -> float:
+    return get_data_at_coords(self, x, y, -1)
+
 
 @dataclass
 class Bounds:
@@ -70,13 +74,19 @@ def get_animations_path(filename: str) -> str:
   return f"{root}{ANIMATIONS_BASE}{filename}"
 
 def mount_gdrive():
-  global MOUNTED
-  if not MOUNTED:
-    MOUNTED = True
+  if not os.path.exists(GDRIVE_BASE):
     # Access data stored on Google Drive
     if GDRIVE_BASE:
+      try:
         from google.colab import drive
         drive.mount(GDRIVE_BASE)
+      except ModuleNotFoundError:
+        print('WARNING, GDRIVE NOT MOUNTED! USING LOCAL FS!!!')
+
+      if not os.path.exists(GDRIVE_BASE):
+        print('CREATING A LOCAL FOLDER FOR SOURCE!!!!')
+        os.makedirs(GDRIVE_BASE, exist_ok=True)
+
 
 def print_raster_info(raster):
   dataset = raster
@@ -106,6 +116,11 @@ def print_raster_info(raster):
 
     if band.GetRasterColorTable():
         print("Band has a color table with {} entries".format(band.GetRasterColorTable().GetCount()))
+
+def load_named_raster(path: str, name: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
+  raster = load_raster(path, use_only_band_index)
+  raster.name = name
+  return raster
 
 def load_raster(path: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
   """
@@ -231,19 +246,24 @@ def coords_to_indices(bounds: Bounds, x: float, y: float):
 
   return x_idx, y_idx
 
-def get_data_at_coords(dataset_tif: AmazonGeoTiff, x: float, y: float, month: int) -> float:
+def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
   # x = longitude
   # y = latitude
-  bounds = get_extent(dataset_tif.gdal_dataset)
+  bounds = get_extent(dataset.gdal_dataset)
   x_idx, y_idx = coords_to_indices(bounds, x, y)
+  if not x_idx and not y_idx:
+    return None
   if month == -1:
-    value = dataset_tif.yearly_masked_image[x_idx, y_idx]
+    value = dataset.yearly_masked_image[x_idx, y_idx]
   else:
-    value = dataset_tif.masked_image[x_idx, y_idx, month]
+    value = dataset.masked_image[x_idx, y_idx, month]
   if np.ma.is_masked(value):
     raise ValueError("Coordinates are masked")
   else:
     return value
+
+def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff):
+  return True if get_data_at_coords(reference_isocape, lon, lat, 0) else False
 
 brazil_map_geotiff_ = None
 def brazil_map_geotiff() -> AmazonGeoTiff:
@@ -256,35 +276,35 @@ relative_humidity_geotiff_ = None
 def relative_humidity_geotiff() -> AmazonGeoTiff:
   global relative_humidity_geotiff_
   if not relative_humidity_geotiff_:
-    relative_humidity_geotiff_ = load_raster(get_raster_path("R.rh_Stack.tif"))
+    relative_humidity_geotiff_ = load_named_raster(get_raster_path("R.rh_Stack.tif"), "rh")
   return relative_humidity_geotiff_
 
 temperature_geotiff_ = None
 def temperature_geotiff() -> AmazonGeoTiff:
   global temperature_geotiff_
   if not temperature_geotiff_:
-    temperature_geotiff_ = load_raster(get_raster_path("Temperatura_Stack.tif"))
+    temperature_geotiff_ = load_named_raster(get_raster_path("Temperatura_Stack.tif"), "temp")
   return temperature_geotiff_
 
 vapor_pressure_deficit_geotiff_ = None
 def vapor_pressure_deficit_geotiff() -> AmazonGeoTiff:
   global vapor_pressure_deficit_geotiff_
   if not vapor_pressure_deficit_geotiff_:
-    vapor_pressure_deficit_geotiff_ = load_raster(get_raster_path("R.vpd_Stack.tif"))
+    vapor_pressure_deficit_geotiff_ = load_named_raster(get_raster_path("R.vpd_Stack.tif"), "vpd")
   return vapor_pressure_deficit_geotiff_
 
 atmosphere_isoscape_geotiff_ = None
 def atmosphere_isoscape_geotiff() -> AmazonGeoTiff:
   global atmosphere_isoscape_geotiff_
   if not atmosphere_isoscape_geotiff_:
-    atmosphere_isoscape_geotiff_ = load_raster(get_raster_path("Iso_Oxi_Stack.tif"))
+    atmosphere_isoscape_geotiff_ = load_named_raster(get_raster_path("Iso_Oxi_Stack.tif"), "atmosphere_oxygen_ratio")
   return atmosphere_isoscape_geotiff_
 
 cellulose_isoscape_geotiff_ = None
 def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
   global cellulose_isoscape_geotiff_
   if not cellulose_isoscape_geotiff_:
-    cellulose_isoscape_geotiff_ = load_raster(get_raster_path("iso_O_cellulose.tif"))
+    cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
   return cellulose_isoscape_geotiff_
 
 
