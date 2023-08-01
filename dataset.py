@@ -6,6 +6,10 @@ import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
+from geopy import distance
+import math
+import pytest
+import random
 
 @dataclass
 class PartitionedDataset:
@@ -254,49 +258,6 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   print_split(partition_data)
   return partition_data
 
-
-def preprocess_sample_data(df: pd.DataFrame,
-                           feature_columns: list[str],
-                           label_columns: list[str],
-                           aggregate_columns: list[str],
-                           keep_grouping: bool) -> pd.DataFrame:
-  '''
-  Given a pd.DataFRame df:
-  1. Filters in relevant columns using feature_columns, label_columns
-  2. Calculates the mean and variance of each column in label_columns grouping
-     by a key made of aggregate_columns
-  3. If keep_grouping = True, we export groupings by key aggregate_columns
-     otherwise we return the original sample with their matching means/variances.
-  '''
-  df.dropna(subset=feature_columns + label_columns, inplace=True)
-  df = df[feature_columns + label_columns]
-
-  if aggregate_columns:
-    grouped = df.groupby(aggregate_columns)
-
-    for col in label_columns:
-      means = grouped.mean().reset_index()
-      means.rename(columns={col: f"{col}_mean"}, inplace=True)
-      means = means[aggregate_columns + [f"{col}_mean"]]
-
-      variances = grouped.var().reset_index()
-      variances.rename(columns={col: f"{col}_variance"}, inplace=True)
-      variances = variances[aggregate_columns + [f"{col}_variance"]]
-
-      df = pd.merge(df, means, how="inner",
-                    left_on=aggregate_columns, right_on=aggregate_columns)
-      df = pd.merge(df, variances, how="inner",
-                    left_on=aggregate_columns, right_on=aggregate_columns)
-      df.drop(columns=[col], inplace=True)
-
-    if keep_grouping:
-      # The first entry is the same as all entries in the grouping for the
-      # aggregate_columns. Any other column will have different values but
-      # we only take the first one.
-      df = df.groupby(aggregate_columns).first().reset_index()
-
-  return df
-                             
 #Utility function for randomly sampling a point around a sample site
 def _is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
   return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
@@ -379,5 +340,47 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
           new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
           fake_sample.loc[len(fake_sample)] = new_row
       attempts += 1
+
   return fake_sample
-                       
+
+def preprocess_sample_data(df: pd.DataFrame,
+                           feature_columns: list[str],
+                           label_columns: list[str],
+                           aggregate_columns: list[str],
+                           keep_grouping: bool) -> pd.DataFrame:
+  '''
+  Given a pd.DataFRame df:
+  1. Filters in relevant columns using feature_columns, label_columns
+  2. Calculates the mean and variance of each column in label_columns grouping
+     by a key made of aggregate_columns
+  3. If keep_grouping = True, we export groupings by key aggregate_columns
+     otherwise we return the original sample with their matching means/variances.
+  '''
+  df.dropna(subset=feature_columns + label_columns, inplace=True)
+  df = df[feature_columns + label_columns]
+
+  if aggregate_columns:
+    grouped = df.groupby(aggregate_columns)
+
+    for col in label_columns:
+      means = grouped.mean().reset_index()
+      means.rename(columns={col: f"{col}_mean"}, inplace=True)
+      means = means[aggregate_columns + [f"{col}_mean"]]
+
+      variances = grouped.var().reset_index()
+      variances.rename(columns={col: f"{col}_variance"}, inplace=True)
+      variances = variances[aggregate_columns + [f"{col}_variance"]]
+
+      df = pd.merge(df, means, how="inner",
+                    left_on=aggregate_columns, right_on=aggregate_columns)
+      df = pd.merge(df, variances, how="inner",
+                    left_on=aggregate_columns, right_on=aggregate_columns)
+      df.drop(columns=[col], inplace=True)
+
+    if keep_grouping:
+      # The first entry is the same as all entries in the grouping for the
+      # aggregate_columns. Any other column will have different values but
+      # we only take the first one.
+      df = df.groupby(aggregate_columns).first().reset_index()
+
+  return df
