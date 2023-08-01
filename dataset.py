@@ -1,11 +1,13 @@
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
 from enum import Enum
+import ee
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
+import datetime
 
 @dataclass
 class PartitionedDataset:
@@ -137,12 +139,15 @@ def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
   for raster in rasters:
     feature_dict[raster.name] = []
   
+  dupe_columns = []
   for row in df.itertuples():
-    lat = getattr(row, "lat")
-    lon = getattr(row, "lon")
+    lat = getattr(row, _LATITUDE_COLUMN_NAME)
+    lon = getattr(row, _LONGITUDE_COLUMN_NAME)
     for raster in rasters:
       feature_dict[raster.name].append(raster.value_at(lon, lat))
 
+  # prefer the rasters as the source
+  df = df.drop([r.name for r in rasters], axis=1, errors='ignore')
   return pd.concat([pd.DataFrame(feature_dict), df], axis=1)
 
 
@@ -254,6 +259,33 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   print_split(partition_data)
   return partition_data
 
+def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
+  '''
+  Given an optional list of filters, returns a DataFrame containing all current
+  reference sample from Earth Engine. You must have the proper authorization
+  to access this data, which is obtained by belonging to an organization added
+  to TimberID.org
+  '''
+  import google
+  from google.colab import auth
+  auth.authenticate_user()
+
+  credentials, project_id = google.auth.default()
+  ee.Initialize(credentials, project='river-sky-386919')
+  fc = ee.FeatureCollection('projects/river-sky-386919/assets/timberID/trusted_samples')
+  for filter_fc in filters:
+    fc = fc.filter(filter_fc)
+  info = fc.getInfo()
+  features = info['features']
+  dictarr = []
+
+  for f in features:
+      attr = f['properties']
+      attr[_LATITUDE_COLUMN_NAME] = f['geometry']['coordinates'][1]
+      attr[_LONGITUDE_COLUMN_NAME] = f['geometry']['coordinates'][0]
+      dictarr.append(attr)
+
+  return pd.DataFrame(dictarr)
 
 def preprocess_sample_data(df: pd.DataFrame,
                            feature_columns: list[str],
