@@ -301,10 +301,6 @@ def preprocess_sample_data(df: pd.DataFrame,
 
   return df
 
-#Utility function for randomly sampling a point around a sample site
-def _is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
-  return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
-
 # Pick a random point around (lat, lon) within max_distance_km. If edge_only is
 # true, only pick points exactly max_distance_km away from (lat, lon).
 def _random_nearby_point(lat: float, lon: float, max_distance_km: float, edge_only=False):
@@ -371,7 +367,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
       continue
     count += 1
     lat, lon, attempts = 0, 0, 0
-    while((not _is_valid_point(lat, lon, mean_iso) or
+    while((not raster.is_valid_point(lat, lon, mean_iso) or
           _is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
           attempts < max_random_sample_attempts):
       lat, lon = _random_nearby_point(coord[0], coord[1], max_fraud_radius)
