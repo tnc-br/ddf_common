@@ -246,7 +246,7 @@ def coords_to_indices(bounds: Bounds, x: float, y: float):
   y_idx = int((x - bounds.minx) / abs(bounds.pixel_size_x))
 
   return x_idx, y_idx
-  
+
 def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
   # x = longitude
   # y = latitude
