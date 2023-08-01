@@ -13,6 +13,7 @@ import pytest
 import random
 import datetime
 
+
 @dataclass
 class PartitionedDataset:
   '''
@@ -21,7 +22,6 @@ class PartitionedDataset:
   train: pd.DataFrame
   test: pd.DataFrame
   validation: pd.DataFrame
-
 
 @dataclass
 class DatasetGeographicPartitions:
@@ -39,6 +39,7 @@ class PartitionStrategy(Enum):
   The strategies you can partition datasets to.
   '''
   FIXED = 1
+  RANDOM = 2
 
 
 @dataclass
@@ -75,9 +76,24 @@ _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
   )
 )
 
+@dataclass
+class RandomPartitionStrategy:
+  '''
+  Defines the parameters for the RANDOM partition strategy
+  '''
+  train_fraction: float
+  validation_fraction: float
+  test_fraction: float
+  random_seed: int
+
+
+_RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
+  0.8, 0.1, 0.1, None
+)
+
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
-_LATITUDE_COLUMN_NAME = "lat" 
+_LATITUDE_COLUMN_NAME = "lat"
 
 def _partition_data_fixed(sample_data: pd.DataFrame,
                           strategy: FixedPartitionStrategy) -> PartitionedDataset:
@@ -90,22 +106,39 @@ def _partition_data_fixed(sample_data: pd.DataFrame,
   test_bounds = strategy.test_fixed_bounds
 
   train_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
   validation_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
   test_data = sample_data[
-      (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
-      (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
-      (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
+    (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
+    (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
+    (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
 
   return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
+
+def _partition_data_random(sample_data: pd.DataFrame,
+                           strategy: RandomPartitionStrategy):
+  '''
+  Return sample_data split randomly into train/validation/test buckets based on
+  the provided strategy.
+  '''
+  sample_data.sample(frac=1, random_state=strategy.random_seed)
+  n_train = int(sample_data.shape[0] * strategy.train_fraction)
+  n_validation = int(sample_data.shape[0] * strategy.validation_fraction)
+
+  train_data = sample_data.iloc[:n_train]
+  validation_data = sample_data.iloc[n_train:n_train+n_validation]
+  test_data = sample_data.iloc[n_train+n_validation:]
+
+  return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
+
 
 def partition(sample_data: pd.DataFrame,
               partition_strategy: PartitionStrategy) -> PartitionedDataset:
@@ -114,6 +147,8 @@ def partition(sample_data: pd.DataFrame,
   '''
   if partition_strategy == PartitionStrategy.FIXED:
     return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
+  elif partition_strategy == PartitionStrategy.RANDOM:
+    return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
   else:
     raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
@@ -213,11 +248,11 @@ def gen_tabular_dataset_with_coords(monthly: bool, samples_per_site: int,
 
 def load_sample_data(reference_csv_filename: str) -> pd.DataFrame:
   """This method loads reference sample data from a CSV, determines the unique
-locations in that CSV and then calls the existing method
-gen_tabular_dataset_with_coords to enrich those locations with features for
-"rh", "temp", "vpd", and  "atmosphere_oxygen_ratio".
-Finally, it joins the CSV provided d18O means values from the CSV with the
-per-loc features"""
+  locations in that CSV and then calls the existing method
+  gen_tabular_dataset_with_coords to enrich those locations with features for
+  "rh", "temp", "vpd", and  "atmosphere_oxygen_ratio".
+  Finally, it joins the CSV provided d18O means values from the CSV with the
+  per-loc features"""
 
   df = pd.read_csv(raster.get_sample_db_path(reference_csv_filename),
    encoding="ISO-8859-1", sep=',')
