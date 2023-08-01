@@ -136,7 +136,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
         else:
           true_positive += 1
 
-        rows += 1
+      rows += 1
 
     if rows == 0:
       return (0, 0, 0)
