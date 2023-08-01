@@ -1,11 +1,17 @@
 # Module for helper functions for manipulating data and datasets.
 from dataclasses import dataclass
 from enum import Enum
+import ee
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
+from geopy import distance
+import math
+import pytest
+import random
+import datetime
 
 
 @dataclass
@@ -172,12 +178,15 @@ def add_features_from_rasters(df: pd.DataFrame, rasters: list) -> pd.DataFrame:
   for raster in rasters:
     feature_dict[raster.name] = []
   
+  dupe_columns = []
   for row in df.itertuples():
-    lat = getattr(row, "lat")
-    lon = getattr(row, "lon")
+    lat = getattr(row, _LATITUDE_COLUMN_NAME)
+    lon = getattr(row, _LONGITUDE_COLUMN_NAME)
     for raster in rasters:
       feature_dict[raster.name].append(raster.value_at(lon, lat))
 
+  # prefer the rasters as the source
+  df = df.drop([r.name for r in rasters], axis=1, errors='ignore')
   return pd.concat([pd.DataFrame(feature_dict), df], axis=1)
 
 
@@ -289,6 +298,33 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   print_split(partition_data)
   return partition_data
 
+def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
+  '''
+  Given an optional list of filters, returns a DataFrame containing all current
+  reference sample from Earth Engine. You must have the proper authorization
+  to access this data, which is obtained by belonging to an organization added
+  to TimberID.org
+  '''
+  import google
+  from google.colab import auth
+  auth.authenticate_user()
+
+  credentials, project_id = google.auth.default()
+  ee.Initialize(credentials, project='river-sky-386919')
+  fc = ee.FeatureCollection('projects/river-sky-386919/assets/timberID/trusted_samples')
+  for filter_fc in filters:
+    fc = fc.filter(filter_fc)
+  info = fc.getInfo()
+  features = info['features']
+  dictarr = []
+
+  for f in features:
+      attr = f['properties']
+      attr[_LATITUDE_COLUMN_NAME] = f['geometry']['coordinates'][1]
+      attr[_LONGITUDE_COLUMN_NAME] = f['geometry']['coordinates'][0]
+      dictarr.append(attr)
+
+  return pd.DataFrame(dictarr)
 
 def preprocess_sample_data(df: pd.DataFrame,
                            feature_columns: list[str],
@@ -331,3 +367,89 @@ def preprocess_sample_data(df: pd.DataFrame,
       df = df.groupby(aggregate_columns).first().reset_index()
 
   return df
+
+#Utility function for randomly sampling a point around a sample site
+def _is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
+  return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
+
+# Pick a random point around (lat, lon) within max_distance_km. If edge_only is
+# true, only pick points exactly max_distance_km away from (lat, lon).
+def _random_nearby_point(lat: float, lon: float, max_distance_km: float, edge_only=False):
+  # Pick a random angle pointing outward from the origin.
+  # 0 == North, 90 == East, 180 == South, 270 == West
+  angle = 360 * random.random()
+
+  # sqrt() is required for an equal radial distribution, otherwise samples
+  # cluster around origin.
+  dist = max_distance_km if edge_only else max_distance_km * math.sqrt(random.random())
+
+  # WGS-84 is the most accurate ellipsoidal model of Earth, but we should double
+  # check to make sure this matches the model used by our sample collectors.
+  point = distance.geodesic(
+      ellipsoid='WGS-84', kilometers=dist).destination((lat, lon), bearing=angle)
+  return point.latitude, point.longitude
+
+# Given a list of real_points, returns true if (lat, lon) is within threshold
+# of any of those points.
+def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: float):
+  for point, _ in real_points:
+    if distance.geodesic((lat, lon), point).km < threshold_km:
+      return True
+  return False
+
+#This function creates a dataset based on real samples adding a Fraud column
+def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.AmazonGeoTiff,element: str,max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
+  '''
+  This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
+  Input:
+  - real_samples_data: dataset containing real samples
+  - element: element that will be used in the ttest: Oxygen (e.g: d18O_cel), Carbon or Nitrogen.
+  - mean_iso: isoscape averages
+  - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
+  - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
+  - min_fraud_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  Output: 
+  - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
+  '''
+
+  real_samples_data.dropna(subset=[element], how='all', inplace=True)
+  real_samples = real_samples_data.groupby(['lat','long'])[element]
+  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[element]
+
+  count = 0
+  lab_samp = real_samples
+
+  if max_fraud_radius <= min_fraud_radius:
+    raise ValueError("max_fraud_radius {} <= min_fraud_radius {}".format(
+        max_fraud_radius, min_fraud_radius))
+    
+  fake_sample = pd.DataFrame(columns=['Code',
+          'lat',
+          'long',
+          element,
+          'fraud'])
+
+  # Max number of times to attempt to generate random coordinates.
+  max_random_sample_attempts = 1000
+  count = 0
+
+  for coord, lab_samp in real_samples_code:
+    if lab_samp.size <= 1 :
+      continue
+    count += 1
+    lat, lon, attempts = 0, 0, 0
+    while((not _is_valid_point(lat, lon, mean_iso) or
+          _is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
+          attempts < max_random_sample_attempts):
+      lat, lon = _random_nearby_point(coord[0], coord[1], max_fraud_radius)
+      if lab_samp.size < 5:
+        pass
+      else:
+      #generating 5 samples per code
+        for i in range(5):
+          new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
+          fake_sample.loc[len(fake_sample)] = new_row
+      attempts += 1
+
+  return fake_sample
+
