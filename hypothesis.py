@@ -21,6 +21,15 @@ class HypothesisTest:
     p_value: float
     p_value_threshold: float
 
+@dataclass
+class FraudMetrics:
+    '''
+    Collection of metrics for fraud detection
+    '''
+    isotope_column_names: list[str]
+    accuracy: float
+    precision: float
+    recall: float
 
 def sample_ttest(longitude: float,
                  latitude: float,
@@ -70,9 +79,9 @@ def sample_ttest(longitude: float,
 
 
 def fraud_metrics(sample_data: pd.DataFrame,
-                  isotope_column_name: str,
-                  means_isoscape: raster.AmazonGeoTiff,
-                  variances_isoscape: raster.AmazonGeoTiff,
+                  isotope_column_names: list[str],
+                  means_isoscapes: list[raster.AmazonGeoTiff],
+                  variances_isoscapes: list[raster.AmazonGeoTiff],
                   sample_size_per_location: int,
                   p_value_target: float):
     '''
@@ -91,7 +100,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
         _TREE_CODE_COLUMN_NAME,
         _LONGITUDE_COLUMN_NAME,
         _LATITUDE_COLUMN_NAME,
-        _FRAUDULENT_COLUMN_NAME])[isotope_column_name]
+        _FRAUDULENT_COLUMN_NAME])[isotope_column_names]
 
     # Counts the number of locations in the sample have more than one row in dataset.
     rows = 0
@@ -101,35 +110,45 @@ def fraud_metrics(sample_data: pd.DataFrame,
     false_positive = 0
     false_negative = 0
     for group_key, isotope_values in sample_data:
-        if isotope_values.size <= 1:
-            continue
-        hypothesis_test = sample_ttest(group_key[1], group_key[2], isotope_values, means_isoscape,
-                                       variances_isoscape, sample_size_per_location, p_value_target)
+      if isotope_values.shape[0] <= 1:
+        continue
 
-        if not group_key[3]:
-            if hypothesis_test.p_value >= p_value_target:
-                true_negative += 1
-            else:
-                false_positive += 1
+      p_values = []
+      for i, isotope_column_name in enumerate(isotope_column_names):
+        hypothesis_test = sample_ttest(group_key[1],
+                                       group_key[2],
+                                       isotope_values[isotope_column_name],
+                                       means_isoscapes[i],
+                                       variances_isoscapes[i],
+                                       sample_size_per_location,
+                                       p_value_target)
+        p_values.append(hypothesis_test.p_value)
+      combined_p_value = np.array(p_values).prod()
+
+      if not group_key[3]:
+        if combined_p_value >= p_value_target:
+          true_negative += 1
         else:
-            if hypothesis_test.p_value >= p_value_target:
-                false_negative += 1
-            else:
-                true_positive += 1
+          false_positive += 1
+      else:
+        if combined_p_value >= p_value_target:
+          false_negative += 1
+        else:
+          true_positive += 1
 
         rows += 1
 
     if rows == 0:
-        return (0, 0, 0)
+      return (0, 0, 0)
 
     accuracy = (true_negative + true_positive)/rows
 
     precision = 0
     if (true_positive + false_positive) > 0:
-        precision = true_positive / (true_positive + false_positive)
+      precision = true_positive / (true_positive + false_positive)
 
     recall = 0
     if (false_negative + true_positive) > 0:
-        recall = true_positive / (false_negative + true_positive)
+      recall = true_positive / (false_negative + true_positive)
 
-    return (accuracy, precision, recall)
+    return FraudMetrics(isotope_column_names, accuracy, precision, recall)
