@@ -238,14 +238,15 @@ def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: s
 
 def coords_to_indices(bounds: Bounds, x: float, y: float):
   if x < bounds.minx or x > bounds.maxx or y < bounds.miny or y > bounds.maxy:
-    raise ValueError("Coordinates out of bounds")
-
+    #raise ValueError("Coordinates out of bounds")
+    return None, None
+    
   # X => lat, Y => lon
   x_idx = bounds.raster_size_y - int(math.ceil((y - bounds.miny) / abs(bounds.pixel_size_y)))
   y_idx = int((x - bounds.minx) / abs(bounds.pixel_size_x))
 
   return x_idx, y_idx
-
+  
 def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
   # x = longitude
   # y = latitude
