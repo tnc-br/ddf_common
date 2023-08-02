@@ -398,23 +398,21 @@ def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: flo
   return False
 
 #This function creates a dataset based on real samples adding a Fraud column
-def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.AmazonGeoTiff,element: str,max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
+def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str],max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
   - real_samples_data: dataset containing real samples
-  - element: element that will be used in the ttest: Oxygen (e.g: d18O_cel), Carbon or Nitrogen.
-  - mean_iso: isoscape averages
+  - elements: element that will be used in the ttest: Oxygen (e.g: d18O_cel), Carbon or Nitrogen.
+  - mean_isoscapes: Isoscapes of mean values of isotope values from elements
   - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
   - min_fraud_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
-
-  real_samples_data.dropna(subset=[element], how='all', inplace=True)
-  real_samples = real_samples_data.groupby(['lat','long'])[element]
-  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[element]
+  real_samples = real_samples_data.groupby(['lat','long'])[elements]
+  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[elements]
 
   count = 0
   lab_samp = real_samples
@@ -426,8 +424,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   fake_sample = pd.DataFrame(columns=['Code',
           'lat',
           'long',
-          element,
-          'fraud'])
+          'fraud'] + elements)
 
   # Max number of times to attempt to generate random coordinates.
   max_random_sample_attempts = 1000
@@ -436,20 +433,19 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1 :
       continue
-    count += 1
     lat, lon, attempts = 0, 0, 0
-    while((not _is_valid_point(lat, lon, mean_iso) or
+    while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
           _is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
           attempts < max_random_sample_attempts):
       lat, lon = _random_nearby_point(coord[0], coord[1], max_fraud_radius)
-      if lab_samp.size < 5:
-        pass
-      else:
-      #generating 5 samples per code
-        for i in range(5):
-          new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
-          fake_sample.loc[len(fake_sample)] = new_row
       attempts += 1
+    if attempts == max_random_sample_attempts:
+      continue
+    for i in range(lab_samp.shape[0]):
+        new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,'fraud': True }
+        for element in elements:
+          new_row[element] = lab_samp[element].iloc[i]
+        fake_sample.loc[len(fake_sample)] = new_row
+    count += 1
 
   return fake_sample
-
