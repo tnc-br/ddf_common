@@ -158,7 +158,6 @@ def fraud_metrics(sample_data: pd.DataFrame,
     
     idx = np.unique(y_pred).index(p_value_target)
     accuracy = predictions[
-      predictions['fraud'] == predictions['predicted_fraud']].shape[0] /
-        predictions.shape[0]
+      predictions['fraud'] == predictions['predicted_fraud']].shape[0] / predictions.shape[0]
 
     return FraudMetrics(isotope_column_names, accuracy, precision[idx], recall[idx])
