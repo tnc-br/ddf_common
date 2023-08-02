@@ -164,13 +164,13 @@ def fraud_metrics(sample_data: pd.DataFrame,
 
       p_values = []
       for i, isotope_column_name in enumerate(isotope_column_names):
-        hypothesis_test = sample_ttest(group_key[1],
-                                       group_key[2],
-                                       isotope_values[isotope_column_name],
-                                       means_isoscapes[i],
-                                       variances_isoscapes[i],
-                                       sample_size_per_location,
-                                       p_value_target)
+        hypothesis_test = sample_ttest(longitude=group_key[1],
+                                       latitude=group_key[2],
+                                       isotope_values=isotope_values[isotope_column_name],
+                                       means_isoscape=means_isoscapes[i],
+                                       variances_isoscape=variances_isoscapes[i],
+                                       sample_size_per_location=sample_size_per_location,
+                                       p_value_target=p_value_target)
         p_values.append(hypothesis_test.p_value)
       combined_p_value = np.array(p_values).prod()
       if np.isnan(combined_p_value):
