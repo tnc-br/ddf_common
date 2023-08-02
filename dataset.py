@@ -403,7 +403,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
   - real_samples_data: dataset containing real samples
-  - element: element that will be used in the ttest: Oxygen (e.g: d18O_cel), Carbon or Nitrogen.
+  - elements: elements that will be used in the ttest: Oxygen (e.g: d18O_cel) and/or Carbon and/or Nitrogen.
   - mean_iso: isoscape averages
   - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
