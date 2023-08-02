@@ -83,8 +83,8 @@ def get_predictions(sample_data: pd.DataFrame,
                     variances_isoscapes: list[raster.AmazonGeoTiff],
                     sample_size_per_location: int):
   '''
-  Calculates the accuracy, precision, recall based on true positives and negatives,
-  and the false positive and negatives. (go/ddf-glossary)
+  Calculates the p values of a hypothesis test for the elements specified by
+  isotope_column_names using values from means_isoscapes and variances_isoscapes.
 
   sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
@@ -92,7 +92,6 @@ def get_predictions(sample_data: pd.DataFrame,
                       isotope valuesat that location.
   sample_size_per_location: Number of samples per geographic location used to calculate
                             mean and variance in isoscapes.
-  p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
   '''
   sample_data = sample_data.groupby([
       _TREE_CODE_COLUMN_NAME,
