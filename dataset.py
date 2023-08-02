@@ -411,8 +411,6 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
-
-  real_samples_data.dropna(subset=[element], how='all', inplace=True)
   real_samples = real_samples_data.groupby(['lat','long'])[element]
   real_samples_code = real_samples_data.groupby(['lat','long','Code'])[element]
 
@@ -436,20 +434,17 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1 :
       continue
-    count += 1
     lat, lon, attempts = 0, 0, 0
     while((not _is_valid_point(lat, lon, mean_iso) or
           _is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
           attempts < max_random_sample_attempts):
       lat, lon = _random_nearby_point(coord[0], coord[1], max_fraud_radius)
-      if lab_samp.size < 5:
-        pass
-      else:
-      #generating 5 samples per code
-        for i in range(5):
-          new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
-          fake_sample.loc[len(fake_sample)] = new_row
       attempts += 1
+    if attempts == max_random_sample_attempts:
+      continue
+    for i in range(lab_samp.size):
+        new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
+        fake_sample.loc[len(fake_sample)] = new_row
+    count += 1
 
   return fake_sample
-
