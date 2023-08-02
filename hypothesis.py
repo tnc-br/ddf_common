@@ -99,7 +99,11 @@ def get_predictions(sample_data: pd.DataFrame,
       _LONGITUDE_COLUMN_NAME,
       _LATITUDE_COLUMN_NAME,
       _FRAUDULENT_COLUMN_NAME])[isotope_column_names]
-  predictions = pd.DataFrame()
+  predictions = pd.DataFrame({"Code": [],
+                              "long": [],
+                              "lat": [],
+                              "fraud": [],
+                              "predicted_fraud": []})
 
   for group_key, isotope_values in sample_data:
     if isotope_values.shape[0] <= 1:
@@ -120,10 +124,10 @@ def get_predictions(sample_data: pd.DataFrame,
       continue
 
     row = {"Code": [group_key[0]],
-            "lat": [group_key[1]],
-            "long": [group_key[2]],
-            "fraud": [group_key[3]],
-            "predicted_fraud": [combined_p_value]}
+           "long": [group_key[1]],
+           "lat": [group_key[2]],
+           "fraud": [group_key[3]],
+           "predicted_fraud": [combined_p_value]}
     predictions = pd.concat([predictions, pd.DataFrame(row)], ignore_index=True)
 
   return predictions
@@ -153,11 +157,32 @@ def fraud_metrics(sample_data: pd.DataFrame,
                   sample_size_per_location)
     y_true = predictions['fraud']
     y_pred = predictions['predicted_fraud']
-    precision, recall, thresholds = precision_recall_curve(
-      y_true, y_pred)
     
-    idx = np.where(thresholds == p_value_target)
-    accuracy = predictions[
-      predictions['fraud'] == predictions['predicted_fraud']].shape[0] / predictions.shape[0]
+    true_positives = (
+      predictions[(predictions['fraud'] == True) &
+                  (predictions['predicted_fraud'] < p_value_target)].shape[0])
+    true_negatives = (
+      predictions[(predictions['fraud'] == False) &
+                  (predictions['predicted_fraud'] >= p_value_target)].shape[0])
+    false_positives = (
+      predictions[(predictions['fraud'] == False) &
+                  (predictions['predicted_fraud'] < p_value_target)].shape[0])
+    false_negatives = (
+      predictions[(predictions['fraud'] == True) &
+                  (predictions['predicted_fraud'] >= p_value_target)].shape[0])
+    
+    rows = predictions.shape[0]
+    if rows == 0:
+      return FraudMetrics(isotope_column_names, 0, 0, 0)
+      
+    accuracy = (true_negatives + true_positives)/rows
 
-    return FraudMetrics(isotope_column_names, accuracy, precision[idx], recall[idx])
+    precision = 0
+    if (true_positives + false_positives) > 0:
+      precision = true_positives / (true_positives + false_positives)
+
+    recall = 0
+    if (false_negatives + true_positives) > 0:
+      recall = true_positives / (false_negatives + true_positives)
+
+    return FraudMetrics(isotope_column_names, accuracy, precision, recall)
