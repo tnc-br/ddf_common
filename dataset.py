@@ -398,7 +398,7 @@ def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: flo
   return False
 
 #This function creates a dataset based on real samples adding a Fraud column
-def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.AmazonGeoTiff,element: str,max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
+def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.AmazonGeoTiff,elements: list[str],max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
@@ -411,8 +411,8 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
-  real_samples = real_samples_data.groupby(['lat','long'])[element]
-  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[element]
+  real_samples = real_samples_data.groupby(['lat','long'])[elements]
+  real_samples_code = real_samples_data.groupby(['lat','long','Code'])[elements]
 
   count = 0
   lab_samp = real_samples
@@ -424,8 +424,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
   fake_sample = pd.DataFrame(columns=['Code',
           'lat',
           'long',
-          element,
-          'fraud'])
+          'fraud'] + elements)
 
   # Max number of times to attempt to generate random coordinates.
   max_random_sample_attempts = 1000
@@ -442,8 +441,10 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_iso: raster.
       attempts += 1
     if attempts == max_random_sample_attempts:
       continue
-    for i in range(lab_samp.size):
-        new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,element: lab_samp.iloc[i],'fraud': True }
+    for i in range(lab_samp.shape[0]):
+        new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,'fraud': True }
+        for element in elements:
+          new_row[element] = lab_samp[element].iloc[i]
         fake_sample.loc[len(fake_sample)] = new_row
     count += 1
 
