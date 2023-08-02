@@ -190,7 +190,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
       rows += 1
 
     if rows == 0:
-      return (0, 0, 0)
+      return FraudMetrics(isotope_column_names, 0, 0, 0)
 
     accuracy = (true_negative + true_positive)/rows
 
