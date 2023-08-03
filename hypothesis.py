@@ -9,8 +9,8 @@ import numpy as np
 _TREE_CODE_COLUMN_NAME = 'Code'
 _LONGITUDE_COLUMN_NAME = 'long'
 _LATITUDE_COLUMN_NAME = 'lat'
-_FRAUDULENT_COLUMN_NAME = 'fraud'
-
+_FRAUD_LABEL_COLUMN_NAME = 'fraud'
+_FRAUD_P_VALUE_COLUMN_NAME = 'fraud_p_value'
 
 @dataclass
 class HypothesisTest:
@@ -98,12 +98,12 @@ def get_predictions(sample_data: pd.DataFrame,
       _TREE_CODE_COLUMN_NAME,
       _LONGITUDE_COLUMN_NAME,
       _LATITUDE_COLUMN_NAME,
-      _FRAUDULENT_COLUMN_NAME])[isotope_column_names]
-  predictions = pd.DataFrame({"Code": [],
-                              "long": [],
-                              "lat": [],
-                              "fraud": [],
-                              "predicted_fraud": []})
+      _FRAUD_LABEL_COLUMN_NAME])[isotope_column_names]
+  predictions = pd.DataFrame({_TREE_CODE_COLUMN_NAME: [],
+                              _LONGITUDE_COLUMN_NAME: [],
+                              _LATITUDE_COLUMN_NAME: [],
+                              _FRAUD_LABEL_COLUMN_NAME: [],
+                              _FRAUD_P_VALUE_COLUMN_NAME: []})
 
   for group_key, isotope_values in sample_data:
     if isotope_values.shape[0] <= 1:
@@ -155,25 +155,27 @@ def fraud_metrics(sample_data: pd.DataFrame,
                   means_isoscapes,
                   variances_isoscapes,
                   sample_size_per_location)
-    y_true = predictions['fraud']
-    y_pred = predictions['predicted_fraud']
     
+    # A low p-value in our t-test indicates that two distributions (the ground truth and sample being tested)
+    # are dissimilar, which should cause a positive (fraud) result."
+    # https://screenshot.googleplex.com/8gphW7cydwLeBEB
     true_positives = (
-      predictions[(predictions['fraud'] == True) &
-                  (predictions['predicted_fraud'] < p_value_target)].shape[0])
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &&
+                  (predictions[_FRAUD_P_VALUE_COLUMN_NAME] < p_value_target)].shape[0])
     true_negatives = (
-      predictions[(predictions['fraud'] == False) &
-                  (predictions['predicted_fraud'] >= p_value_target)].shape[0])
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &&
+                  (predictions[_FRAUD_P_VALUE_COLUMN_NAME] >= p_value_target)].shape[0])
     false_positives = (
-      predictions[(predictions['fraud'] == False) &
-                  (predictions['predicted_fraud'] < p_value_target)].shape[0])
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &&
+                  (predictions[_FRAUD_P_VALUE_COLUMN_NAME] < p_value_target)].shape[0])
     false_negatives = (
-      predictions[(predictions['fraud'] == True) &
-                  (predictions['predicted_fraud'] >= p_value_target)].shape[0])
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &&
+                  (predictions[_FRAUD_P_VALUE_COLUMN_NAME] >= p_value_target)].shape[0])
     
     rows = predictions.shape[0]
     if rows == 0:
-      return FraudMetrics(isotope_column_names, 0, 0, 0)
+      return FraudMetrics(isotope_column_names=isotope_column_names,
+                          accuracy=0, precision=0, recall=0)
       
     accuracy = (true_negatives + true_positives)/rows
 
@@ -185,4 +187,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
     if (false_negatives + true_positives) > 0:
       recall = true_positives / (false_negatives + true_positives)
 
-    return FraudMetrics(isotope_column_names, accuracy, precision, recall)
+    return FraudMetrics(isotope_column_names=isotope_column_names,
+                        accurayc=accuracy,
+                        precision=precision,
+                        recall=recall)
