@@ -123,11 +123,11 @@ def get_predictions(sample_data: pd.DataFrame,
     if np.isnan(combined_p_value):
       continue
 
-    row = {"Code": [group_key[0]],
-           "long": [group_key[1]],
-           "lat": [group_key[2]],
-           "fraud": [group_key[3]],
-           "predicted_fraud": [combined_p_value]}
+    row = {_TREE_CODE_COLUMN_NAME: [group_key[0]],
+           _LONGITUDE_COLUMN_NAME: [group_key[1]],
+           _LATITUDE_COLUMN_NAME: [group_key[2]],
+           _FRAUD_LABEL_COLUMN_NAME: [group_key[3]],
+           _FRAUD_P_VALUE_COLUMN_NAME: [combined_p_value]}
     predictions = pd.concat([predictions, pd.DataFrame(row)], ignore_index=True)
 
   return predictions
