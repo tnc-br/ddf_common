@@ -160,16 +160,16 @@ def fraud_metrics(sample_data: pd.DataFrame,
     # are dissimilar, which should cause a positive (fraud) result."
     # https://screenshot.googleplex.com/8gphW7cydwLeBEB
     true_positives = (
-      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &&
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &
                   (predictions[_FRAUD_P_VALUE_COLUMN_NAME] < p_value_target)].shape[0])
     true_negatives = (
-      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &&
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &
                   (predictions[_FRAUD_P_VALUE_COLUMN_NAME] >= p_value_target)].shape[0])
     false_positives = (
-      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &&
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == False) &
                   (predictions[_FRAUD_P_VALUE_COLUMN_NAME] < p_value_target)].shape[0])
     false_negatives = (
-      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &&
+      predictions[(predictions[_FRAUD_LABEL_COLUMN_NAME] == True) &
                   (predictions[_FRAUD_P_VALUE_COLUMN_NAME] >= p_value_target)].shape[0])
     
     rows = predictions.shape[0]
