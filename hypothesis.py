@@ -188,6 +188,6 @@ def fraud_metrics(sample_data: pd.DataFrame,
       recall = true_positives / (false_negatives + true_positives)
 
     return FraudMetrics(isotope_column_names=isotope_column_names,
-                        accurayc=accuracy,
+                        accuracy=accuracy,
                         precision=precision,
                         recall=recall)
