@@ -446,7 +446,7 @@ def generate_isoscapes_from_variational_model(
     required_geotiffs: List[str],
     max_res: bool):
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
-  all_bounds = [raster.get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
+  all_bounds = [get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
 
   # Set output_resolution to match that of the highest-resolution geotiff is max_res == true, else the smallest 
   output_resolution = sorted(
@@ -454,12 +454,8 @@ def generate_isoscapes_from_variational_model(
     key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0] 
 
   means_np, vars_np = get_predictions_at_each_pixel(
-    model, feature_transformer, input_geotiffs, bounds)
-  raster.save_numpy_to_geotiff(
-      bounds,
-      means_np,
-      raster.get_raster_path(output_geotiff_id+"_means.tiff"))
-  raster.save_numpy_to_geotiff(
-      bounds,
-      vars_np,
-      raster.get_raster_path(output_geotiff_id+"_vars.tiff"))
+    model, feature_transformer, input_geotiffs, output_resolution)
+  save_numpy_to_geotiff(
+      output_resolution, means_np, get_raster_path(output_geotiff_id+"_means.tiff"))
+  save_numpy_to_geotiff(
+      output_resolution, vars_np, get_raster_path(output_geotiff_id+"_vars.tiff"))
