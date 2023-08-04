@@ -390,17 +390,17 @@ def pa_geotiff() -> AmazonGeoTiff:
 
 krig_means_isoscape_geotiff_ = None
 def krig_means_isoscape_geotiff() -> AmazonGeoTiff:
-  global krig_means_geotiff_
-  if not krig_means_geotiff_:
-    krig_means_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_means.tiff"), "ordinary_krig_means")
-  return krig_means_geotiff_
+  global krig_means_isoscape_geotiff_
+  if not krig_means_isoscape_geotiff_:
+    krig_means_isoscape_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_means.tiff"), "ordinary_krig_means")
+  return krig_means_isoscape_geotiff_
 
 krig_variances_isoscape_geotiff_ = None
 def krig_variances_isoscape_geotiff() -> AmazonGeoTiff:
-  global krig_variances_geotiff_
-  if not krig_variances_geotiff_:
-    krig_variances_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_vars.tiff"), "ordinary_krig_vars")
-  return krig_variances_geotiff_  
+  global krig_variances_isoscape_geotiff_
+  if not krig_variances_isoscape_geotiff_:
+    krig_variances_isoscape_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_vars.tiff"), "ordinary_krig_vars")
+  return krig_variances_isoscape_geotiff_  
 
 precipitation_regression_isoscape_geotiff_ = None
 def precipitation_regression_isoscape_geotiff() -> AmazonGeoTiff:
@@ -434,9 +434,9 @@ column_name_to_geotiff_fn = {
   "Mean Annual Precipitation": brazil_map_geotiff,
   "Iso_Oxi_Stack_mean_TERZER": craig_gordon_isoscape_geotiff,
   "isoscape_fullmodel_d18O_prec_REGRESSION": precipitation_regression_isoscape_geotiff,
-  "ordinary_kriging_linear_d18O_predicted_mean" : krig_means_geotiff,
   "brisoscape_mean_ISORIX": brisoscape_geotiff,
-  "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_geotiff
+  "ordinary_kriging_linear_d18O_predicted_mean" : krig_means_isoscape_geotiff,
+  "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
 }
 
 def generate_isoscapes_from_variational_model(
