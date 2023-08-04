@@ -378,14 +378,14 @@ dem_geotiff_ = None
 def dem_geotiff() -> AmazonGeoTiff:
   global dem_geotiff_
   if not dem_geotiff_:
-    dem_geotiff_ = load_named_raster(get_raster_path("dem_pa_Stack_mean.tiff"), "dem",  use_only_band_index=0)
+    dem_geotiff_ = load_named_raster(get_raster_path("dem_pa_brasil_raster.tiff"), "dem",  use_only_band_index=0)
   return dem_geotiff_
 
 pa_geotiff_ = None
 def pa_geotiff() -> AmazonGeoTiff:
   global pa_geotiff_
   if not pa_geotiff_:
-    pa_geotiff_ = load_named_raster(get_raster_path("dem_pa_Stack_mean.tiff"), "pa",  use_only_band_index=1)
+    pa_geotiff_ = load_named_raster(get_raster_path("dem_pa_brasil_raster.tiff"), "pa",  use_only_band_index=1)
   return pa_geotiff_
 
 krig_means_isoscape_geotiff_ = None
