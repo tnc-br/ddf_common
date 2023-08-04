@@ -443,9 +443,9 @@ def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
     model: tf.keras.Model,
     feature_transformer: ColumnTransformer,
-    trained_columns: List[str],
+    required_geotiffs: List[str],
     max_res: bool):
-  input_geotiffs = {column_name: column_name_to_geotiff_fn[column]() for column_name in trained_columns}
+  input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
   all_bounds = [raster.get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
 
   # Set output_resolution to match that of the highest-resolution geotiff is max_res == true, else the smallest 
