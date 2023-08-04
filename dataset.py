@@ -398,7 +398,7 @@ def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: flo
   return False
 
 #This function creates a dataset based on real samples adding a Fraud column
-def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str],max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
+def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str],max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float, simulated_fraud_percent:float) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
@@ -408,6 +408,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
   - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
   - min_fraud_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  - simulated_fraud_percent: desired percentage of fake data. It is a float number from 0 up to 1 (100%)
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
@@ -416,6 +417,8 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
 
   count = 0
   lab_samp = real_samples
+
+  fake_amount = round(simulated_fraud_percent*real_samples_code.ngroups)
 
   if max_fraud_radius <= min_fraud_radius:
     raise ValueError("max_fraud_radius {} <= min_fraud_radius {}".format(
@@ -431,7 +434,9 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
   count = 0
 
   for coord, lab_samp in real_samples_code:
-    if lab_samp.size <= 1 :
+    if count >= fake_amount:
+      break
+    if lab_samp.size <= 1:
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
@@ -447,5 +452,4 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
           new_row[element] = lab_samp[element].iloc[i]
         fake_sample.loc[len(fake_sample)] = new_row
     count += 1
-
   return fake_sample
