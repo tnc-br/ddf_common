@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 from osgeo import gdal, gdal_array
 import numpy as np
+import tensorflow as tf
 from typing import List
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import pandas as pd
 import math
 import glob
 import os
 import matplotlib.animation as animation
+from sklearn.compose import ColumnTransformer
 
 
 GDRIVE_BASE = "/content/gdrive"
@@ -263,6 +267,61 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
   else:
     return value
 
+def get_predictions_at_each_pixel(
+    model: tf.keras.Model,
+    feature_transformer: ColumnTransformer,
+    geotiffs: dict[str, AmazonGeoTiff],
+    bounds: Bounds):
+
+  # Initialize a blank plane representing means and variance.
+  predicted_means_np = np.ma.array(
+      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=float),
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
+  predicted_vars_np = np.ma.array(
+      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=float),
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
+
+  for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
+    rows = []
+    row_indexes = []
+    for y_idx, y in enumerate(np.arange(bounds.miny, bounds.maxy, -bounds.pixel_size_y, dtype=float)):
+      # Row should contain all the features needed to predict, in the same
+      # column order the model was trained.
+      row = {}
+      row["lat"] = y
+      row["long"] = x
+
+      # Surround in try/except as we will be trying to fetch out of bounds data.
+      try:
+        for geotiff_label, geotiff in geotiffs.items():
+          row[geotiff_label] = geotiff.value_at(x, y)
+          if pd.isnull(row[geotiff_label]):
+            raise ValueError
+      except (ValueError, IndexError):
+        continue # masked and out-of-bounds coordinates
+
+      rows.append(row)
+      row_indexes.append((y_idx,0,))
+
+    if (len(rows) > 0):
+      X = pd.DataFrame.from_dict(rows)
+      if (X.isnull().values.any()):
+        print(X.isnull().sum())
+      X_scaled = pd.DataFrame(feature_transformer.transform(X),
+                              index=X.index, columns=X.columns)
+      predictions = model.predict_on_batch(X_scaled)
+
+      means_np = predictions[:, 0]
+      for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
+        predicted_means_np.mask[x_idx,y_idx,month_idx] = False # unmask since we have data
+        predicted_means_np.data[x_idx,y_idx,month_idx] = prediction
+      vars_np = predictions[:, 1]
+      for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
+        predicted_vars_np.mask[x_idx, y_idx, month_idx] = False
+        predicted_vars_np.data[x_idx, y_idx, month_idx] = prediction
+
+  return predicted_means_np, predicted_vars_np
+
 def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff):
   return True if get_data_at_coords(reference_isocape, lon, lat, 0) else False
 
@@ -308,5 +367,99 @@ def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
     cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
   return cellulose_isoscape_geotiff_
 
+pet_geotiff_ = None
+def pet_geotiff() -> AmazonGeoTiff:
+  global pet_geotiff_
+  if not pet_geotiff_:
+    pet_geotiff_ = load_named_raster(get_raster_path("pet_Stack_mean.tiff"), "pet")
+  return pet_geotiff_
 
+dem_geotiff_ = None
+def dem_isoscape_geotiff() -> AmazonGeoTiff:
+  global dem_geotiff_
+  if not dem_geotiff_:
+    dem_geotiff_ = load_named_raster(get_raster_path("dem_pa_Stack_mean.tiff"), "dem",  use_only_band_index=0)
+  return dem_geotiff_
 
+pa_geotiff_ = None
+def pa_isoscape_geotiff() -> AmazonGeoTiff:
+  global pa_geotiff_
+  if not pa_geotiff_:
+    pa_geotiff_ = load_named_raster(get_raster_path("dem_pa_Stack_mean.tiff"), "pa",  use_only_band_index=1)
+  return pa_geotiff_
+
+krig_means_isoscape_geotiff_ = None
+def krig_means_isoscape_geotiff() -> AmazonGeoTiff:
+  global krig_means_geotiff_
+  if not krig_means_geotiff_:
+    krig_means_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_means.tiff"), "ordinary_krig_means")
+  return krig_means_geotiff_
+
+krig_variances_isoscape_geotiff_ = None
+def krig_variances_isoscape_geotiff() -> AmazonGeoTiff:
+  global krig_variances_geotiff_
+  if not krig_variances_geotiff_:
+    krig_variances_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_vars.tiff"), "ordinary_krig_vars")
+  return krig_variances_geotiff_  
+
+precipitation_regression_isoscape_geotiff_ = None
+def precipitation_regression_isoscape_geotiff() -> AmazonGeoTiff:
+  global precipitation_regression_isoscape_geotiff_
+  if not precipitation_regression_isoscape_geotiff_:
+    precipitation_regression_isoscape_geotiff_ = load_named_raster(get_raster_path("isoscape_fullmodel_d18O_prec_REGRESSION.tiff"), "precipitation_regression_isoscape_geotiff")
+  return precipitation_regression_isoscape_geotiff_
+
+craig_gordon_isoscape_geotiff_ = None
+def craig_gordon_isoscape_geotiff() -> AmazonGeoTiff:
+  global craig_gordon_isoscape_geotiff_
+  if not craig_gordon_isoscape_geotiff_:
+    craig_gordon_isoscape_geotiff_ = load_named_raster(get_raster_path("Iso_Oxi_Stack_mean_TERZER.tif"), "craig_gordon_isoscape_geotiff")
+  return craig_gordon_isoscape_geotiff_
+
+brisoscape_geotiff_ = None
+def brisoscape_geotiff() -> AmazonGeoTiff:
+  global brisoscape_geotiff_
+  if not brisoscape_geotiff_:
+    brisoscape_geotiff_ = load_named_raster(get_raster_path("brisoscape_mean_ISORIX.tif"), "brisoscape_geotiff")
+  return brisoscape_geotiff_
+
+# A collection of column names to functions that load the corresponding geotiffs.
+column_name_to_geotiff_fn = {
+  "VPD" : vapor_pressure_deficit_geotiff,
+  "RH": relative_humidity_geotiff,
+  "PET": pet_geotiff,
+  "DEM": dem_geotiff,
+  "PA": pa_geotiff,
+  "Mean Annual Temperature": temperature_geotiff,
+  "Mean Annual Precipitation": brazil_map_geotiff,
+  "Iso_Oxi_Stack_mean_TERZER": craig_gordon_isoscape_geotiff,
+  "isoscape_fullmodel_d18O_prec_REGRESSION": precipitation_regression_isoscape_geotiff,
+  "ordinary_kriging_linear_d18O_predicted_mean" : krig_means_geotiff,
+  "brisoscape_mean_ISORIX": brisoscape_geotiff,
+  "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_geotiff
+}
+
+def generate_isoscapes_from_variational_model(
+    output_geotiff_id: str,
+    model: tf.keras.Model,
+    feature_transformer: ColumnTransformer,
+    trained_columns: List[str],
+    max_res: bool):
+  input_geotiffs = {column_name: column_name_to_geotiff_fn[column]() for column_name in trained_columns}
+  all_bounds = [raster.get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
+
+  # Set output_resolution to match that of the highest-resolution geotiff is max_res == true, else the smallest 
+  output_resolution = sorted(
+    all_bounds,
+    key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0] 
+
+  means_np, vars_np = get_predictions_at_each_pixel(
+    model, feature_transformer, input_geotiffs, bounds)
+  raster.save_numpy_to_geotiff(
+      bounds,
+      means_np,
+      raster.get_raster_path(output_geotiff_id+"_means.tiff"))
+  raster.save_numpy_to_geotiff(
+      bounds,
+      vars_np,
+      raster.get_raster_path(output_geotiff_id+"_vars.tiff"))
