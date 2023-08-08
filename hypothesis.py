@@ -6,6 +6,8 @@ import math
 import pandas as pd
 import numpy as np
 
+import scipy
+
 _TREE_CODE_COLUMN_NAME = 'Code'
 _LONGITUDE_COLUMN_NAME = 'long'
 _LATITUDE_COLUMN_NAME = 'lat'
@@ -119,7 +121,7 @@ def get_predictions(sample_data: pd.DataFrame,
                                      sample_size_per_location=sample_size_per_location,
                                      p_value_target=None)
       p_values.append(hypothesis_test.p_value)
-    combined_p_value = np.array(p_values).prod()
+    combined_p_value = scipy.stats.combine_pvalues(p_values, method='pearson').pvalue
     if np.isnan(combined_p_value):
       continue
 
