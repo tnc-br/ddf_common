@@ -454,7 +454,7 @@ def generate_isoscapes_from_variational_model(
     key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0]
 
   if (not max_res):
-    output_resolution = get_extent(input_geotiffs["Mean Annual Temperature"].gdal_dataset) 
+    output_resolution = get_extent(input_geotiffs["VPD"].gdal_dataset) 
 
   means_np, vars_np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
