@@ -99,8 +99,7 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
                             mean and variance in isoscapes.
   '''
   predictions = sample_data
-  predictions[_FRAUD_P_VALUE_COLUMN_NAME] =
-    sample_data.apply(lambda row: sample_ttest(
+  predictions[_FRAUD_P_VALUE_COLUMN_NAME] = predictions.apply(lambda row: sample_ttest(
       longitude=row[_LONGITUDE_COLUMN_NAME],
       latitude=row[_LATITUDE_COLUMN_NAME],
       isotope_values=row[isotope_column_names],
