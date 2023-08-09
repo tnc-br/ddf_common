@@ -3,14 +3,6 @@ import raster
 import pandas as pd
 import dataset
 
-def get_data_rmse(
-  isoscape: raster.AmazonGeoTiff,
-  row: pd.DataFrame):
-  try:
-    return raster.get_data_at_coords(isoscape, row['long'],row['lat'],-1)
-  except ValueError:
-    return None
-
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
   '''
   Calculates the mean, variance and overall (mean and variance) RMSE of df using
@@ -22,10 +14,15 @@ def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_n
       len([mean_true_name, var_true_name, mean_pred_name, var_pred_name, 'truth', 'prediction']) ==
       len(set([mean_true_name, var_true_name, mean_pred_name, var_pred_name, 'truth', 'prediction'])))
 
-  df[mean_pred_name] = df.apply(lambda row: get_data_rmse(means_isoscape, row), axis=1)
-  df[var_pred_name] = df.apply(lambda row: get_data_rmse(vars_isoscape, row), axis=1)
+  df[mean_pred_name] = df.apply(
+    lambda row: raster.get_data_ignoring_errors(
+      means_isoscape, row['lon'], row['lat']), axis=1)
+  df[var_pred_name] = df.apply(
+    lambda row: raster.get_data_ignoring_errors(
+      vars_isoscape, row['lon'], row['lat']), axis=1)
 
   df = df.dropna(subset=[mean_pred_name, var_pred_name, mean_true_name, var_true_name])
+  print(df.shape)
 
   predictions = list(df.apply(lambda row: [row[mean_pred_name], row[var_pred_name]], axis=1).values)
   truths = list(df.apply(lambda row: [row[mean_true_name], row[var_true_name]], axis=1).values)

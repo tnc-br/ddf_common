@@ -7,7 +7,7 @@ import math
 import glob
 import os
 import matplotlib.animation as animation
-
+import pandas as pd
 
 GDRIVE_BASE = "/content/gdrive"
 RASTER_BASE = "/MyDrive/amazon_rainforest_files/amazon_rasters/" #@param
@@ -312,5 +312,11 @@ def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
     cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
   return cellulose_isoscape_geotiff_
 
-
-
+def get_data_ignoring_errors(
+  isoscape: AmazonGeoTiff,
+  longitude: float,
+  latitude: float):
+  try:
+    return get_data_at_coords(isoscape, longitude, latitude, -1)
+  except ValueError:
+    return None

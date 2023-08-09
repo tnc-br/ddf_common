@@ -60,10 +60,15 @@ def sample_ttest(longitude: float,
       variances_isoscape = variances_isoscapes[i]
 
       # Values from prediction.
-      predicted_isotope_mean = raster.get_data_at_coords(
-          means_isoscape, longitude, latitude, 0)
-      predicted_isotope_variance = raster.get_data_at_coords(
-          variances_isoscape, longitude, latitude, 0)
+      predicted_isotope_mean = raster.get_data_ignoring_errors(
+          means_isoscape, longitude, latitude)
+      predicted_isotope_variance = raster.get_data_ignoring_errors(
+          variances_isoscape, longitude, latitude)
+      
+      if (predicted_isotope_mean is None or
+        predicted_isotope_variance is None):
+        return HypothesisTest(
+          longitude, latitude, None, p_value_target)
 
       # t-student Test
       _, p_value = scipy.stats.ttest_ind_from_stats(
@@ -82,7 +87,8 @@ def sample_ttest(longitude: float,
     return HypothesisTest(longitude, latitude, combined_p_value, p_value_target)
 
 def get_predictions_grouped(sample_data: pd.DataFrame,
-                    isotope_column_names: list[str],
+                    isotope_means_column_names: list[str],
+                    isotope_variances_column_names: list[str],
                     means_isoscapes: list[raster.AmazonGeoTiff],
                     variances_isoscapes: list[raster.AmazonGeoTiff],
                     sample_size_per_location: int):
@@ -102,13 +108,14 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
   predictions[_FRAUD_P_VALUE_COLUMN_NAME] = predictions.apply(lambda row: sample_ttest(
       longitude=row[_LONGITUDE_COLUMN_NAME],
       latitude=row[_LATITUDE_COLUMN_NAME],
-      isotope_values=row[isotope_column_names],
+      isotope_means=row[isotope_means_column_names],
+      isotope_variances=row[isotope_variances_column_names],
       means_isoscapes=means_isoscapes,
       variances_isoscapes=variances_isoscapes,
       isoscape_sample_size_per_location=sample_size_per_location,
-      data_sample_size_per_location=row[dataset.SAMPLE_COUNT_COLUMN_NAME],
+      data_sample_size=row[dataset.SAMPLE_COUNT_COLUMN_NAME],
       p_value_target=None
-    ))
+    ).p_value, axis=1)
 
   return predictions
 
