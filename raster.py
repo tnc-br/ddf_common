@@ -212,7 +212,7 @@ def animate(geotiff: AmazonGeoTiff, nSeconds, fps):
 
   return anim
 
-def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: str):
+def save_numpy_to_geotiff(bounds: Bounds, predictions: List[np.ma.MaskedArray], path: str):
   """Copy metadata from a base geotiff and write raster data + mask from `data`"""
   driver = gdal.GetDriverByName("GTiff")
   metadata = driver.GetMetadata()
@@ -221,7 +221,7 @@ def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: s
   if metadata.get(gdal.DCAP_CREATECOPY) != "YES":
       raise RuntimeError("GTiff driver does not support required method CreateCopy().")
 
-  dataset = driver.Create(path, bounds.raster_size_x, bounds.raster_size_y, prediction.shape[2], eType=gdal.GDT_Float64)
+  dataset = driver.Create(path, bounds.raster_size_x, bounds.raster_size_y, bands=len(predictions), eType=gdal.GDT_Float64)
   dataset.SetGeoTransform([bounds.minx, bounds.pixel_size_x, 0, bounds.maxy, 0, bounds.pixel_size_y])
   dataset.SetProjection('GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]')
 
@@ -231,9 +231,9 @@ def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: s
   #if prediction.shape[2] > base.gdal_dataset.RasterCount:
   #  raise ValueError(f"Expected fewer than {dataset.RasterCount} bands in prediction but found {prediction.shape[2]}")
 
-  prediction_transformed = np.flip(np.transpose(prediction, axes=[1,0,2]), axis=0)
-  for band_index in range(dataset.RasterCount):
-    band = dataset.GetRasterBand(band_index+1)
+  for prediction, i in enumerate(predictions):
+    prediction_transformed = np.flip(np.transpose(prediction, axes=[1,0,2]), axis=0)
+    band = dataset.GetRasterBand(i+1)
     if band.CreateMaskBand(0) == gdal.CE_Failure:
       raise RuntimeError("Failed to create mask band")
     mask_band = band.GetMaskBand()
