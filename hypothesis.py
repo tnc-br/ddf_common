@@ -39,7 +39,7 @@ def sample_ttest(longitude: float,
                  means_isoscapes: list[raster.AmazonGeoTiff],
                  variances_isoscapes: list[raster.AmazonGeoTiff],
                  isoscape_sample_size_per_location: int,
-                 data_sample_size_per_location: list[int],
+                 data_sample_size: int,
                  p_value_target: float) -> HypothesisTest:
     '''
     longitude: Of the sample
@@ -57,7 +57,6 @@ def sample_ttest(longitude: float,
       isotope_variance = isotope_variances[i]
       means_isoscape = means_isoscapes[i]
       variances_isoscape = variances_isoscapes[i]
-      sample_size = data_sample_size_per_location[i]
 
       # Values from prediction.
       predicted_isotope_mean = raster.get_data_at_coords(
@@ -72,7 +71,7 @@ def sample_ttest(longitude: float,
           nobs1=isoscape_sample_size_per_location,
           mean2=isotope_mean,
           std2=math.sqrt(isotope_variance),
-          nobs2=data_sample_size_per_location,
+          nobs2=data_sample_size,
           equal_var=False, alternative="two-sided"
       )
 
@@ -106,7 +105,7 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
       means_isoscapes=means_isoscapes,
       variances_isoscapes=variances_isoscapes,
       isoscape_sample_size_per_location=sample_size_per_location,
-      data_sample_size_per_location=df[dataset.SAMPLE_COUNT_COLUMN_NAME],
+      data_sample_size_per_location=row[dataset.SAMPLE_COUNT_COLUMN_NAME],
       p_value_target=None
     ))
 
