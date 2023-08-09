@@ -4,7 +4,7 @@ import pandas as pd
 import dataset
 
 def get_data_rmse(
-  raster: AmazonGeoTiff,
+  raster: raster.AmazonGeoTiff,
   row: pd.DataFrame):
   try:
     return raster.get_data_at_coords(means_isoscape, row['long'],row['lat'],-1)
