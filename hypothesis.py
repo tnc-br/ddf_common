@@ -138,7 +138,7 @@ def get_predictions(sample_data: pd.DataFrame,
   for col in aggregate_columns + isotope_column_names:
     feature_columns.remove(col)
 
-  sample_data = dataset.preprocess_sample_data(
+  sample_data = sample_dataset.preprocess_sample_data(
     df=sample_data,
     feature_columns=feature_columns,
     label_columns=isotope_column_names,
