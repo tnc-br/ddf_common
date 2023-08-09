@@ -134,7 +134,7 @@ def get_predictions(sample_data: pd.DataFrame,
       _LATITUDE_COLUMN_NAME,
       _FRAUD_LABEL_COLUMN_NAME]
 
-  feature_columns = sample_data.columns
+  feature_columns = sample_data.columns.values
   for col in aggregate_columns + isotope_column_names:
     feature_columns.remove(col)
 
