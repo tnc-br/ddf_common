@@ -172,7 +172,11 @@ def get_extent(dataset):
 def plot_band(geotiff: AmazonGeoTiff, month_index, figsize=None):
   if figsize:
     plt.figure(figsize=figsize)
-  im = plt.imshow(geotiff.masked_image[:,:,month_index], extent=get_extent(geotiff.gdal_dataset).to_matplotlib(), interpolation='none')
+  if month_index >= 0:
+    img = geotiff.masked_image[:,:,month_index]
+  else:
+    img = geotiff.masked_image
+  im = plt.imshow(img, extent=get_extent(geotiff.gdal_dataset).to_matplotlib(), interpolation='none')
   plt.colorbar(im)
 
 def animate(geotiff: AmazonGeoTiff, nSeconds, fps):
