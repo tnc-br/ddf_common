@@ -153,12 +153,12 @@ def get_predictions(sample_data: pd.DataFrame,
     sample_size_per_location=sample_size_per_location)
 
 def fraud_metrics(sample_data: pd.DataFrame,
-                  group_data: bool,
                   isotope_column_names: list[str],
                   means_isoscapes: list[raster.AmazonGeoTiff],
                   variances_isoscapes: list[raster.AmazonGeoTiff],
                   sample_size_per_location: int,
-                  p_value_target: float):
+                  p_value_target: float,
+                  group_data: bool = True):
     '''
     Calculates the accuracy, precision, recall based on true positives and negatives,
     and the false positive and negatives. (go/ddf-glossary)
