@@ -274,12 +274,9 @@ def get_predictions_at_each_pixel(
     bounds: Bounds):
 
   # Initialize a blank plane representing means and variance.
-  predicted_means_np = np.ma.array(
-      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=float),
-      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
-  predicted_vars_np = np.ma.array(
-      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=float),
-      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
+  predicted_np = np.ma.array(
+      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
   for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
     rows = []
@@ -313,14 +310,14 @@ def get_predictions_at_each_pixel(
 
       means_np = predictions[:, 0]
       for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
-        predicted_means_np.mask[x_idx,y_idx,month_idx] = False # unmask since we have data
-        predicted_means_np.data[x_idx,y_idx,month_idx] = prediction
+        predicted_np.mask[x_idx,y_idx,0] = False # unmask since we have data
+        predicted_np.data[x_idx,y_idx,0] = prediction
       vars_np = predictions[:, 1]
       for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
-        predicted_vars_np.mask[x_idx, y_idx, month_idx] = False
-        predicted_vars_np.data[x_idx, y_idx, month_idx] = prediction
+        predicted_np.mask[x_idx, y_idx, 1] = False
+        predicted_np.data[x_idx, y_idx, 1] = prediction
 
-  return predicted_means_np, predicted_vars_np
+  return predicted_np
 
 def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff):
   return True if get_data_at_coords(reference_isocape, lon, lat, 0) else False
@@ -456,9 +453,7 @@ def generate_isoscapes_from_variational_model(
   if (not max_res):
     output_resolution = get_extent(input_geotiffs["VPD"].gdal_dataset) 
 
-  means_np, vars_np = get_predictions_at_each_pixel(
+  np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
   save_numpy_to_geotiff(
-      output_resolution, means_np, get_raster_path(output_geotiff_id+"_means.tiff"))
-  save_numpy_to_geotiff(
-      output_resolution, vars_np, get_raster_path(output_geotiff_id+"_vars.tiff"))
+      output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
