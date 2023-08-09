@@ -34,10 +34,12 @@ class FraudMetrics:
 
 def sample_ttest(longitude: float,
                  latitude: float,
-                 isotope_values: list[float],
-                 means_isoscape: raster.AmazonGeoTiff,
-                 variances_isoscape: raster.AmazonGeoTiff,
-                 sample_size_per_location: int,
+                 isotope_means: list[float],
+                 isotope_variances: list[float],
+                 means_isoscapes: list[raster.AmazonGeoTiff],
+                 variances_isoscapes: list[raster.AmazonGeoTiff],
+                 isoscape_sample_size_per_location: int,
+                 data_sample_size_per_location: list[int],
                  p_value_target: float) -> HypothesisTest:
     '''
     longitude: Of the sample
@@ -46,37 +48,68 @@ def sample_ttest(longitude: float,
     means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
     variances_isoscape: Isoscape that maps geographic coordinates to the variance of
                         isotope valuesat that location.
-    sample_size_per_location: Number of samples per geographic location used to calculate
+    isoscape_sample_size_per_location: Number of samples per geographic location used to calculate
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
-    if len(isotope_values) <= 1:
-        raise ValueError  # Isotope values needs to be more than 1.
+    p_values = []
+    for i, isotope_mean in enumerate(isotope_means):
+      isotope_variance = isotope_variances[i]
+      means_isoscape = means_isoscapes[i]
+      variances_isoscape = variances_isoscapes[i]
+      sample_size = data_sample_size_per_location[i]
 
-    isotope_mean = np.mean(isotope_values)
-    isotope_variance = np.var(isotope_values)*(len(isotope_values) /
-                                               (len(isotope_values) - 1))
-    isotope_sample_count = len(isotope_values)
+      # Values from prediction.
+      predicted_isotope_mean = raster.get_data_at_coords(
+          means_isoscape, longitude, latitude, 0)
+      predicted_isotope_variance = raster.get_data_at_coords(
+          variances_isoscape, longitude, latitude, 0)
 
-    # Values from prediction.
-    predicted_isotope_mean = raster.get_data_at_coords(
-        means_isoscape, longitude, latitude, 0)
-    predicted_isotope_variance = raster.get_data_at_coords(
-        variances_isoscape, longitude, latitude, 0)
-    predicted_isotope_sample_count = sample_size_per_location
+      # t-student Test
+      _, p_value = scipy.stats.ttest_ind_from_stats(
+          mean1=predicted_isotope_mean,
+          std1=math.sqrt(predicted_isotope_variance),
+          nobs1=isoscape_sample_size_per_location,
+          mean2=isotope_mean,
+          std2=math.sqrt(isotope_variance),
+          nobs2=data_sample_size_per_location,
+          equal_var=False, alternative="two-sided"
+      )
 
-    # t-student Test
-    _, p_value = scipy.stats.ttest_ind_from_stats(
-        mean1=predicted_isotope_mean,
-        std1=math.sqrt(predicted_isotope_variance),
-        nobs1=predicted_isotope_sample_count,
-        mean2=isotope_mean,
-        std2=math.sqrt(isotope_variance),
-        nobs2=isotope_sample_count,
-        equal_var=False, alternative="two-sided"
-    )
+      p_values.append(p_value)    
 
     return HypothesisTest(longitude, latitude, p_value, p_value_target)
+
+def get_predictions_grouped(sample_data: pd.DataFrame,
+                    isotope_column_names: list[str],
+                    means_isoscapes: list[raster.AmazonGeoTiff],
+                    variances_isoscapes: list[raster.AmazonGeoTiff],
+                    sample_size_per_location: int):
+  '''
+  Calculates the p values of a hypothesis test for the elements specified by
+  isotope_column_names using values from means_isoscapes and variances_isoscapes.
+
+  sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
+  means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
+  variances_isoscape: Isoscape that maps geographic coordinates to the variance of
+                      isotope valuesat that location.
+  sample_size_per_location: Number of samples per geographic location used to calculate
+                            mean and variance in isoscapes.
+  '''
+  predictions = sample_data
+  predictions[_FRAUD_P_VALUE_COLUMN_NAME] =
+    sample_data.apply(lambda row: sample_ttest(
+      longitude=row[_LONGITUDE_COLUMN_NAME],
+      latitude=row[_LATITUDE_COLUMN_NAME],
+      isotope_values=row[isotope_column_names],
+      means_isoscapes=means_isoscapes,
+      variances_isoscapes=variances_isoscapes,
+      isoscape_sample_size_per_location=sample_size_per_location,
+      data_sample_size_per_location=df[dataset.SAMPLE_COUNT_COLUMN_NAME],
+      p_value_target=None
+    ))
+
+  return predictions
 
 def get_predictions(sample_data: pd.DataFrame,
                     isotope_column_names: list[str],
@@ -94,45 +127,32 @@ def get_predictions(sample_data: pd.DataFrame,
   sample_size_per_location: Number of samples per geographic location used to calculate
                             mean and variance in isoscapes.
   '''
-  sample_data = sample_data.groupby([
+  aggregate_columns = [
       _TREE_CODE_COLUMN_NAME,
       _LONGITUDE_COLUMN_NAME,
       _LATITUDE_COLUMN_NAME,
-      _FRAUD_LABEL_COLUMN_NAME])[isotope_column_names]
-  predictions = pd.DataFrame({_TREE_CODE_COLUMN_NAME: [],
-                              _LONGITUDE_COLUMN_NAME: [],
-                              _LATITUDE_COLUMN_NAME: [],
-                              _FRAUD_LABEL_COLUMN_NAME: [],
-                              _FRAUD_P_VALUE_COLUMN_NAME: []})
+      _FRAUD_LABEL_COLUMN_NAME]
 
-  for group_key, isotope_values in sample_data:
-    if isotope_values.shape[0] <= 1:
-      continue
+  feature_columns = sample_data.columns
+  for col in aggregate_columns + isotope_column_names:
+    feature_columns.remove(col)
 
-    p_values = []
-    for i, isotope_column_name in enumerate(isotope_column_names):
-      hypothesis_test = sample_ttest(longitude=group_key[1],
-                                     latitude=group_key[2],
-                                     isotope_values=isotope_values[isotope_column_name],
-                                     means_isoscape=means_isoscapes[i],
-                                     variances_isoscape=variances_isoscapes[i],
-                                     sample_size_per_location=sample_size_per_location,
-                                     p_value_target=None)
-      p_values.append(hypothesis_test.p_value)
-    combined_p_value = np.array(p_values).prod()
-    if np.isnan(combined_p_value):
-      continue
+  sample_data = dataset.preprocess_sample_data(
+    df=sample_data,
+    feature_columns=feature_columns,
+    label_columns=isotope_column_names,
+    aggregate_columns=aggregate_columns,
+    keep_grouping=True
+  )
 
-    row = {_TREE_CODE_COLUMN_NAME: [group_key[0]],
-           _LONGITUDE_COLUMN_NAME: [group_key[1]],
-           _LATITUDE_COLUMN_NAME: [group_key[2]],
-           _FRAUD_LABEL_COLUMN_NAME: [group_key[3]],
-           _FRAUD_P_VALUE_COLUMN_NAME: [combined_p_value]}
-    predictions = pd.concat([predictions, pd.DataFrame(row)], ignore_index=True)
-
-  return predictions
+  return get_predictions_grouped(
+    sample_data=sample_data,
+    means_isoscapes=means_isoscapes,
+    variances_isoscapes=variances_isoscapes,
+    sample_size_per_location=sample_size_per_location)
 
 def fraud_metrics(sample_data: pd.DataFrame,
+                  group_data: bool,
                   isotope_column_names: list[str],
                   means_isoscapes: list[raster.AmazonGeoTiff],
                   variances_isoscapes: list[raster.AmazonGeoTiff],
@@ -150,11 +170,18 @@ def fraud_metrics(sample_data: pd.DataFrame,
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
-    predictions = get_predictions(sample_data,
-                  isotope_column_names,
-                  means_isoscapes,
-                  variances_isoscapes,
-                  sample_size_per_location)
+    if group_data:
+      predictions = get_predictions(sample_data,
+                    isotope_column_names,
+                    means_isoscapes,
+                    variances_isoscapes,
+                    sample_size_per_location)
+    else:
+      predictions = get_predictions_grouped(sample_data,
+                    isotope_column_names,
+                    means_isoscapes,
+                    variances_isoscapes,
+                    sample_size_per_location)
     
     # A low p-value in our t-test indicates that two distributions (the ground truth and sample being tested)
     # are dissimilar, which should cause a positive (fraud) result."

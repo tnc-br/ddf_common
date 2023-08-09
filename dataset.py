@@ -13,6 +13,7 @@ import pytest
 import random
 import datetime
 
+SAMPLE_COUNT_COLUMN_NAME = 'sample_count'
 
 @dataclass
 class PartitionedDataset:
@@ -354,6 +355,7 @@ def preprocess_sample_data(df: pd.DataFrame,
       variances.rename(columns={col: f"{col}_variance"}, inplace=True)
       variances = variances[aggregate_columns + [f"{col}_variance"]]
 
+      df[SAMPLE_COUNT_COLUMN_NAME] = grouped.count()
       df = pd.merge(df, means, how="inner",
                     left_on=aggregate_columns, right_on=aggregate_columns)
       df = pd.merge(df, variances, how="inner",
