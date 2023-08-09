@@ -76,9 +76,10 @@ def sample_ttest(longitude: float,
           equal_var=False, alternative="two-sided"
       )
 
-      p_values.append(p_value)    
+      p_values.append(p_value)  
+    combined_p_value = np.array(p_values).prod()  
 
-    return HypothesisTest(longitude, latitude, p_value, p_value_target)
+    return HypothesisTest(longitude, latitude, combined_p_value, p_value_target)
 
 def get_predictions_grouped(sample_data: pd.DataFrame,
                     isotope_column_names: list[str],
@@ -88,6 +89,7 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
   '''
   Calculates the p values of a hypothesis test for the elements specified by
   isotope_column_names using values from means_isoscapes and variances_isoscapes.
+  This method assumes that sample_data is grouped by aggregate_columns.
 
   sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
@@ -119,6 +121,7 @@ def get_predictions(sample_data: pd.DataFrame,
   '''
   Calculates the p values of a hypothesis test for the elements specified by
   isotope_column_names using values from means_isoscapes and variances_isoscapes.
+  This method assumes that the data is not grouped by aggregate_columns.
 
   sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
@@ -163,6 +166,7 @@ def fraud_metrics(sample_data: pd.DataFrame,
     and the false positive and negatives. (go/ddf-glossary)
 
     sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
+    group_data: Whether or not the data needs to be grouped.
     means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
     variances_isoscape: Isoscape that maps geographic coordinates to the variance of
                         isotope valuesat that location.
