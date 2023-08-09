@@ -16,10 +16,10 @@ def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_n
 
   df[mean_pred_name] = df.apply(
     lambda row: raster.get_data_ignoring_errors(
-      means_isoscape, row['lon'], row['lat']), axis=1)
+      means_isoscape, row['long'], row['lat']), axis=1)
   df[var_pred_name] = df.apply(
     lambda row: raster.get_data_ignoring_errors(
-      vars_isoscape, row['lon'], row['lat']), axis=1)
+      vars_isoscape, row['long'], row['lat']), axis=1)
 
   df = df.dropna(subset=[mean_pred_name, var_pred_name, mean_true_name, var_true_name])
   print(df.shape)

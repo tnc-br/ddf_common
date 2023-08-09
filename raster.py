@@ -315,8 +315,9 @@ def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
 def get_data_ignoring_errors(
   isoscape: AmazonGeoTiff,
   longitude: float,
-  latitude: float):
+  latitude: float,
+  month_index: int = -1):
   try:
-    return get_data_at_coords(isoscape, longitude, latitude, -1)
+    return get_data_at_coords(isoscape, longitude, latitude, month_index)
   except ValueError:
     return None

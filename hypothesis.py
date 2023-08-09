@@ -40,7 +40,7 @@ def sample_ttest(longitude: float,
                  means_isoscapes: list[raster.AmazonGeoTiff],
                  variances_isoscapes: list[raster.AmazonGeoTiff],
                  isoscape_sample_size_per_location: int,
-                 data_sample_size: int,
+                 data_sample_sizes: list[int],
                  p_value_target: float) -> HypothesisTest:
     '''
     longitude: Of the sample
@@ -58,6 +58,7 @@ def sample_ttest(longitude: float,
       isotope_variance = isotope_variances[i]
       means_isoscape = means_isoscapes[i]
       variances_isoscape = variances_isoscapes[i]
+      data_sample_size = data_sample_sizes[i]
 
       # Values from prediction.
       predicted_isotope_mean = raster.get_data_ignoring_errors(
@@ -89,7 +90,7 @@ def sample_ttest(longitude: float,
 def get_predictions_grouped(sample_data: pd.DataFrame,
                     isotope_means_column_names: list[str],
                     isotope_variances_column_names: list[str],
-                    means_isoscapes: list[raster.AmazonGeoTiff],
+                    isotope_counts_column_names: list[str],                    means_isoscapes: list[raster.AmazonGeoTiff],
                     variances_isoscapes: list[raster.AmazonGeoTiff],
                     sample_size_per_location: int):
   '''
@@ -113,7 +114,7 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
       means_isoscapes=means_isoscapes,
       variances_isoscapes=variances_isoscapes,
       isoscape_sample_size_per_location=sample_size_per_location,
-      data_sample_size=row[dataset.SAMPLE_COUNT_COLUMN_NAME],
+      data_sample_sizes=row[isotope_counts_column_names],
       p_value_target=None
     ).p_value, axis=1)
 
@@ -143,7 +144,7 @@ def get_predictions(sample_data: pd.DataFrame,
       _FRAUD_LABEL_COLUMN_NAME]
 
   feature_columns = list(sample_data.columns.values)
-  for col in aggregate_columns + isotope_column_names:
+  for col in isotope_column_names:
     feature_columns.remove(col)
 
   sample_data = dataset.preprocess_sample_data(
@@ -156,6 +157,9 @@ def get_predictions(sample_data: pd.DataFrame,
 
   return get_predictions_grouped(
     sample_data=sample_data,
+    isotope_means_column_names=[f"{col}_mean" for col in isotope_column_names],
+    isotope_variances_column_names=[f"{col}_variance" for col in isotope_column_names],
+    isotope_counts_column_names=[f"{col}_{dataset.SAMPLE_COUNT_COLUMN_NAME_SUFFIX}" for col in isotope_column_names],
     means_isoscapes=means_isoscapes,
     variances_isoscapes=variances_isoscapes,
     sample_size_per_location=sample_size_per_location)
