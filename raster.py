@@ -247,7 +247,7 @@ def coords_to_indices(bounds: Bounds, x: float, y: float):
 
   return x_idx, y_idx
 
-def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
+def _get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
   # x = longitude
   # y = latitude
   bounds = get_extent(dataset.gdal_dataset)
@@ -259,20 +259,21 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
   else:
     value = dataset.masked_image[x_idx, y_idx, month]
   if np.ma.is_masked(value):
+    return None
+  else:
+    return value
+
+def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -> float:
+  # x = longitude
+  # y = latitude
+  value = _get_data_at_coords(dataset, x, y, month)
+  if value is None:
     raise ValueError(f"Coordinates ({y},{x}) are masked in {dataset.name}")
   else:
     return value
 
 def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff) -> bool:  
-  bounds = get_extent(reference_isocape.gdal_dataset)
-  x_idx, y_idx = coords_to_indices(bounds, lon, lat)
-  if not x_idx and not y_idx:
-    return False
-  value = reference_isocape.yearly_masked_image[x_idx, y_idx]
-  if np.ma.is_masked(value):
-    return False
-  else:
-    return True
+  return _get_data_at_coords(reference_isocape, lon, lat, -1) is not None
 
 brazil_map_geotiff_ = None
 def brazil_map_geotiff() -> AmazonGeoTiff:
