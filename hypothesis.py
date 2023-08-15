@@ -37,18 +37,22 @@ def sample_ttest(longitude: float,
                  latitude: float,
                  isotope_means: list[float],
                  isotope_variances: list[float],
+                 isotope_counts: list[int],
                  means_isoscapes: list[raster.AmazonGeoTiff],
                  variances_isoscapes: list[raster.AmazonGeoTiff],
                  isoscape_sample_size_per_location: int,
-                 data_sample_sizes: list[int],
                  p_value_target: float) -> HypothesisTest:
     '''
+    Returns Hypothesis test with longitude, latitude, combined_p_value and p_value_target.
+    Calculates p values from predicted isotope values from the mean and variance isoscapes
+    and combines them by multiplication as combined_p_value.
     longitude: Of the sample
     latitude: Of the sample
     isotope_values: Of the sample
-    means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
-    variances_isoscape: Isoscape that maps geographic coordinates to the variance of
-                        isotope valuesat that location.
+    isotope_counts: Of the sample
+    means_isoscape: List of isoscapes where each maps geographic coordinates to a mean isotope value.
+    variances_isoscape: List of isoscapes where each maps geographic coordinates to the variance of
+                        isotope values at that location.
     isoscape_sample_size_per_location: Number of samples per geographic location used to calculate
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
@@ -90,7 +94,8 @@ def sample_ttest(longitude: float,
 def get_predictions_grouped(sample_data: pd.DataFrame,
                     isotope_means_column_names: list[str],
                     isotope_variances_column_names: list[str],
-                    isotope_counts_column_names: list[str],                    means_isoscapes: list[raster.AmazonGeoTiff],
+                    isotope_counts_column_names: list[str],
+                    means_isoscapes: list[raster.AmazonGeoTiff],
                     variances_isoscapes: list[raster.AmazonGeoTiff],
                     sample_size_per_location: int):
   '''
@@ -98,12 +103,22 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
   isotope_column_names using values from means_isoscapes and variances_isoscapes.
   This method assumes that sample_data is grouped by aggregate_columns.
 
-  sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
-  means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
-  variances_isoscape: Isoscape that maps geographic coordinates to the variance of
-                      isotope valuesat that location.
+  sample_data: pd.DataFrame with lat, long, isotope_value counts, means and variances
+               and fraudulent columns
+  isotope_means_column_names: Names of the columns in sample_data that have isotope mean
+                              values. They must correspond in order to the element order of
+                              means_isoscapes and variances_isoscapes.
+  isotope_variances_column_names: Names of the columns in sample_data that have isotope variance
+                              values. They must correspond in order to the element order of
+                              means_isoscapes and variances_isoscapes.
+  isotope_counts_column_names: Names of the columns in sample_data that have isotope count
+                              values. They must correspond in order to the element order of
+                              means_isoscapes and variances_isoscapes.
+  means_isoscapes: Isoscapes where each maps geographic coordinates to a mean isotope value.
+  variances_isoscapes: Isoscapes where each maps geographic coordinates to the variance of
+                      isotope values at that location.
   sample_size_per_location: Number of samples per geographic location used to calculate
-                            mean and variance in isoscapes.
+                            mean and variance in means_isoscapes and variances_isoscapes.
   '''
   predictions = sample_data
   predictions[_FRAUD_P_VALUE_COLUMN_NAME] = predictions.apply(lambda row: sample_ttest(
@@ -131,12 +146,18 @@ def get_predictions(sample_data: pd.DataFrame,
   This method assumes that the data is not grouped by aggregate_columns.
 
   sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
-  means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
-  variances_isoscape: Isoscape that maps geographic coordinates to the variance of
+  isotope_column_names: Name of the columns in sample_data that has raw isotope values.
+                        They should follow the size and order of elements of means_isoscapes
+                        and variances_isoscapes.
+  means_isoscapes: Isoscapes where each maps geographic coordinates to a mean isotope value.
+  variances_isoscapes: Isoscapes where each maps geographic coordinates to the variance of
                       isotope valuesat that location.
   sample_size_per_location: Number of samples per geographic location used to calculate
                             mean and variance in isoscapes.
   '''
+  assert(
+    len(isotope_column_names) == len(means_isoscapes) and
+    len(isotope_column_names) == len(variances_isoscapes))
   aggregate_columns = [
       _TREE_CODE_COLUMN_NAME,
       _LONGITUDE_COLUMN_NAME,
@@ -176,13 +197,16 @@ def fraud_metrics(sample_data: pd.DataFrame,
     and the false positive and negatives. (go/ddf-glossary)
 
     sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
-    group_data: Whether or not the data needs to be grouped.
-    means_isoscape: Isoscape that maps geographic coordinates to a mean isotope value.
-    variances_isoscape: Isoscape that maps geographic coordinates to the variance of
+    isotope_column_names: Names of the columns that correspond to separate elements to consider
+                          which need to follow the length and order of means_isoscapes
+                          and variances_isoscapes.
+    means_isoscapes: Isoscapes where each maps geographic coordinates to a mean isotope value.
+    variances_isoscapes: Isoscapes where each maps geographic coordinates to the variance of
                         isotope valuesat that location.
     sample_size_per_location: Number of samples per geographic location used to calculate
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
+    group_data: Whether or not the data needs to be grouped.
     '''
     if group_data:
       predictions = get_predictions(sample_data,
