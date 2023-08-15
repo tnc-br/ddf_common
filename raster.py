@@ -1,3 +1,5 @@
+import model
+
 from dataclasses import dataclass
 from osgeo import gdal, gdal_array
 import numpy as np
@@ -268,8 +270,7 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
     return value
 
 def get_predictions_at_each_pixel(
-    model: tf.keras.Model,
-    feature_transformer: ColumnTransformer,
+    model: Model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
     bounds: Bounds):
 
@@ -295,6 +296,7 @@ def get_predictions_at_each_pixel(
           if pd.isnull(row[geotiff_label]):
             raise ValueError
       except (ValueError, IndexError):
+        print ("Failed to get value at coord ", x, y)
         continue # masked and out-of-bounds coordinates
 
       rows.append(row)
@@ -302,11 +304,7 @@ def get_predictions_at_each_pixel(
 
     if (len(rows) > 0):
       X = pd.DataFrame.from_dict(rows)
-      if (X.isnull().values.any()):
-        print(X.isnull().sum())
-      X_scaled = pd.DataFrame(feature_transformer.transform(X),
-                              index=X.index, columns=X.columns)
-      predictions = model.predict_on_batch(X_scaled)
+      predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
       for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
@@ -464,8 +462,7 @@ def res_to_bounds(x: int, y: int, reference_geotiff: AmazonGeoTiff):
 
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
-    model: tf.keras.Model,
-    feature_transformer: ColumnTransformer,
+    model: Model.Model,
     required_geotiffs: List[str],
     res_x: int,
     res_y: int):
