@@ -431,7 +431,7 @@ d13C_var_geotiff_ = None
 def d13C_var_geotiff() -> AmazonGeoTiff:
   global d13C_var_geotiff_
   if not d13C_var_geotiff_:
-    d13C_var_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_var", use_only_band_index=0)
+    d13C_var_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_var", use_only_band_index=1)
   return d13C_var_geotiff_
 
 # A collection of column names to functions that load the corresponding geotiffs.
@@ -452,22 +452,25 @@ column_name_to_geotiff_fn = {
   "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
 }
 
+def res_to_bounds(x: int, y: int, reference_geotiff: AmazonGeoTiff):
+  # Use reference geotiff to get the min/max x and y. Alter everything else
+  # to fit the new set of dimensions.
+  bounds = get_extent(reference_geotiff)
+  bounds.pixel_size_x *= (bounds.raster_size_x/x)
+  bounds.pixel_size_y *= (bounds.raster_size_y/y)
+  bounds.raster_size_x = x
+  bounds.raster_size_y = y
+  return bounds
+
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
     model: tf.keras.Model,
     feature_transformer: ColumnTransformer,
     required_geotiffs: List[str],
-    max_res: bool):
+    res_x: int,
+    res_y: int):
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
-  all_bounds = [get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
-
-  # Set output_resolution to match that of the highest-resolution geotiff is max_res == true, else the smallest 
-  output_resolution = sorted(
-    all_bounds,
-    key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0]
-
-  if (not max_res):
-    output_resolution = get_extent(input_geotiffs["VPD"].gdal_dataset) 
+  bounds = res_to_bounds(res_x, res_y, input_geotiffs[0])
 
   np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
