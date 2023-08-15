@@ -26,5 +26,5 @@ class TFModel(Model):
     def load_tf_model(tf_model_path: str) -> tf.keras.Model:
         return tf.keras.saving.load_model(tf_model_path)
     
-    def predict_on_batch(X: DataFrame):
+    def predict_on_batch(X: pd.DataFrame):
         return self.vi_model.predict_on_batch(X)
