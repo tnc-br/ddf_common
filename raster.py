@@ -270,7 +270,7 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
     return value
 
 def get_predictions_at_each_pixel(
-    model: Model.Model,
+    model: model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
     bounds: Bounds):
 
@@ -462,7 +462,7 @@ def res_to_bounds(x: int, y: int, reference_geotiff: AmazonGeoTiff):
 
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
-    model: Model.Model,
+    model: model.Model,
     required_geotiffs: List[str],
     res_x: int,
     res_y: int):
