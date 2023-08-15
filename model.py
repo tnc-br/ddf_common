@@ -13,8 +13,8 @@ class Model:
 class TFModel(Model):
     def __init__(self, tf_model_path: str, transformer_path: str) -> None:
         Model.__init__(self)
-        self.vi_model =  load_tf_model(tf_model_path)
-        self.transformer = apply_transformer(transformer_path)
+        self.vi_model =  self.load_tf_model(tf_model_path)
+        self.transformer = self.apply_transformer(transformer_path)
 
     def load_transformer(transformer_path: str) -> ColumnTransformer:
         return joblib.load(transformer_path)
