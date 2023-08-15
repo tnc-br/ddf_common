@@ -472,7 +472,5 @@ def generate_isoscapes_from_variational_model(
   # a Bounds using these limits.
   bounds = res_to_bounds(res_x, res_y, list(input_geotiffs.values())[0])
 
-  np = get_predictions_at_each_pixel(
-    model, feature_transformer, input_geotiffs, output_resolution)
-  save_numpy_to_geotiff(
-      output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
+  np = get_predictions_at_each_pixel(model, input_geotiffs, bounds)
+  save_numpy_to_geotiff(bounds, np, get_raster_path(output_geotiff_id+".tiff"))
