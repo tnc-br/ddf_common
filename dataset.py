@@ -380,7 +380,7 @@ def preprocess_sample_data(df: pd.DataFrame,
 
 #Utility function for randomly sampling a point around a sample site
 def _is_valid_point(lat: float, lon: float, reference_isocape: raster.AmazonGeoTiff):
-  return True if raster.get_data_ignoring_errors(reference_isocape, lon, lat, 0) else False
+  return True if raster.get_data_at_coords(reference_isocape, lon, lat, 0) else False
 
 # Pick a random point around (lat, lon) within max_distance_km. If edge_only is
 # true, only pick points exactly max_distance_km away from (lat, lon).
