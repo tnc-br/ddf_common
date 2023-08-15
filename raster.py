@@ -470,7 +470,7 @@ def generate_isoscapes_from_variational_model(
 
   # Pick random geotiff to finds the coords of corners of the map, then create
   # a Bounds using these limits.
-  bounds = res_to_bounds(res_x, res_y, input_geotiffs.values()[0])
+  bounds = res_to_bounds(res_x, res_y, list(input_geotiffs.values())[0])
 
   np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
