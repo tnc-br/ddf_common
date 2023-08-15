@@ -340,22 +340,18 @@ def preprocess_sample_data(df: pd.DataFrame,
   3. If keep_grouping = True, we export groupings by key aggregate_columns
      otherwise we return the original sample with their matching means/variances.
   '''
-  df.dropna(subset=feature_columns + label_columns, inplace=True)
   df = df[feature_columns + label_columns]
 
   if aggregate_columns:
     grouped = df.groupby(aggregate_columns)
 
-    counts = grouped.count()
     for col in label_columns:
+      counts = grouped.count().reset_index()
       counts.rename(
         columns={col: f"{col}_{SAMPLE_COUNT_COLUMN_NAME_SUFFIX}"},
         inplace=True)
-    counts = counts[aggregate_columns + [f"{col}_{SAMPLE_COUNT_COLUMN_NAME_SUFFIX}"]]
-    df = pd.merge(df, counts, how="inner",
-                  left_on=aggregate_columns, right_on=aggregate_columns)   
-
-    for col in label_columns:
+      counts = counts[aggregate_columns + [f"{col}_{SAMPLE_COUNT_COLUMN_NAME_SUFFIX}"]]
+  
       means = grouped.mean().reset_index()
       means.rename(columns={col: f"{col}_mean"}, inplace=True)
       means = means[aggregate_columns + [f"{col}_mean"]]
@@ -364,6 +360,8 @@ def preprocess_sample_data(df: pd.DataFrame,
       variances.rename(columns={col: f"{col}_variance"}, inplace=True)
       variances = variances[aggregate_columns + [f"{col}_variance"]]
 
+      df = pd.merge(df, counts, how="inner",
+                  left_on=aggregate_columns, right_on=aggregate_columns)
       df = pd.merge(df, means, how="inner",
                     left_on=aggregate_columns, right_on=aggregate_columns)
       df = pd.merge(df, variances, how="inner",
