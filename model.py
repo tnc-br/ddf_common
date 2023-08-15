@@ -11,7 +11,7 @@ class Model:
         pass
 
 class TFModel(Model):
-    def __init__(self, transformer_path: str, tf_model_path: str) -> None:
+    def __init__(self, tf_model_path: str, transformer_path: str) -> None:
         Model.__init__()
         self.vi_model =  load_tf_model(tf_model_path)
         self.transformer = apply_transformer(transformer_path)
