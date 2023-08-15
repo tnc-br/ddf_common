@@ -62,11 +62,6 @@ def sample_ttest(longitude: float,
     p_values = []
     for i, isotope_mean in enumerate(isotope_means):
       isotope_variance = isotope_variances[i]
-      data_sample_size = isotope_counts[i]
-
-      if data_sample_size == 1:
-        continue
-      
       means_isoscape = means_isoscapes[i]
       variances_isoscape = variances_isoscapes[i]
 
