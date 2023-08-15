@@ -453,7 +453,7 @@ column_name_to_geotiff_fn = {
 def res_to_bounds(x: int, y: int, reference_geotiff: AmazonGeoTiff):
   # Use reference geotiff to get the min/max x and y. Alter everything else
   # to fit the new set of dimensions.
-  bounds = get_extent(reference_geotiff)
+  bounds = get_extent(reference_geotiff.gdal_dataset)
   bounds.pixel_size_x *= (bounds.raster_size_x/x)
   bounds.pixel_size_y *= (bounds.raster_size_y/y)
   bounds.raster_size_x = x
