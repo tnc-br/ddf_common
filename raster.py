@@ -1,4 +1,5 @@
 import model
+import columns
 
 from dataclasses import dataclass
 from osgeo import gdal, gdal_array
@@ -433,20 +434,20 @@ def d13C_var_geotiff() -> AmazonGeoTiff:
 
 # A collection of column names to functions that load the corresponding geotiffs.
 column_name_to_geotiff_fn = {
-  "VPD" : vapor_pressure_deficit_geotiff,
-  "RH": relative_humidity_geotiff,
-  "PET": pet_geotiff,
-  "DEM": dem_geotiff,
-  "PA": pa_geotiff,
-  "Mean Annual Temperature": temperature_geotiff,
-  "Mean Annual Precipitation": brazil_map_geotiff,
-  "Iso_Oxi_Stack_mean_TERZER": craig_gordon_isoscape_geotiff,
-  "isoscape_fullmodel_d18O_prec_REGRESSION": precipitation_regression_isoscape_geotiff,
-  "brisoscape_mean_ISORIX": brisoscape_geotiff,
-  "d13C_mean": d13C_mean_geotiff,
-  "d13C_var": d13C_var_geotiff,
-  "ordinary_kriging_linear_d18O_predicted_mean" : krig_means_isoscape_geotiff,
-  "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
+  columns.VPD : vapor_pressure_deficit_geotiff,
+  columns.RH: relative_humidity_geotiff,
+  columns.PET: pet_geotiff,
+  columns.DEM: dem_geotiff,
+  columns.PA: pa_geotiff,
+  columns.TEMP: temperature_geotiff,
+  columns.PREC: brazil_map_geotiff,
+  columns.d18O_PREC_CG: craig_gordon_isoscape_geotiff,
+  columns.d18O_PREC_REGR: precipitation_regression_isoscape_geotiff,
+  columns.d18O_PREC_ISORIX: brisoscape_geotiff,
+  columns.d13C_MEAN: d13C_mean_geotiff,
+  columns.d13C_VAR: d13C_var_geotiff,
+  columns.d18O_KRIGING_MEAN : krig_means_isoscape_geotiff,
+  columns.d18O_KRIGING_VAR : krig_variances_isoscape_geotiff
 }
 
 def res_to_bounds(x: int, y: int, reference_geotiff: AmazonGeoTiff):
