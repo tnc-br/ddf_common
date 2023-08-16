@@ -296,7 +296,6 @@ def get_predictions_at_each_pixel(
           if pd.isnull(row[geotiff_label]):
             raise ValueError
       except (ValueError, IndexError):
-        print ("Failed to get value at coord ", x, y)
         continue # masked and out-of-bounds coordinates
 
       rows.append(row)
