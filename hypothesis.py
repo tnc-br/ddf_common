@@ -46,6 +46,8 @@ def sample_ttest(longitude: float,
     Returns Hypothesis test with longitude, latitude, combined_p_value and p_value_target.
     Calculates p values from predicted isotope values from the mean and variance isoscapes
     and combines them by multiplication as combined_p_value.
+    If an element has only one sample (from isotope_counts), it will be skipped.
+    
     longitude: Of the sample
     latitude: Of the sample
     isotope_values: Of the sample
@@ -60,20 +62,23 @@ def sample_ttest(longitude: float,
     p_values = []
     for i, isotope_mean in enumerate(isotope_means):
       isotope_variance = isotope_variances[i]
+      data_sample_size = isotope_counts[i]
+
+      if data_sample_size == 1:
+        continue
+      
       means_isoscape = means_isoscapes[i]
       variances_isoscape = variances_isoscapes[i]
-      data_sample_size = data_sample_sizes[i]
 
       # Values from prediction.
-      predicted_isotope_mean = raster.get_data_ignoring_errors(
-          means_isoscape, longitude, latitude)
-      predicted_isotope_variance = raster.get_data_ignoring_errors(
-          variances_isoscape, longitude, latitude)
+      predicted_isotope_mean = raster.get_data_at_coords(
+          means_isoscape, longitude, latitude, 0)
+      predicted_isotope_variance = raster.get_data_at_coords(
+          variances_isoscape, longitude, latitude, 0)
       
       if (predicted_isotope_mean is None or
         predicted_isotope_variance is None):
-        return HypothesisTest(
-          longitude, latitude, None, p_value_target)
+        continue
 
       # t-student Test
       _, p_value = scipy.stats.ttest_ind_from_stats(
@@ -87,6 +92,10 @@ def sample_ttest(longitude: float,
       )
 
       p_values.append(p_value)  
+    
+    if len(p_values) == 0:
+      return HypothesisTest(longitude, latitude, None, p_value_target)
+  
     combined_p_value = np.array(p_values).prod()  
 
     return HypothesisTest(longitude, latitude, combined_p_value, p_value_target)
@@ -126,10 +135,10 @@ def get_predictions_grouped(sample_data: pd.DataFrame,
       latitude=row[_LATITUDE_COLUMN_NAME],
       isotope_means=row[isotope_means_column_names],
       isotope_variances=row[isotope_variances_column_names],
+      isotope_counts=row[isotope_counts_column_names],
       means_isoscapes=means_isoscapes,
       variances_isoscapes=variances_isoscapes,
       isoscape_sample_size_per_location=sample_size_per_location,
-      data_sample_sizes=row[isotope_counts_column_names],
       p_value_target=None
     ).p_value, axis=1)
 
