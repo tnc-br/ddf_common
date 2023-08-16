@@ -43,8 +43,6 @@ def sample_ttest(longitude: float,
     Returns Hypothesis test with longitude, latitude, combined_p_value and p_value_target.
     Calculates p values from predicted isotope values from the mean and variance isoscapes
     and combines them by multiplication as combined_p_value.
-    If an element has only one sample (from isotope_counts), it will be skipped.
-    
     longitude: Of the sample
     latitude: Of the sample
     isotope_values: Of the sample
@@ -58,6 +56,11 @@ def sample_ttest(longitude: float,
     p_values = []
     for i, isotope_mean in enumerate(isotope_means):
       isotope_variance = isotope_variances[i]
+      data_sample_size = isotope_counts[i]
+
+      if data_sample_size == 1:
+        continue
+      
       means_isoscape = means_isoscapes[i]
       variances_isoscape = variances_isoscapes[i]
 
@@ -203,11 +206,21 @@ def fraud_metrics(sample_data: pd.DataFrame,
                               mean and variance in isoscapes.
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     '''
-    predictions = get_predictions(sample_data,
-                  isotope_column_names,
-                  means_isoscapes,
-                  variances_isoscapes,
-                  sample_size_per_location)
+    if group_data:
+      predictions = get_predictions(sample_data,
+                    isotope_column_names,
+                    means_isoscapes,
+                    variances_isoscapes,
+                    sample_size_per_location)
+    else:
+      predictions = get_predictions_grouped(
+        sample_data=sample_data,
+        isotope_means_column_names=[f"{col}_mean" for col in isotope_column_names],
+        isotope_variances_column_names=[f"{col}_variance" for col in isotope_column_names],
+        isotope_counts_column_names=[f"{col}_{dataset.SAMPLE_COUNT_COLUMN_NAME_SUFFIX}" for col in isotope_column_names],
+        means_isoscapes=means_isoscapes,
+        variances_isoscapes=variances_isoscapes,
+        sample_size_per_location=sample_size_per_location)
     
     # A low p-value in our t-test indicates that two distributions (the ground truth and sample being tested)
     # are dissimilar, which should cause a positive (fraud) result."
