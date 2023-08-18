@@ -459,12 +459,12 @@ column_name_to_geotiff_fn = {
   "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
 }
 
-def res_to_bounds(res: int, reference_bounds: Bounds):
-  # Use reference geotiff to get the min/max x and y. Alter everything else
+def res_to_bounds(res: int, brazil_bounds: Bounds):
+  # Use reference geotiff to get the min/max lat and lon. Alter everything else
   # to fit the new set of dimensions.
-  bounds = get_extent(reference_geotiff.gdal_dataset)
-  bounds.pixel_size_x *= (bounds.raster_size_x/res)
-  bounds.pixel_size_y *= (bounds.raster_size_y/res)
+  bounds = brazil_bounds
+  bounds.pixel_size_x *= (brazil_bounds.raster_size_x/res)
+  bounds.pixel_size_y *= (brazil_bounds.raster_size_y/res)
   bounds.raster_size_x = res
   bounds.raster_size_y = res
   return bounds
@@ -478,11 +478,7 @@ def generate_isoscapes_from_variational_model(
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
   
   arbitrary_geotiff = list(input_geotiffs.values())[0]
-  output_resolution = res_to_bounds(res, get_extent(arbitrary_geotiff.gdal_dataset))
-
-  # Randomly pick a medium sized raster.
-  if (not max_res):
-    output_resolution = get_extent(input_geotiffs["VPD"].gdal_dataset) 
+  output_resolution = res_to_bounds(res, get_extent(arbitrary_geotiff.gdal_dataset)) 
 
   np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
