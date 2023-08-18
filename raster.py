@@ -459,19 +459,26 @@ column_name_to_geotiff_fn = {
   "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
 }
 
+def res_to_bounds(res: int, reference_bounds: Bounds):
+  # Use reference geotiff to get the min/max x and y. Alter everything else
+  # to fit the new set of dimensions.
+  bounds = get_extent(reference_geotiff.gdal_dataset)
+  bounds.pixel_size_x *= (bounds.raster_size_x/res)
+  bounds.pixel_size_y *= (bounds.raster_size_y/res)
+  bounds.raster_size_x = res
+  bounds.raster_size_y = res
+  return bounds
+
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
     model: tf.keras.Model,
     feature_transformer: ColumnTransformer,
     required_geotiffs: List[str],
-    max_res: bool):
+    res: int):
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
-  all_bounds = [get_extent(geotiff.gdal_dataset) for geotiff in input_geotiffs.values()]
-
-  # Set output_resolution to match that of the highest-resolution geotiff is max_res == true, else the smallest 
-  output_resolution = sorted(
-    all_bounds,
-    key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0]
+  
+  arbitrary_geotiff = list(input_geotiffs.values())[0]
+  output_resolution = res_to_bounds(res, get_extent(arbitrary_geotiff.gdal_dataset))
 
   # Randomly pick a medium sized raster.
   if (not max_res):
