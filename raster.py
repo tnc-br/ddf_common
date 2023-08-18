@@ -420,6 +420,20 @@ def brisoscape_geotiff() -> AmazonGeoTiff:
     brisoscape_geotiff_ = load_named_raster(get_raster_path("brisoscape_mean_ISORIX.tif"), "brisoscape_geotiff")
   return brisoscape_geotiff_
 
+d13C_mean_geotiff_ = None
+def d13C_mean_geotiff() -> AmazonGeoTiff:
+  global d13C_mean_geotiff_
+  if not d13C_mean_geotiff_:
+    d13C_mean_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_mean", use_only_band_index=0)
+  return d13C_mean_geotiff_
+
+d13C_var_geotiff_ = None
+def d13C_var_geotiff() -> AmazonGeoTiff:
+  global d13C_var_geotiff_
+  if not d13C_var_geotiff_:
+    d13C_var_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_var", use_only_band_index=1)
+  return d13C_var_geotiff_
+
 # A collection of column names to functions that load the corresponding geotiffs.
 column_name_to_geotiff_fn = {
   "VPD" : vapor_pressure_deficit_geotiff,
@@ -432,6 +446,8 @@ column_name_to_geotiff_fn = {
   "Iso_Oxi_Stack_mean_TERZER": craig_gordon_isoscape_geotiff,
   "isoscape_fullmodel_d18O_prec_REGRESSION": precipitation_regression_isoscape_geotiff,
   "brisoscape_mean_ISORIX": brisoscape_geotiff,
+  "d13C_cel_mean": d13C_mean_geotiff,
+  "d13C_cel_var": d13C_var_geotiff,
   "ordinary_kriging_linear_d18O_predicted_mean" : krig_means_isoscape_geotiff,
   "ordinary_kriging_linear_d18O_predicted_variance" : krig_variances_isoscape_geotiff
 }
@@ -450,6 +466,7 @@ def generate_isoscapes_from_variational_model(
     all_bounds,
     key=lambda bounds: bounds.pixel_size_x*bounds.pixel_size_y)[-1 if max_res else 0]
 
+  # Randomly pick a medium sized raster.
   if (not max_res):
     output_resolution = get_extent(input_geotiffs["VPD"].gdal_dataset) 
 
