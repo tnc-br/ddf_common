@@ -311,8 +311,6 @@ def get_predictions_at_each_pixel(
 
     if (len(rows) > 0):
       X = pd.DataFrame.from_dict(rows)
-      if (X.isnull().values.any()):
-        print(X.isnull().sum())
       X_scaled = pd.DataFrame(feature_transformer.transform(X),
                               index=X.index, columns=X.columns)
       predictions = model.predict_on_batch(X_scaled)
