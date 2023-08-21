@@ -276,11 +276,24 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
   else:
     return value
 
+
 def get_predictions_at_each_pixel(
     model: tf.keras.Model,
     feature_transformer: ColumnTransformer,
     geotiffs: dict[str, AmazonGeoTiff],
     bounds: Bounds):
+  """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
+  Queries are constructed by querying every geotiff in `geotiffs` for information 
+  at that pixel and passing the parameters to the model. 
+  
+  Parameters are standardized using feature_transformer, a set of standardizers used
+  to fit training data.
+  
+  `model`: Tensorflow model used to make predictions
+  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
+                         Input must be transformed prior to predictions
+  `geotiffs`: The set of geotiffs required to make the prediction
+  `bounds`: Every pixel within these bounds will have a prediction made on it.  """
 
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
