@@ -12,7 +12,7 @@ import os
 import matplotlib.animation as animation
 from sklearn.compose import ColumnTransformer
 
-import models
+import model
 
 
 GDRIVE_BASE = "/content/gdrive"
@@ -280,8 +280,7 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
 
 
 def get_predictions_at_each_pixel(
-    model: models.Model,
-    feature_transformer: ColumnTransformer,
+    model: model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
     bounds: Bounds):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
@@ -485,8 +484,7 @@ def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
 
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
-    model: models.Model,
-    feature_transformer: ColumnTransformer,
+    model: model.Model,
     required_geotiffs: List[str],
     res_x: int, 
     res_y: int):
@@ -496,7 +494,6 @@ def generate_isoscapes_from_variational_model(
   base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
 
-  np = get_predictions_at_each_pixel(
-    model, feature_transformer, input_geotiffs, output_resolution)
+  np = get_predictions_at_each_pixel(model, input_geotiffs, output_resolution)
   save_numpy_to_geotiff(
       output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
