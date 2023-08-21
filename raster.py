@@ -460,14 +460,14 @@ column_name_to_geotiff_fn = {
 }
 
 # Converts a resolution into a Bounds class, storing info about pixel size and raster size.
-def create_bounds_from_res(res: int, brazil_bounds: Bounds):
+def create_bounds_from_res(res_x: int, res_y: int, brazil_bounds: Bounds):
   # Use brazil_bounds to get the min/max lat and lon. Scale everything else
   # to fit the new resolution.
   bounds = brazil_bounds
-  bounds.pixel_size_x *= (brazil_bounds.raster_size_x/res)
-  bounds.pixel_size_y *= (brazil_bounds.raster_size_y/res)
-  bounds.raster_size_x = res
-  bounds.raster_size_y = res
+  bounds.pixel_size_x *= (brazil_bounds.raster_size_x/res_x)
+  bounds.pixel_size_y *= (brazil_bounds.raster_size_y/res_y)
+  bounds.raster_size_x = res_x
+  bounds.raster_size_y = res_y
   return bounds
 
 def generate_isoscapes_from_variational_model(
@@ -475,12 +475,12 @@ def generate_isoscapes_from_variational_model(
     model: tf.keras.Model,
     feature_transformer: ColumnTransformer,
     required_geotiffs: List[str],
-    res: int):
+    res_x: int, res_y: int):
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
   
   arbitrary_geotiff = list(input_geotiffs.values())[0]
-  brazil_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
-  output_resolution = create_bounds_from_res(res, brazil_bounds) 
+  bounds = get_extent(arbitrary_geotiff.gdal_dataset)
+  output_resolution = create_bounds_from_res(res_x, res_y, bounds) 
 
   np = get_predictions_at_each_pixel(
     model, feature_transformer, input_geotiffs, output_resolution)
