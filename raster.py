@@ -473,7 +473,7 @@ column_name_to_geotiff_fn = {
 }
 
 # Converts a resolution into a Bounds class, storing info about pixel size and raster size.
-def create_bounds_from_res(res_x: int, res_y: int, bounds: Bounds):
+def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
   # Use base_bounds to get the min/max lat and lon. Scale everything else
   # to fit the new resolution.
   new_bounds = base_bounds
