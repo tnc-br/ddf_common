@@ -1,18 +1,20 @@
 # Module for helper functions for manipulating data and datasets.
-from dataclasses import dataclass
-from enum import Enum
+
+import datetime
 import ee
-import pandas as pd
-import raster
-from numpy.random import MT19937, RandomState, SeedSequence
-import numpy as np
-from tqdm import tqdm
-from geopy import distance
 import math
+import numpy as np
+import pandas as pd
 import pytest
 import random
-import datetime
+import raster
 
+from dataclasses import dataclass
+from enum import Enum
+from geopy import distance
+from itertools import permutations
+from numpy.random import MT19937, RandomState, SeedSequence
+from tqdm import tqdm
 
 @dataclass
 class PartitionedDataset:
@@ -139,6 +141,167 @@ def _partition_data_random(sample_data: pd.DataFrame,
 
   return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
 
+def _nearest_neighbors(
+  center_coordinate: list[float],
+  sample_data: pd.DataFrame,
+  n_neighbors: int
+):
+  assert(len(center_coordinate) == 2)
+  # Sometimes rounding of split fractions with dataframe shapes
+  # may end up with bigger or smaller splits.
+  n_neighbors = min(sample_data.shape[0], n_neighbors)
+  near = NearestNeighbors(n_neighbors=n_neighbors).fit(
+    sample_data.groupby(
+      by=[_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ).first().reset_index()
+  )
+  indices = near.kneighbors(
+    [center_coordinate], return_distance=False)[0]
+  coords = reference_data.iloc[indices, :].values
+  return sample_data[
+          sample_data[_LONGITUDE_COLUMN_NAME].isin(coords[:, 0]) &
+          sample_data[_LATITUDE_COLUMN_NAME].isin(coords[:, 1])]
+
+def _partition_by_nearest_neighbors(
+  sample_data: pd.DataFrame,
+  strategy: FurthestPointsStrategy,
+  train_coord: tuple,
+  validation_coord: tuple,
+  test_coord: tuple
+):
+  train_split = _nearest_neighbors(
+    center_coordinate=train_coord,
+    sample_data=sample_data,
+    n_neighbors=filtered_sample_data.shape[0]*strategy.train_fraction
+  )
+  filtered_sample_data = sample_data[
+          ~sample_data[_LONGITUDE_COLUMN_NAME].isin(
+            train_split[_LONGITUDE_COLUMN_NAME].values
+          ) |
+          ~sample_data[_LATITUDE_COLUMN_NAME].isin(
+            train_split[_LATITUDE_COLUMN_NAME].values
+          )]
+  
+  validation_split = _nearest_neighbors(
+    center_coordinate=validation_coord,
+    sample_data=filtered_sample_data,
+    n_neighbors=sample_data.shape[0]*strategy.validation_fraction 
+  )
+  filtered_sample_data = sample_data[
+    ~filtered_sample_data[_LONGITUDE_COLUMN_NAME].isin(
+      validation_split[_LONGITUDE_COLUMN_NAME].values
+    ) |
+    ~filtered_sample_data[_LATITUDE_COLUMN_NAME].isin(
+      validation_split[_LATITUDE_COLUMN_NAME].values
+    )]
+  
+  test_split = _nearest_neighbors(
+    center_coordinate=test_coord,
+    sample_data=filtered_sample_data,
+    n_neighbors=filtered_sample_data.shape[0] 
+  )
+
+  return PartitionedDataset(
+    train=train_split,
+    test=test_split,
+    validation=validation_split
+  )
+
+def _polygon(
+  coordinates: list[list]
+):
+  '''
+  Given an unordered list of longitude and latitude coordinates
+  represented by tuples, returns a polygon with the shape of the
+  coordinates.
+  '''
+  # Compute centroid
+  centroid = (sum([c[0] for c in coordinates])/len(coordinates),
+              sum([c[1] for c in coordinates])/len(coordinates))
+  # Sort by polar angle. This arranges the coordinates so that they
+  # delimit an outward shape.
+  sorted_coordinates = coordinates
+  sorted_coordinates.sort(
+    key=lambda c: math.atan2(
+      c[1] - centroid[1],
+      c[0] - centroid[0])
+  )
+  return Polygon(split_coords)
+
+def _valid_polygons(
+  train_polygon: Polygon,
+  validation_polygon: Polygon,
+  test_polygon: Polygon
+):
+  '''
+  Returns true if the train, validation, and test polygons
+  have a larger area than or equal to 0.1 and they don't overlap
+  over each other. Returns false otherwise. 
+  '''
+  small_polygon = False
+  for polygon in [train_polygon, validation_polygon, test_polygon]:
+    if polygon.area < 0.1:
+      return False
+
+  if (train_polygon.intersects(validation_polygon) or
+     train_polygon.intersects(test_polygon) or
+     validation_polygon.intersects(test_polygon)):
+    return False
+
+  return True
+
+def _partition_data_k_means_furthest_points(
+  sample_data: pd.DataFrame,
+  strategy: FurthestPointsStrategy
+):
+  # Shuffle unnique coordinates from sample_data
+  unique_coordinates_df = sample_data.groupby(
+    by=['long', 'lat']
+  ).first().reset_index()
+  shuffled_coordinates_df = unique_coordinates_df.sample(frac=1.0)
+  coordinates = 
+    list(shuffled_coordinates_df[[_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]].values)
+  assert(len(coordinates) >= strategy.top_n)
+
+  # Compute centroid of the coordinates
+  centroid = [sum([c[0] for c in coordinates])/len(coordinates),
+              sum([c[1] for c in coordinates])/len(coordinates)]
+  
+  # Sort coordinates from furthest to closest to the centroid.
+  distances_to_centroid = []
+  for coord in coordinates:
+    distance_points.append(
+      math.dist(cent, coordinates), coord)
+  distances_to_centroid.sort(reverse=True)
+  furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
+
+  random.shuffle(furthest_coordinates)
+  # We need permutations of 3 numbers that correspond to train, validation and test.
+  coord_permutations = list(permutations(furthest_coordinates, 3))
+  sampled_permutations = random.shuffle(coord_permutations)[:strategy.sample_n]
+
+  permutation_splits = []
+  for p in sampled_permutations:
+    partitioned_dataset = _partition_by_nearest_neighbors(
+      sample_data=sample_data,
+      strategy=strategy,
+      train_coord=p[0], validation_coord=p[1], test_coord=p[2]
+    )
+    train_polygon = _polygon(partitioned_dataset.train[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    validation_polygon = _polygon(partitioned_dataset.validation[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    test_polygon = _polygon(partitioned_dataset.test[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    if not _valid_polygons(
+      train_polygon=train_polygon, validation_polygon=validation_polygon,
+      test_polygon=test_polygon):
+      continue
+    permutation_splits.append(partitioned_dataset)
+  return permutation_splits
 
 def partition(sample_data: pd.DataFrame,
               partition_strategy: PartitionStrategy) -> PartitionedDataset:
@@ -332,7 +495,7 @@ def preprocess_sample_data(df: pd.DataFrame,
                            aggregate_columns: list[str],
                            keep_grouping: bool) -> pd.DataFrame:
   '''
-  Given a pd.DataFRame df:
+  Given a pd.DataFrame df:
   1. Filters in relevant columns using feature_columns, label_columns
   2. Calculates the mean and variance of each column in label_columns grouping
      by a key made of aggregate_columns
