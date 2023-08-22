@@ -271,8 +271,10 @@ def _partition_data_k_means_furthest_points(
     by=['long', 'lat']
   ).first().reset_index()
   shuffled_coordinates_df = unique_coordinates_df.sample(frac=1.0)
-  coordinates = 
-    list(shuffled_coordinates_df[[_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]].values)
+  coordinates = list(
+    shuffled_coordinates_df[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
   assert(len(coordinates) >= strategy.top_n)
 
   # Compute centroid of the coordinates
