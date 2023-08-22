@@ -93,6 +93,18 @@ _RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
   0.8, 0.1, 0.1, None
 )
 
+@dataclass
+class FurthestPointsPartitionStrategy:
+  '''
+  Defines the parameters for the FURTHEST_POINTS partition strategy
+  '''
+  top_n = 5
+  sample_n = 5
+  train_fraction: float
+  validation_fraction: float
+  test_fraction: float
+  random_seed: int
+
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
@@ -164,7 +176,7 @@ def _nearest_neighbors(
 
 def _partition_by_nearest_neighbors(
   sample_data: pd.DataFrame,
-  strategy: FurthestPointsStrategy,
+  strategy: FurthestPointsPartitionStrategy,
   train_coord: tuple,
   validation_coord: tuple,
   test_coord: tuple
@@ -252,7 +264,7 @@ def _valid_polygons(
 
 def _partition_data_k_means_furthest_points(
   sample_data: pd.DataFrame,
-  strategy: FurthestPointsStrategy
+  strategy: FurthestPointsPartitionStrategy
 ):
   # Shuffle unnique coordinates from sample_data
   unique_coordinates_df = sample_data.groupby(
@@ -312,6 +324,10 @@ def partition(sample_data: pd.DataFrame,
     return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
   elif partition_strategy == PartitionStrategy.RANDOM:
     return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
+  elif partition_strategy == PartitionStrategy.FURTHEST_POINTS:
+    return _partition_data_k_means_furthest_points(
+      sample_data, _FURTHEST_POINTS_STRATEGY
+    )
   else:
     raise ValueError(f"Unknown partition strategy: {partition_strategy}")
 
