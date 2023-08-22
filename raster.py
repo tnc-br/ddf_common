@@ -497,3 +497,32 @@ def generate_isoscapes_from_variational_model(
   np = get_predictions_at_each_pixel(model, input_geotiffs, output_resolution)
   save_numpy_to_geotiff(
       output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
+
+#Stamp isoscape functions
+def stamp_isoscape(filename, metadata_name, metadata_value):
+  #Stamp the isoscape with key/value metadata
+  #This function can also be used to edit an existing stamp.
+  #Open the GeoTIFF file.
+  dataset = gdal.Open(filename)
+  # Get the existing metadata.
+  metadata = dataset.GetMetadata()
+  # Add the custom metadata.
+  metadata[metadata_name] = metadata_value
+  # Set the metadata.
+  dataset.SetMetadata(metadata)
+  # Save the GeoTIFF file.
+  dataset.FlushCache()
+
+def show_stamps(filename):
+  #Return all the metadata in an isoscape
+  dataset = gdal.Open(filename)
+  metadata = dataset.GetMetadata()
+  return(metadata)
+
+def del_stamp(filename, metadata_name):
+  #Delete a key/value stamp in an isoscape
+  dataset = gdal.Open(filename)
+  metadata = dataset.GetMetadata()
+  del metadata[metadata_name]
+  dataset.SetMetadata(metadata)
+  dataset.FlushCache()
