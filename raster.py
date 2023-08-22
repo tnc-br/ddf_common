@@ -12,6 +12,8 @@ import os
 import matplotlib.animation as animation
 from sklearn.compose import ColumnTransformer
 
+import model
+
 
 GDRIVE_BASE = "/content/gdrive"
 RASTER_BASE = "/MyDrive/amazon_rainforest_files/amazon_rasters/" #@param
@@ -278,8 +280,7 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
 
 
 def get_predictions_at_each_pixel(
-    model: tf.keras.Model,
-    feature_transformer: ColumnTransformer,
+    model: model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
     bounds: Bounds):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
@@ -324,9 +325,7 @@ def get_predictions_at_each_pixel(
 
     if (len(rows) > 0):
       X = pd.DataFrame.from_dict(rows)
-      X_scaled = pd.DataFrame(feature_transformer.transform(X),
-                              index=X.index, columns=X.columns)
-      predictions = model.predict_on_batch(X_scaled)
+      predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
       for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
@@ -485,8 +484,7 @@ def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
 
 def generate_isoscapes_from_variational_model(
     output_geotiff_id: str,
-    model: tf.keras.Model,
-    feature_transformer: ColumnTransformer,
+    model: model.Model,
     required_geotiffs: List[str],
     res_x: int, 
     res_y: int):
@@ -496,7 +494,6 @@ def generate_isoscapes_from_variational_model(
   base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
 
-  np = get_predictions_at_each_pixel(
-    model, feature_transformer, input_geotiffs, output_resolution)
+  np = get_predictions_at_each_pixel(model, input_geotiffs, output_resolution)
   save_numpy_to_geotiff(
       output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
