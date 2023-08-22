@@ -14,6 +14,7 @@ from enum import Enum
 from geopy import distance
 from itertools import permutations
 from numpy.random import MT19937, RandomState, SeedSequence
+from shapely import Polygon
 from tqdm import tqdm
 
 @dataclass
