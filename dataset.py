@@ -43,7 +43,7 @@ class PartitionStrategy(Enum):
   '''
   FIXED = 1
   RANDOM = 2
-
+  FURTHEST_POINTS = 3
 
 @dataclass
 class FixedPartitionStrategy:
