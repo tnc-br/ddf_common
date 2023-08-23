@@ -3,6 +3,7 @@ import pandas as pd
 import ee
 import eeddf
 import math
+import raster
 from typing import Tuple, List
 from multiprocessing import Pool
 
@@ -56,7 +57,7 @@ which takes a float `lat` and `lon` as parameters and returns a float.
 The `value_at` method returns the value of the raster at the specified
 latitude and longitude.
 """
-class eeRaster:
+class eeRaster(raster.AmazonGeoTiffBase):
     """
     A class representing an Earth Engine raster.
 
@@ -68,36 +69,6 @@ class eeRaster:
     """
     def __init__(self, imageCollection: ee.ImageCollection):
       self._imageCollection = imageCollection
-
-    def value_at(self, lat: float, lon: float) -> float:
-        """
-        Returns the value of the raster at the specified latitude and longitude.
-
-        Args:
-            lat (float): The latitude coordinate.
-            lon (float): The longitude coordinate.
-
-        Returns:
-            float: The value of the raster at the specified latitude and longitude.
-        """
-        return self.values_at([[lat, lon]])[0]
-
-    def values_at(self, coordinates:List[Tuple[float, float]]) -> List[float]:
-      """
-      Returns the values of the raster at the specified latitudes and longitudes.
-
-      Args:
-          coordinates: A list of tuples consisting of [latitude, longitude].
-
-      Returns:
-          List[float]: The values of the raster at the specified latitudes and
-          longitudes.
-      """
-      df = self.values_at_df(pd.DataFrame(coordinates, columns=[
-        _LATITUDE_COLUMN_NAME, _LONGITUDE_COLUMN_NAME]))
-
-      value_list = df["value"].tolist()
-      return value_list
 
     def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
