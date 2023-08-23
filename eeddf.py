@@ -18,4 +18,4 @@ def initialize_ddf():
     auth.authenticate_user()
 
     credentials, project_id = google.auth.default()
-    ee.Initialize(credentials, project='river-sky-386919')
+    ee.Initialize(credentials, project='river-sky-386919', opt_url='https://earthengine-highvolume.googleapis.com')
