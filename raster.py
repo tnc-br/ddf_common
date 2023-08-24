@@ -498,29 +498,61 @@ def generate_isoscapes_from_variational_model(
   save_numpy_to_geotiff(
       output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
 
-#Stamp isoscape functions
-def stamp_isoscape(filename, metadata_name, metadata_value):
-  #Stamp the isoscape with key/value metadata
-  #This function can also be used to edit an existing stamp.
-  #Open the GeoTIFF file.
+def stamp_isoscape(filename: str, metadata_name: str, metadata_value: str):
+  """
+  stamp_isoscape function
+  ------------------------
+  This function stamps an isoscape with key/value metadata.
+  This function can also be used to edit an existing stamp:
+    - inform the existing metadata_name
+    - inform a new desired metadata_value 
+  ------------------------
+  Parameters:
+  filename : str
+      GeoTIFF filename (with the full path) of the isoscape to be stamped
+      e.g: /content/gdrive/Shared drives/TNC Fellowship 🌳/4. Isotope Research & Signals/code/amazon_rainforest_files/amazon_rasters/variational/ensemble_with_carbon_brisoisorix/fixed_isorix_carbon_ensemble.tiff
+  metadata_name : str
+      Name of the metadata to be stamped 
+      e.g: "p_value"
+  metadata_value : str
+      Value of the metadada related to the metadata_name informed
+      e,g: "0.05"
+  """
   dataset = gdal.Open(filename)
-  # Get the existing metadata.
   metadata = dataset.GetMetadata()
-  # Add the custom metadata.
   metadata[metadata_name] = metadata_value
-  # Set the metadata.
   dataset.SetMetadata(metadata)
-  # Save the GeoTIFF file.
   dataset.FlushCache()
 
-def show_stamps(filename):
-  #Return all the metadata in an isoscape
+def show_stamps(filename: str):
+  """
+  show_stamps function
+  ------------------------
+  This function returns all the metadata from an isoscape
+  ------------------------
+  Parameter:
+  filename : str
+      GeoTIFF filename (with the full path) of the stamped isoscape
+      e.g: /content/gdrive/Shared drives/TNC Fellowship 🌳/4. Isotope Research & Signals/code/amazon_rainforest_files/amazon_rasters/variational/ensemble_with_carbon_brisoisorix/fixed_isorix_carbon_ensemble.tiff
+  """
   dataset = gdal.Open(filename)
   metadata = dataset.GetMetadata()
   return(metadata)
 
-def del_stamp(filename, metadata_name):
-  #Delete a key/value stamp in an isoscape
+def del_stamp(filename: str, metadata_name: str):
+  """
+  del_stamp function
+  ------------------------
+  This function deletes a key/value metadata
+  ------------------------
+  Parameters:
+  filename : str
+      GeoTIFF filename (with the full path) of the stamped isoscape
+      e.g: /content/gdrive/Shared drives/TNC Fellowship 🌳/4. Isotope Research & Signals/code/amazon_rainforest_files/amazon_rasters/variational/ensemble_with_carbon_brisoisorix/fixed_isorix_carbon_ensemble.tiff
+  metadata_name : str
+      Name of the metadata to be deleted
+      e.g: "p_value"
+  """  
   dataset = gdal.Open(filename)
   metadata = dataset.GetMetadata()
   del metadata[metadata_name]
