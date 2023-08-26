@@ -1,8 +1,10 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from osgeo import gdal, gdal_array
 import numpy as np
+import pandas as pd
+from typing import Tuple, List
 import tensorflow as tf
-from typing import List
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pandas as pd
@@ -21,10 +23,57 @@ MODEL_BASE = "/MyDrive/amazon_rainforest_files/amazon_isoscape_models/" #@param
 SAMPLE_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_sample_data/" #@param
 ANIMATIONS_BASE = "/MyDrive/amazon_rainforest_files/amazon_animations/" #@param
 TEST_DATA_BASE = "/MyDrive/amazon_rainforest_files/amazon_test_data/" #@param
+_LONGITUDE_COLUMN_NAME = "long"
+_LATITUDE_COLUMN_NAME = "lat"
 
 # Module for helper functions for manipulating data and datasets.
+class AmazonGeoTiffBase(ABC): # Inherit from ABC(Abstract base class)
+    def value_at(self, lon: float, lat: float) -> float:
+        """
+        Returns the value of the raster at the specified latitude and longitude.
+
+        Args:
+            lat (float): The latitude coordinate.
+            lon (float): The longitude coordinate.
+
+        Returns:
+            float: The value of the raster at the specified latitude and longitude.
+        """
+        return self.values_at([[lon, lat]])[0]
+
+    def values_at(self, coordinates:List[Tuple[float, float]]) -> List[float]:
+      """
+      Returns the values of the raster at the specified latitudes and longitudes.
+
+      Args:
+          coordinates: A list of tuples consisting of [latitude, longitude].
+
+      Returns:
+          List[float]: The values of the raster at the specified latitudes and
+          longitudes.
+      """
+      df = self.values_at_df(pd.DataFrame(coordinates, columns=[
+        _LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]))
+
+      value_list = df["value"].tolist()
+      return value_list
+
+    @abstractmethod
+    def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
+      """
+      Returns the values of the raster at the specified latitudes and longitudes.
+
+      Args:
+          coordinates: A list of tuples consisting of [latitude, longitude].
+
+      Returns:
+          List[float]: The values of the raster at the specified latitudes and
+          longitudes.
+      """
+      pass
+
 @dataclass
-class AmazonGeoTiff:
+class AmazonGeoTiff(AmazonGeoTiffBase):
   """Represents a geotiff from our dataset."""
   gdal_dataset: gdal.Dataset
   image_value_array: np.ndarray # ndarray of floats
@@ -35,6 +84,9 @@ class AmazonGeoTiff:
 
   def value_at(self, x: float, y: float) -> float:
     return get_data_at_coords(self, x, y, -1)
+
+  def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
+    return None
 
 
 @dataclass

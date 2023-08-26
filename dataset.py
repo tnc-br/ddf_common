@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import ee
+import eeddf
 import pandas as pd
 import raster
 from numpy.random import MT19937, RandomState, SeedSequence
@@ -306,12 +307,7 @@ def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
   to access this data, which is obtained by belonging to an organization added
   to TimberID.org
   '''
-  import google
-  from google.colab import auth
-  auth.authenticate_user()
-
-  credentials, project_id = google.auth.default()
-  ee.Initialize(credentials, project='river-sky-386919')
+  eeddf.initialize_ddf()
   fc = ee.FeatureCollection('projects/river-sky-386919/assets/timberID/trusted_samples')
   for filter_fc in filters:
     fc = fc.filter(filter_fc)
