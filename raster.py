@@ -509,14 +509,14 @@ d13C_mean_amazon_only_geotiff_ = None
 def d13C_mean_amazon_only_geotiff() -> AmazonGeoTiff:
   global d13C_mean_amazon_only_geotiff_
   if not d13C_mean_amazon_only_geotiff_:
-    d13C_mean_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null"), "d13C_mean_amazon", use_only_band_index=0)
+    d13C_mean_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_mean_amazon", use_only_band_index=0)
   return d13C_mean_amazon_only_geotiff_
 
 d13C_var_amazon_only_geotiff_ = None
 def d13C_var_amazon_only_geotiff() -> AmazonGeoTiff:
   global d13C_var_amazon_only_geotiff_
   if not d13C_var_amazon_only_geotiff_:
-    d13C_var_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null"), "d13C_var_amazon", use_only_band_index=1)
+    d13C_var_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_var_amazon", use_only_band_index=1)
   return d13C_var_amazon_only_geotiff_
 
 # A collection of column names to functions that load the corresponding geotiffs.
