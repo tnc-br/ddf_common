@@ -364,13 +364,12 @@ def get_predictions_at_each_pixel(
       row["long"] = x
 
       # Surround in try/except as we will be trying to fetch out of bounds data.
-      try:
-        for geotiff_label, geotiff in geotiffs.items():
-          row[geotiff_label] = geotiff.value_at(x, y)
-          if pd.isnull(row[geotiff_label]):
-            raise ValueError
-      except (ValueError, IndexError):
-        continue # masked and out-of-bounds coordinates
+      for geotiff_label, geotiff in geotiffs.items():
+        if not is_valid_point(y, x, geotiff):
+          continue
+        row[geotiff_label] = geotiff.value_at(x, y)
+        if pd.isnull(row[geotiff_label]):
+          continue
 
       rows.append(row)
       row_indexes.append((y_idx,0,))
