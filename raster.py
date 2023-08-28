@@ -334,7 +334,8 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
 def get_predictions_at_each_pixel(
     model: model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
-    bounds: Bounds):
+    bounds: Bounds,
+    geometry_mask: AmazonGeoTiff=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
   at that pixel and passing the parameters to the model. 
@@ -346,7 +347,8 @@ def get_predictions_at_each_pixel(
   `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
                          Input must be transformed prior to predictions
   `geotiffs`: The set of geotiffs required to make the prediction
-  `bounds`: Every pixel within these bounds will have a prediction made on it.  """
+  `bounds`: Every pixel within these bounds will have a prediction made on it
+  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
 
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
@@ -365,6 +367,8 @@ def get_predictions_at_each_pixel(
 
       # Surround in try/except as we will be trying to fetch out of bounds data.
       try:
+        if geometry_mask and pd.isnull(geometry_mask.value_at(x, y)):
+          continue
         for geotiff_label, geotiff in geotiffs.items():
           row[geotiff_label] = geotiff.value_at(x, y)
           if pd.isnull(row[geotiff_label]):
@@ -581,7 +585,9 @@ def generate_isoscapes_from_variational_model(
   base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
 
-  np = get_predictions_at_each_pixel(model, input_geotiffs, output_resolution)
+  np = get_predictions_at_each_pixel(
+    model, input_geotiffs, output_resolution, 
+    geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
       output_resolution, np, get_raster_path(output_geotiff+".tiff"))
 
