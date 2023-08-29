@@ -314,7 +314,6 @@ def _partition_data_k_means_furthest_points(
   for coord in coordinates:
     distances_to_centroid.append((
       math.dist(centroid, coord), (coord[0], coord[1])))
-  print(distances_to_centroid)
   distances_to_centroid.sort(reverse=True)
   furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
 
