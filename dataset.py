@@ -106,13 +106,15 @@ class FurthestPointsPartitionStrategy:
   validation_fraction: float
   test_fraction: float
   random_seed: int
+  max_attempts: int
 
 _FURTHEST_POINTS_STRATEGY = FurthestPointsPartitionStrategy(
   top_n=5,
   train_fraction=0.8,
   validation_fraction=0.1,
   test_fraction=0.1,
-  random_seed=None
+  random_seed=None,
+  max_attempts=1000
 )
 
 # Standard column names in reference samples.
@@ -173,20 +175,19 @@ def _nearest_neighbors(
   # may end up with bigger or smaller splits.
   n_neighbors = int(
     min(sample_data.shape[0], n_neighbors))
+  print("n_neighbors:", n_neighbors)
   if n_neighbors < 3:
     return pd.DataFrame({
       _LONGITUDE_COLUMN_NAME: [],
       _LATITUDE_COLUMN_NAME: [],
     })
   near = NearestNeighbors(n_neighbors=n_neighbors).fit(
-    sample_data
+    sample_data[[_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]]
   )
   indices = near.kneighbors(
     [center_coordinate], return_distance=False)[0]
-  coords = sample_data.iloc[indices, :].values
-  return sample_data[
-          sample_data[_LONGITUDE_COLUMN_NAME].isin(coords[:, 0]) &
-          sample_data[_LATITUDE_COLUMN_NAME].isin(coords[:, 1])]
+  print(len(indices))
+  return sample_data.iloc[indices, :]
 
 def _partition_by_nearest_neighbors(
   sample_data: pd.DataFrame,
@@ -201,26 +202,24 @@ def _partition_by_nearest_neighbors(
     sample_data=sample_data,
     n_neighbors=sample_data.shape[0]*strategy.train_fraction
   )
+  print(train_split.index)
   filtered_sample_data = sample_data[
-          ~sample_data[_LONGITUDE_COLUMN_NAME].isin(
-            train_split[_LONGITUDE_COLUMN_NAME].values
-          ) |
-          ~sample_data[_LATITUDE_COLUMN_NAME].isin(
-            train_split[_LATITUDE_COLUMN_NAME].values
+          ~sample_data.index.isin(
+            train_split.index.values
           )]
+  print(filtered_sample_data.shape)
   
   validation_split = _nearest_neighbors(
     center_coordinate=validation_coord,
     sample_data=filtered_sample_data,
     n_neighbors=sample_data.shape[0]*strategy.validation_fraction 
   )
+  print(validation_split.index)
   filtered_sample_data = filtered_sample_data[
-    ~filtered_sample_data[_LONGITUDE_COLUMN_NAME].isin(
-      validation_split[_LONGITUDE_COLUMN_NAME].values
-    ) |
-    ~filtered_sample_data[_LATITUDE_COLUMN_NAME].isin(
-      validation_split[_LATITUDE_COLUMN_NAME].values
+    ~filtered_sample_data.index.isin(
+      validation_split.index.values
     )]
+  print(filtered_sample_data.shape)
   
   test_split = _nearest_neighbors(
     center_coordinate=test_coord,
@@ -269,9 +268,22 @@ def _valid_polygons(
   '''
   small_polygon = False
   for polygon in [train_polygon, validation_polygon, test_polygon]:
+    print(polygon.area)
     if polygon.area < 0.1:
       return False
 
+  print(
+    "train_polygon.intersects(validation_polygon):",
+    train_polygon.intersects(validation_polygon)
+  )
+  print(
+    "train_polygon.intersects(test_polygon):",
+    train_polygon.intersects(test_polygon)
+  )
+  print(
+    "validation_polygon.intersects(test_polygon):",
+    validation_polygon.intersects(test_polygon)
+  )
   if (train_polygon.intersects(validation_polygon) or
      train_polygon.intersects(test_polygon) or
      validation_polygon.intersects(test_polygon)):
@@ -314,41 +326,48 @@ def _partition_data_k_means_furthest_points(
   for coord in coordinates:
     distances_to_centroid.append((
       math.dist(centroid, coord), (coord[0], coord[1])))
+  print(distances_to_centroid)
   distances_to_centroid.sort(reverse=True)
   furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
 
-  random.shuffle(furthest_coordinates)
-  # We need permutations of 3 numbers that correspond to train, validation and test.
-  coord_permutations = list(permutations(furthest_coordinates, 3))
-  random.shuffle(coord_permutations)
-  # Pick one random permutation.
-  sampled_permutation = coord_permutations[0]
+  partitioned_dataset = None
+  attempts = 0
+  train_polygon = None
+  validation_polygon = None
+  test_polygon = None
+  are_valid_polygons = False
+  while (attempts <= strategy.max_attempts and
+        train_polygon is None and
+        validation_polygon is None and
+        test_polygon is None and
+        not are_valid_polygons):
+    random.shuffle(furthest_coordinates)
+    # We need permutations of 3 numbers that correspond to train, validation and test.
+    coord_permutations = list(permutations(furthest_coordinates, 3))
+    random.shuffle(coord_permutations)
+    # Pick one random permutation.
+    sampled_permutation = coord_permutations[0]
 
-  partitioned_dataset = _partition_by_nearest_neighbors(
-    sample_data=sample_data,
-    strategy=strategy,
-    train_coord=sampled_permutation[0],
-    validation_coord=sampled_permutation[1],
-    test_coord=sampled_permutation[2]
-  )
-  train_polygon = _polygon(partitioned_dataset.train[
-    [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
-  ].values)
-  validation_polygon = _polygon(partitioned_dataset.validation[
-    [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
-  ].values)
-  test_polygon = _polygon(partitioned_dataset.test[
-    [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
-  ].values)
-  assert (not train_polygon or
-    not validation_polygon or
-    not test_polygon or
-    not _valid_polygons(
-    train_polygon=train_polygon, validation_polygon=validation_polygon,
-    test_polygon=test_polygon)),(f"not {train_polygon} or" +
-    f"not {validation_polygon} or" +
-    f"not {test_polygon} or" +
-    f"not {_valid_polygons(train_polygon=train_polygon, validation_polygon=validation_polygon,test_polygon=test_polygon)}")
+    partitioned_dataset = _partition_by_nearest_neighbors(
+      sample_data=sample_data,
+      strategy=strategy,
+      train_coord=sampled_permutation[0],
+      validation_coord=sampled_permutation[1],
+      test_coord=sampled_permutation[2]
+    )
+    train_polygon = _polygon(partitioned_dataset.train[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    validation_polygon = _polygon(partitioned_dataset.validation[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    test_polygon = _polygon(partitioned_dataset.test[
+      [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
+    ].values)
+    are_valid_polygons = _valid_polygons(
+      train_polygon=train_polygon, validation_polygon=validation_polygon,
+      test_polygon=test_polygon)
+    attempts += 1
   return partitioned_dataset
 
 def partition(sample_data: pd.DataFrame,
