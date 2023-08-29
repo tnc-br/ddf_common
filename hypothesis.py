@@ -197,11 +197,10 @@ def fraud_metrics(sample_data: pd.DataFrame,
                   means_isoscapes: list[raster.AmazonGeoTiff],
                   variances_isoscapes: list[raster.AmazonGeoTiff],
                   sample_size_per_location: int,
-                  p_value_target: float,
-                  group_data: bool = True):
+                  p_value_target: float):
     '''
     Calculates the accuracy, precision, recall based on true positives and negatives,
-    and the false positive and negatives. (go/ddf-glossary)
+    and the false positive and negatives. Assumes that the dataset is grouped.
 
     sample_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
     isotope_column_names: Names of the columns that correspond to separate elements to consider
@@ -215,21 +214,14 @@ def fraud_metrics(sample_data: pd.DataFrame,
     p_value_target: desired p_value for the t-test (e.sample_data: 0.05)
     group_data: Whether or not the data needs to be grouped.
     '''
-    if group_data:
-      predictions = get_predictions(sample_data,
-                    isotope_column_names,
-                    means_isoscapes,
-                    variances_isoscapes,
-                    sample_size_per_location)
-    else:
-      predictions = get_predictions_grouped(
-        sample_data=sample_data,
-        isotope_means_column_names=[f"{col}_mean" for col in isotope_column_names],
-        isotope_variances_column_names=[f"{col}_variance" for col in isotope_column_names],
-        isotope_counts_column_names=[f"{col}_{dataset.SAMPLE_COUNT_COLUMN_NAME_SUFFIX}" for col in isotope_column_names],
-        means_isoscapes=means_isoscapes,
-        variances_isoscapes=variances_isoscapes,
-        sample_size_per_location=sample_size_per_location)
+    predictions = get_predictions_grouped(
+      sample_data=sample_data,
+      isotope_means_column_names=[f"{col}_mean" for col in isotope_column_names],
+      isotope_variances_column_names=[f"{col}_variance" for col in isotope_column_names],
+      isotope_counts_column_names=[f"{col}_{dataset.SAMPLE_COUNT_COLUMN_NAME_SUFFIX}" for col in isotope_column_names],
+      means_isoscapes=means_isoscapes,
+      variances_isoscapes=variances_isoscapes,
+      sample_size_per_location=sample_size_per_location)
     
     # A low p-value in our t-test indicates that two distributions (the ground truth and sample being tested)
     # are dissimilar, which should cause a positive (fraud) result."
