@@ -348,6 +348,12 @@ def _partition_data_k_means_furthest_points(
       train_polygon=train_polygon, validation_polygon=validation_polygon,
       test_polygon=test_polygon)
     attempts += 1
+  assert(
+    (train_polygon is None or
+     validation_polygon is None or
+     test_polygon is None or
+     not are_valid_polygons)
+  )
   return partitioned_dataset
 
 def partition(sample_data: pd.DataFrame,
