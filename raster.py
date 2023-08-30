@@ -334,7 +334,8 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
 def get_predictions_at_each_pixel(
     model: model.Model,
     geotiffs: dict[str, AmazonGeoTiff],
-    bounds: Bounds):
+    bounds: Bounds,
+    geometry_mask: AmazonGeoTiff=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
   at that pixel and passing the parameters to the model. 
@@ -346,7 +347,8 @@ def get_predictions_at_each_pixel(
   `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
                          Input must be transformed prior to predictions
   `geotiffs`: The set of geotiffs required to make the prediction
-  `bounds`: Every pixel within these bounds will have a prediction made on it.  """
+  `bounds`: Every pixel within these bounds will have a prediction made on it
+  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
 
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
@@ -365,6 +367,8 @@ def get_predictions_at_each_pixel(
 
       # Surround in try/except as we will be trying to fetch out of bounds data.
       try:
+        if geometry_mask and pd.isnull(geometry_mask.value_at(x, y)):
+          continue
         for geotiff_label, geotiff in geotiffs.items():
           row[geotiff_label] = geotiff.value_at(x, y)
           if pd.isnull(row[geotiff_label]):
@@ -505,6 +509,20 @@ def d13C_var_geotiff() -> AmazonGeoTiff:
     d13C_var_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_var", use_only_band_index=1)
   return d13C_var_geotiff_
 
+d13C_mean_amazon_only_geotiff_ = None
+def d13C_mean_amazon_only_geotiff() -> AmazonGeoTiff:
+  global d13C_mean_amazon_only_geotiff_
+  if not d13C_mean_amazon_only_geotiff_:
+    d13C_mean_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_mean_amazon", use_only_band_index=0)
+  return d13C_mean_amazon_only_geotiff_
+
+d13C_var_amazon_only_geotiff_ = None
+def d13C_var_amazon_only_geotiff() -> AmazonGeoTiff:
+  global d13C_var_amazon_only_geotiff_
+  if not d13C_var_amazon_only_geotiff_:
+    d13C_var_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_var_amazon", use_only_band_index=1)
+  return d13C_var_amazon_only_geotiff_
+
 # A collection of column names to functions that load the corresponding geotiffs.
 column_name_to_geotiff_fn = {
   "VPD" : vapor_pressure_deficit_geotiff,
@@ -535,20 +553,43 @@ def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
   return new_bounds
 
 def generate_isoscapes_from_variational_model(
-    output_geotiff_id: str,
     model: model.Model,
     required_geotiffs: List[str],
     res_x: int, 
-    res_y: int):
+    res_y: int,
+    output_geotiff: str,
+    amazon_only: bool=False):
+  """
+  generate_isoscapes_from_variational_model function
+  --------------------------------------------------
+  This function generates an isoscape using a model, according
+  to the resolution specs. It queries the model for every 
+  pixel in a (res_x x res_y) tiff of the landscape.
+  --------------------------------------------------
+  Parameters:
+  output_geotiff: str
+    Name of the file to output. 
+  required_geotiffs: List[str]
+    List of columns required to query the model. All of these 
+    rasters will be loaded into memory and queried at every
+    pixel to query the model.
+  res_x: int
+    The  
+
+  """
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
-  
-  arbitrary_geotiff = list(input_geotiffs.values())[0]
+
+  arbitrary_geotiff = list(input_geotiffs.values())[0]  
+  if amazon_only:
+    arbitrary_geotiff = d13C_mean_amazon_only_geotiff()
   base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
 
-  np = get_predictions_at_each_pixel(model, input_geotiffs, output_resolution)
+  np = get_predictions_at_each_pixel(
+    model, input_geotiffs, output_resolution, 
+    geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
-      output_resolution, np, get_raster_path(output_geotiff_id+".tiff"))
+      output_resolution, np, get_raster_path(output_geotiff+".tiff"))
 
 def stamp_isoscape(filename: str, metadata_name: str, metadata_value: str):
   """
