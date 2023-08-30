@@ -175,7 +175,6 @@ def _nearest_neighbors(
   # may end up with bigger or smaller splits.
   n_neighbors = int(
     min(sample_data.shape[0], n_neighbors))
-  print("n_neighbors:", n_neighbors)
   if n_neighbors < 3:
     return pd.DataFrame({
       _LONGITUDE_COLUMN_NAME: [],
@@ -186,7 +185,6 @@ def _nearest_neighbors(
   )
   indices = near.kneighbors(
     [center_coordinate], return_distance=False)[0]
-  print(len(indices))
   return sample_data.iloc[indices, :]
 
 def _partition_by_nearest_neighbors(
@@ -196,30 +194,25 @@ def _partition_by_nearest_neighbors(
   validation_coord: tuple,
   test_coord: tuple
 ):
-  print(sample_data.shape[0]*strategy.train_fraction)
   train_split = _nearest_neighbors(
     center_coordinate=train_coord,
     sample_data=sample_data,
     n_neighbors=sample_data.shape[0]*strategy.train_fraction
   )
-  print(train_split.index)
   filtered_sample_data = sample_data[
           ~sample_data.index.isin(
             train_split.index.values
           )]
-  print(filtered_sample_data.shape)
   
   validation_split = _nearest_neighbors(
     center_coordinate=validation_coord,
     sample_data=filtered_sample_data,
     n_neighbors=sample_data.shape[0]*strategy.validation_fraction 
   )
-  print(validation_split.index)
   filtered_sample_data = filtered_sample_data[
     ~filtered_sample_data.index.isin(
       validation_split.index.values
     )]
-  print(filtered_sample_data.shape)
   
   test_split = _nearest_neighbors(
     center_coordinate=test_coord,
@@ -268,22 +261,9 @@ def _valid_polygons(
   '''
   small_polygon = False
   for polygon in [train_polygon, validation_polygon, test_polygon]:
-    print(polygon.area)
     if polygon.area < 0.1:
       return False
 
-  print(
-    "train_polygon.intersects(validation_polygon):",
-    train_polygon.intersects(validation_polygon)
-  )
-  print(
-    "train_polygon.intersects(test_polygon):",
-    train_polygon.intersects(test_polygon)
-  )
-  print(
-    "validation_polygon.intersects(test_polygon):",
-    validation_polygon.intersects(test_polygon)
-  )
   if (train_polygon.intersects(validation_polygon) or
      train_polygon.intersects(test_polygon) or
      validation_polygon.intersects(test_polygon)):
@@ -326,7 +306,6 @@ def _partition_data_k_means_furthest_points(
   for coord in coordinates:
     distances_to_centroid.append((
       math.dist(centroid, coord), (coord[0], coord[1])))
-  print(distances_to_centroid)
   distances_to_centroid.sort(reverse=True)
   furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
 
@@ -337,10 +316,10 @@ def _partition_data_k_means_furthest_points(
   test_polygon = None
   are_valid_polygons = False
   while (attempts <= strategy.max_attempts and
-        train_polygon is None and
-        validation_polygon is None and
-        test_polygon is None and
-        not are_valid_polygons):
+        (train_polygon is None or
+        validation_polygon is None or
+        test_polygon is None or
+        not are_valid_polygons)):
     random.shuffle(furthest_coordinates)
     # We need permutations of 3 numbers that correspond to train, validation and test.
     coord_permutations = list(permutations(furthest_coordinates, 3))
