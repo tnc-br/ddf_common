@@ -170,6 +170,10 @@ def _nearest_neighbors(
   sample_data: pd.DataFrame,
   n_neighbors: int
 ):
+  '''
+  From sample_data, select the n_neighbors closest to the specified
+  center_coordinate.
+  '''
   assert(len(center_coordinate) == 2)
   # Sometimes rounding of split fractions with dataframe shapes
   # may end up with bigger or smaller splits.
@@ -194,6 +198,13 @@ def _partition_by_nearest_neighbors(
   validation_coord: tuple,
   test_coord: tuple
 ):
+  '''
+  Returns a PartitionedDataset from splits of a sample_data pd.DataFrame by the train,
+  validation and test split fractions, choosing the points based on the nearest points
+  for each of the train_coord, validation_coord and test_coord arguments.
+  It first gets the nearest neighbors for train_coord, then validation_coord
+  and finally test_coord.
+  '''
   train_split = _nearest_neighbors(
     center_coordinate=train_coord,
     sample_data=sample_data,
@@ -271,11 +282,15 @@ def _valid_polygons(
 
   return True
 
-def _partition_data_k_means_furthest_points(
+def _shuffled_unique_coordinates(
   sample_data: pd.DataFrame,
+  furthest_coordinates: list[list[float]],
   strategy: FurthestPointsPartitionStrategy
 ):
-  # Shuffle unnique coordinates from sample_data
+  '''
+  Returns shuffled unique coordinates from sample_data that match
+  the expected train, validation and test fractions.
+  '''
   unique_coordinates_df = sample_data.groupby(
     by=['long', 'lat']
   ).first().reset_index()
@@ -298,29 +313,25 @@ def _partition_data_k_means_furthest_points(
     f"{int(len(coordinates) * strategy.validation_fraction)} validation + "
     f"{int(len(coordinates) * strategy.test_fraction)} test samples but you have a sample of {len(coordinates)}")
   
-  # Compute centroid of the coordinates
-  centroid = [sum([c[0] for c in coordinates])/len(coordinates),
-              sum([c[1] for c in coordinates])/len(coordinates)]
-  
-  # Sort coordinates from furthest to closest to the centroid.
-  distances_to_centroid = []
-  for coord in coordinates:
-    distances_to_centroid.append((
-      math.dist(centroid, coord), (coord[0], coord[1])))
-  distances_to_centroid.sort(reverse=True)
-  furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
+  return coordinates
 
+def _maybe_partition_furthest_points(
+  sample_data: pd.DataFrame,
+  furthest_coordinates: list[list[float]],
+  strategy: FurthestPointsPartitionStrategy
+):
+  '''
+  Returns a PartitionedDataset that has a valid train/validation/test split
+  that has:
+  - Non-overlapping splits
+  - Splits which polygon areas have less than 0.1 area
+  It attempts to generate these partitions randomly for at most strategy.max_attempts.
+  If unsuccesful, returns None.
+  '''
   partitioned_dataset = None
   attempts = 0
-  train_polygon = None
-  validation_polygon = None
-  test_polygon = None
-  are_valid_polygons = False
   while (attempts <= strategy.max_attempts and
-        (train_polygon is None or
-        validation_polygon is None or
-        test_polygon is None or
-        not are_valid_polygons)):
+         partitioned_dataset is None):
     random.seed(strategy.random_seed)
     random.shuffle(furthest_coordinates)
     # We need permutations of 3 numbers that correspond to train, validation and test.
@@ -348,18 +359,38 @@ def _partition_data_k_means_furthest_points(
     are_valid_polygons = _valid_polygons(
       train_polygon=train_polygon, validation_polygon=validation_polygon,
       test_polygon=test_polygon)
+    if (train_polygon is None or
+        validation_polygon is None or
+        test_polygon is None or
+        not are_valid_polygons):
+      partitioned_dataset = None
     attempts += 1
-  print(attempts)
-  print(train_polygon is None)
-  print(validation_polygon is None)
-  print(test_polygon is None)
-  print(not are_valid_polygons)
-  assert(
-    (train_polygon is not None and
-     validation_polygon is not None and
-     test_polygon is not None and
-     are_valid_polygons)
-  )
+  return partitioned_dataset
+
+def _partition_data_furthest_points(
+  sample_data: pd.DataFrame,
+  strategy: FurthestPointsPartitionStrategy
+):
+  coordinates = _shuffled_unique_coordinates(sample_data, strategy)
+  
+  # Compute centroid of the coordinates
+  centroid = [sum([c[0] for c in coordinates])/len(coordinates),
+              sum([c[1] for c in coordinates])/len(coordinates)]
+  
+  # Sort coordinates from furthest to closest to the centroid.
+  distances_to_centroid = []
+  for coord in coordinates:
+    distances_to_centroid.append((
+      math.dist(centroid, coord), (coord[0], coord[1])))
+  distances_to_centroid.sort(reverse=True)
+  furthest_coordinates = [d[1] for d in distances_to_centroid[:strategy.top_n]]
+
+  partitioned_dataset_or_none = _maybe_partition_furthest_points(
+    sample_data=sample_data,
+    furthest_coordinates=furthest_coordinates,
+    strategy=strategy)
+  assert(partitioned_dataset_or_none is not None)
+
   return partitioned_dataset
 
 def partition(sample_data: pd.DataFrame,
@@ -657,7 +688,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
   count = 0
 
   for coord, lab_samp in real_samples_code:
-    if lab_samp.size <= 1 :
+    if lab_samp.size <= 1:
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
