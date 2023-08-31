@@ -185,8 +185,7 @@ def _partition_data_random(sample_data: pd.DataFrame,
 def _nearest_neighbors(
   center_coordinate: list[float],
   sample_data: pd.DataFrame,
-  n_neighbors: int
-):
+  n_neighbors: int) -> pd.DataFrame:
   '''
   From sample_data, select the n_neighbors closest to the specified
   center_coordinate.
@@ -255,8 +254,7 @@ def _partition_by_nearest_neighbors(
   )
 
 def _polygon(
-  coordinates: list[list]
-):
+  coordinates: list[list]) -> Polygon:
   '''
   Given an unordered list of longitude and latitude coordinates
   represented by tuples, returns a polygon with the shape of the
@@ -280,8 +278,7 @@ def _polygon(
 def _valid_polygons(
   train_polygon: Polygon,
   validation_polygon: Polygon,
-  test_polygon: Polygon
-):
+  test_polygon: Polygon) -> bool:
   '''
   Returns true if the train, validation, and test polygons
   have a larger area than or equal to 0.1 and they don't overlap
@@ -301,8 +298,7 @@ def _valid_polygons(
 
 def _shuffled_unique_coordinates(
   sample_data: pd.DataFrame,
-  strategy: FurthestPointsPartitionStrategy
-):
+  strategy: FurthestPointsPartitionStrategy) -> list[list[float]]:
   '''
   Returns shuffled unique coordinates from sample_data that match
   the expected train, validation and test fractions.
@@ -334,8 +330,7 @@ def _shuffled_unique_coordinates(
 def _maybe_partition_furthest_points(
   sample_data: pd.DataFrame,
   furthest_coordinates: list[list[float]],
-  strategy: FurthestPointsPartitionStrategy
-):
+  strategy: FurthestPointsPartitionStrategy) -> PartitionedDataset:
   '''
   Returns a PartitionedDataset that has a valid train/validation/test split
   that has:
@@ -385,8 +380,7 @@ def _maybe_partition_furthest_points(
 
 def _partition_data_furthest_points(
   sample_data: pd.DataFrame,
-  strategy: FurthestPointsPartitionStrategy
-):
+  strategy: FurthestPointsPartitionStrategy) -> PartitionedDataset:
   coordinates = _shuffled_unique_coordinates(sample_data, strategy)
   
   # Compute centroid of the coordinates
