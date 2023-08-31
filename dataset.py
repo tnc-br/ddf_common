@@ -98,8 +98,25 @@ _RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
 @dataclass
 class FurthestPointsPartitionStrategy:
   '''
-  Defines the parameters for the FURTHEST_POINTS partition strategy
+  Defines the parameters for the FURTHEST_POINTS partition strategy.
+  What this strategy consists of is, attempting max_attempts times:
+
+  1. Get top_n coordinates from the sample that are the furthest away
+     from the centroid of the overall sample.
+  2. Sample randomly 3 of these top_n coordinates. This will be the
+     centroid of the train/validation/test splits.
+  3. Get the sample_size*fraction nearest neighbors to each centroid.
+  4. Check that new splits don't overlap or have an area smaller than 0.1
+
+  Attributes:
   - top_n: How many furthest points to consider as centroids to sample
+           that will be the centroid of nearest neighbors for train/validation/test
+           splits respectivelty.
+  - train/validation/test_fraction: how much of the unique coordinate samples to
+           assign to each split
+  - max_attempts: How many teams to sample furthest points as centroids randomly to
+                  attempt creating a valid split. See _maybe_partition_furthest_points
+                  for more details.
   '''
   top_n: int 
   train_fraction: float
