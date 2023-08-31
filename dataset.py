@@ -316,15 +316,16 @@ def _partition_data_k_means_furthest_points(
   validation_polygon = None
   test_polygon = None
   are_valid_polygons = False
+  random_obj = random.Random(strategy.random_seed)
   while (attempts <= strategy.max_attempts and
         (train_polygon is None or
         validation_polygon is None or
         test_polygon is None or
         not are_valid_polygons)):
-    random.Random(strategy.random_seed).shuffle(furthest_coordinates)
+    random_obj.shuffle(furthest_coordinates)
     # We need permutations of 3 numbers that correspond to train, validation and test.
     coord_permutations = list(permutations(furthest_coordinates, 3))
-    random.Random(strategy.random_seed).shuffle(coord_permutations)
+    random_obj.shuffle(coord_permutations)
     # Pick one random permutation.
     sampled_permutation = coord_permutations[0]
 
