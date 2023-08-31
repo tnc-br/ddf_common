@@ -349,11 +349,16 @@ def _partition_data_k_means_furthest_points(
       train_polygon=train_polygon, validation_polygon=validation_polygon,
       test_polygon=test_polygon)
     attempts += 1
+  print(attempts)
+  print(train_polygon is None)
+  print(validation_polygon is None)
+  print(test_polygon is None)
+  print(not are_valid_polygons)
   assert(
-    (train_polygon is None or
-     validation_polygon is None or
-     test_polygon is None or
-     not are_valid_polygons)
+    (train_polygon is not None and
+     validation_polygon is not None and
+     test_polygon is not None and
+     are_valid_polygons)
   )
   return partitioned_dataset
 
