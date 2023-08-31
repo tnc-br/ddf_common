@@ -280,7 +280,7 @@ def _partition_data_k_means_furthest_points(
     by=['long', 'lat']
   ).first().reset_index()
   shuffled_coordinates_df = unique_coordinates_df.sample(frac=1.0,
-    random_state=strategy.random_state)
+    random_state=strategy.random_seed)
   coordinates = list(
     shuffled_coordinates_df[
       [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
@@ -321,10 +321,10 @@ def _partition_data_k_means_furthest_points(
         validation_polygon is None or
         test_polygon is None or
         not are_valid_polygons)):
-    random.Random(strategy.random_state).shuffle(furthest_coordinates)
+    random.Random(strategy.random_seed).shuffle(furthest_coordinates)
     # We need permutations of 3 numbers that correspond to train, validation and test.
     coord_permutations = list(permutations(furthest_coordinates, 3))
-    random.shuffle(coord_permutations)
+    random.Random(strategy.random_seed).shuffle(coord_permutations)
     # Pick one random permutation.
     sampled_permutation = coord_permutations[0]
 
