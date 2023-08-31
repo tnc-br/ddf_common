@@ -284,7 +284,6 @@ def _valid_polygons(
 
 def _shuffled_unique_coordinates(
   sample_data: pd.DataFrame,
-  furthest_coordinates: list[list[float]],
   strategy: FurthestPointsPartitionStrategy
 ):
   '''
@@ -391,7 +390,7 @@ def _partition_data_furthest_points(
     strategy=strategy)
   assert(partitioned_dataset_or_none is not None)
 
-  return partitioned_dataset
+  return partitioned_dataset_or_none
 
 def partition(sample_data: pd.DataFrame,
               partition_strategy: PartitionStrategy) -> PartitionedDataset:
@@ -403,7 +402,7 @@ def partition(sample_data: pd.DataFrame,
   elif partition_strategy == PartitionStrategy.RANDOM:
     return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
   elif partition_strategy == PartitionStrategy.FURTHEST_POINTS:
-    return _partition_data_k_means_furthest_points(
+    return _partition_data_furthest_points(
       sample_data, _FURTHEST_POINTS_STRATEGY
     )
   else:
