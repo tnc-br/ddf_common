@@ -9,6 +9,7 @@ from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
 from geopy import distance
+from typing import List
 import math
 import pytest
 import random
