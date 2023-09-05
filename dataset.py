@@ -16,6 +16,7 @@ import pandas as pd
 import pytest
 import random
 
+from partitioned_dataset import PartitionedDataset
 import raster
 
 def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
@@ -153,9 +154,10 @@ def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
   return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
 def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
-  partition_data = partition(aggregate_reference_data(reference_csv_filename),
+  partition_data = partitioned_dataset.partition(
+                             aggregate_reference_data(reference_csv_filename),
                              PartitionStrategy.FIXED)
-  print_split(partition_data)
+  partitioned_dataset.print_split(partition_data)
   return partition_data
 
 def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
