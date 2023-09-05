@@ -455,7 +455,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
 
   return fake_sample
 
-def valid_in_all_rasters(
+def _valid_in_all_rasters(
   lat: float,
   lon: float,
   rasters: List[raster.AmazonGeoTiff]) -> bool:
@@ -475,7 +475,10 @@ def valid_in_all_rasters(
       return False
   return True
 
-def nudge_invalid_coords(df: pd.DataFrame, rasters: List[raster.AmazonGeoTiff]):
+def nudge_invalid_coords(
+    df: pd.DataFrame,
+      rasters: List[raster.AmazonGeoTiff],
+    max_degrees_deviation: int=2):
   '''
     Given a Pandas DataFrame with latitude and longitude columns, maybe 
     perturb the latitude and longitude (i.e. nudge) values to fit within the 
@@ -490,35 +493,34 @@ def nudge_invalid_coords(df: pd.DataFrame, rasters: List[raster.AmazonGeoTiff]):
         rasters (List[AmazonGeoTiff]): A list of rasters to use to decide whether
           to nudge coordindates. If a row in the dataframe does not have a value
           in this raster, nudge it.
+        max_degrees_deviation: The maximum angle a coordinate can be nudged. 
 
     Returns:
-        bool: True if (lat, lon) is valid in all rasters, False if invalid in
-          at least one.
+        pd.DataFrame: Returns a dataframe with nudged coordinates.
   '''
-  max_degrees_deviation = 2
   for i, row in df.iterrows():
     # Get the lat and long for the current row.
     lat = df.loc[i, "lat"]
     lon = df.loc[i, "long"]
 
-    if valid_in_all_rasters(lat, lon, rasters):
+    if _valid_in_all_rasters(lat, lon, rasters):
       continue
 
     # nudge 0.01 degrees at a time.
     for nudge in [x/100.0 for x in range(1, max_degrees_deviation*100)]:
-      if valid_in_all_rasters(lat + nudge, lon + nudge, rasters):
+      if _valid_in_all_rasters(lat + nudge, lon + nudge, rasters):
         df.loc[i, "lat"] = lat + nudge
         df.loc[i, "long"] = lon + nudge
         break
-      elif valid_in_all_rasters(lat - nudge, lon - nudge, rasters):
+      elif _valid_in_all_rasters(lat - nudge, lon - nudge, rasters):
         df.loc[i, "lat"] = lat - nudge
         df.loc[i, "long"] = lon - nudge
         break
-      elif valid_in_all_rasters(lat + nudge, lon - nudge, rasters):
+      elif _valid_in_all_rasters(lat + nudge, lon - nudge, rasters):
         df.loc[i, "lat"] = lat + nudge
         df.loc[i, "long"] = lon - nudge
         break
-      elif valid_in_all_rasters(lat - nudge, lon + nudge, rasters):
+      elif _valid_in_all_rasters(lat - nudge, lon + nudge, rasters):
         df.loc[i, "lat"] = lat - nudge
         df.loc[i, "long"] = lon + nudge
         break
