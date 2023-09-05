@@ -139,10 +139,12 @@ _FURTHEST_POINTS_STRATEGY = FurthestPointsPartitionStrategy(
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
 
-@dataclass
+@dataclass(eq=True, frozen=True, order=True)
 class Coordinate:
   '''
   Represents a geospatial coordinate.
+  A immutable class that we're able to order and compare based
+  on its fields.
   '''
   longitude: float
   latitude: float
@@ -326,12 +328,12 @@ def _shuffled_unique_coordinates(
   min_size = (int(len(coordinates) * strategy.train_fraction) +
     int(len(coordinates) * strategy.validation_fraction) +
     int(len(coordinates) * strategy.test_fraction))
-  if ((int(len(coordinates) * strategy.train_fraction) > 0) or
-     (int(len(coordinates) * strategy.validation_fraction) > 0) or
-     (int(len(coordinates) * strategy.test_fraction) > 0)):
+  if ((int(len(coordinates) * strategy.train_fraction) <= 0) or
+     (int(len(coordinates) * strategy.validation_fraction) <= 0) or
+     (int(len(coordinates) * strategy.test_fraction) <= 0)):
      raise ValueError
   
-  if (min_size <= len(coordinates)):
+  if (min_size > len(coordinates)):
     print(f"You need {min_size} aka {int(len(coordinates) * strategy.train_fraction)} train + "
       f"{int(len(coordinates) * strategy.validation_fraction)} validation + "
       f"{int(len(coordinates) * strategy.test_fraction)} test samples " +
@@ -357,7 +359,7 @@ def _maybe_partition_furthest_points(
   If unsuccesful, returns None.
   '''
   partitioned_dataset = None
-  for _ in range(strategy.max_attempts)
+  for _ in range(strategy.max_attempts):
     if partitioned_dataset is not None:
       break
     random.seed(strategy.random_seed)
@@ -425,7 +427,7 @@ def _partition_data_furthest_points(
     sample_data=sample_data,
     furthest_coordinates=furthest_coordinates,
     strategy=strategy)
-  if (partitioned_dataset_or_none is not None):
+  if (partitioned_dataset_or_none is None):
     raise ValueError
 
   return partitioned_dataset_or_none
