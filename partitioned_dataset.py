@@ -1,5 +1,14 @@
 # Module that has helper classes and functions to partition dataset.
 
+from dataclasses import dataclass
+from enum import Enum
+from itertools import permutations
+from shapely import Polygon
+from sklearn.neighbors import NearestNeighbors
+import math
+import pandas as pd
+import random
+
 @dataclass
 class PartitionedDataset:
   '''
