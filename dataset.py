@@ -16,6 +16,10 @@ import random
 from partitioned_dataset import PartitionedDataset
 import raster
 
+# Standard column names in reference samples.
+_LONGITUDE_COLUMN_NAME = "long"
+_LATITUDE_COLUMN_NAME = "lat"
+
 def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
   return gen_tabular_dataset_with_coords(monthly, samples_per_site,
                             [(-70,-5,),(-67.5,0,),(-66,-4.5,),(-63,-9.5,),
