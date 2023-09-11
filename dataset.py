@@ -9,6 +9,7 @@ from numpy.random import MT19937, RandomState, SeedSequence
 import numpy as np
 from tqdm import tqdm
 from geopy import distance
+from typing import List
 import math
 import pytest
 import random
@@ -453,3 +454,77 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
     count += 1
 
   return fake_sample
+
+def _valid_in_all_rasters(
+  lat: float,
+  lon: float,
+  rasters: List[raster.AmazonGeoTiff]) -> bool:
+  '''
+    Args:
+        lat (float): The latitude coordinate.
+        lon (float): The longitude coordinate.
+        rasters (List[AmazonGeoTiff]): lat, lon are checked to be valid coords
+          in each of these rasters
+
+    Returns:
+        bool: True if (lat, lon) is valid in all rasters, False if invalid in
+          at least one.
+  '''
+  for r in rasters:
+    if not raster.is_valid_point(lat, lon, r):
+      return False
+  return True
+
+def nudge_invalid_coords(
+    df: pd.DataFrame,
+      rasters: List[raster.AmazonGeoTiff],
+    max_degrees_deviation: int=2):
+  '''
+    Given a Pandas DataFrame with latitude and longitude columns, maybe 
+    perturb the latitude and longitude (i.e. nudge) values to fit within the 
+    bounds of every AmazonGeoTiff in `rasters`. 
+
+    This may be necessary as some rasters have slightly different coordinate 
+    systems than the one used by data providers. Samples very close to borders 
+    are particularly susceptible to being out-of-bounds and will need nudging.
+
+    Args:
+        df (pd.DataFrame): A dataframe with "lat" and "long" columns.
+        rasters (List[AmazonGeoTiff]): A list of rasters to use to decide whether
+          to nudge coordindates. If a row in the dataframe does not have a value
+          in this raster, nudge it.
+        max_degrees_deviation: The maximum angle a coordinate can be nudged. 
+
+    Returns:
+        pd.DataFrame: Returns a dataframe with nudged coordinates.
+  '''
+  for i, row in df.iterrows():
+    # Get the lat and long for the current row.
+    lat = df.loc[i, "lat"]
+    lon = df.loc[i, "long"]
+
+    if _valid_in_all_rasters(lat, lon, rasters):
+      continue
+
+    # nudge 0.01 degrees at a time.
+    for nudge in [x/100.0 for x in range(1, max_degrees_deviation*100)]:
+      if _valid_in_all_rasters(lat + nudge, lon + nudge, rasters):
+        df.loc[i, "lat"] = lat + nudge
+        df.loc[i, "long"] = lon + nudge
+        break
+      elif _valid_in_all_rasters(lat - nudge, lon - nudge, rasters):
+        df.loc[i, "lat"] = lat - nudge
+        df.loc[i, "long"] = lon - nudge
+        break
+      elif _valid_in_all_rasters(lat + nudge, lon - nudge, rasters):
+        df.loc[i, "lat"] = lat + nudge
+        df.loc[i, "long"] = lon - nudge
+        break
+      elif _valid_in_all_rasters(lat - nudge, lon + nudge, rasters):
+        df.loc[i, "lat"] = lat - nudge
+        df.loc[i, "long"] = lon + nudge
+        break
+    if df.loc[i, "lat"] == lat and df.loc[i, "long"] == lon:
+      raise ValueError("Failed to nudge coordinates into valid space")
+
+  return df
