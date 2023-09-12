@@ -1,21 +1,29 @@
 # Module for helper functions for manipulating data and datasets.
+
 from dataclasses import dataclass
 from enum import Enum
-import ee
-import eeddf
-import pandas as pd
-import raster
-from numpy.random import MT19937, RandomState, SeedSequence
-import numpy as np
-from tqdm import tqdm
 from geopy import distance
+from itertools import eeddf
+import permutations
+from numpy.random import MT19937, RandomState, SeedSequence
+from shapely import Polygon
+from sklearn.neighbors import NearestNeighbors
+from tqdm import tqdm
+import datetime
+import ee
 from typing import List
 import math
+import numpy as np
+import pandas as pd
 import pytest
 import random
 import datetime
 
 SAMPLE_COUNT_COLUMN_NAME_SUFFIX = 'count'
+
+from partitioned_dataset import PartitionedDataset
+import partitioned_dataset
+import raster
 
 @dataclass
 class PartitionedDataset:
@@ -97,69 +105,6 @@ _RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
-
-def _partition_data_fixed(sample_data: pd.DataFrame,
-                          strategy: FixedPartitionStrategy) -> PartitionedDataset:
-  '''
-  Return data split between the fixed rectangle train_validation_test_bounds
-  of latitude and longitude for each of the rows in sample_data. Ranges of partitions are [min, max).
-  '''
-  train_bounds = strategy.train_fixed_bounds
-  validation_bounds = strategy.validation_fixed_bounds
-  test_bounds = strategy.test_fixed_bounds
-
-  train_data = sample_data[
-    (sample_data[_LATITUDE_COLUMN_NAME] >= train_bounds.min_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] >= train_bounds.min_longitude) &
-    (sample_data[_LATITUDE_COLUMN_NAME] < train_bounds.max_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] < train_bounds.max_longitude)]
-  validation_data = sample_data[
-    (sample_data[_LATITUDE_COLUMN_NAME] >= validation_bounds.min_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] >= validation_bounds.min_longitude) &
-    (sample_data[_LATITUDE_COLUMN_NAME] < validation_bounds.max_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] < validation_bounds.max_longitude)]
-  test_data = sample_data[
-    (sample_data[_LATITUDE_COLUMN_NAME] >= test_bounds.min_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] >= test_bounds.min_longitude) &
-    (sample_data[_LATITUDE_COLUMN_NAME] < test_bounds.max_latitude) &
-    (sample_data[_LONGITUDE_COLUMN_NAME] < test_bounds.max_longitude)]
-
-  return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
-
-def _partition_data_random(sample_data: pd.DataFrame,
-                           strategy: RandomPartitionStrategy):
-  '''
-  Return sample_data split randomly into train/validation/test buckets based on
-  the provided strategy.
-  '''
-  sample_data.sample(frac=1, random_state=strategy.random_seed)
-  n_train = int(sample_data.shape[0] * strategy.train_fraction)
-  n_validation = int(sample_data.shape[0] * strategy.validation_fraction)
-
-  train_data = sample_data.iloc[:n_train]
-  validation_data = sample_data.iloc[n_train:n_train+n_validation]
-  test_data = sample_data.iloc[n_train+n_validation:]
-
-  return PartitionedDataset(train=train_data, test=test_data, validation=validation_data)
-
-
-def partition(sample_data: pd.DataFrame,
-              partition_strategy: PartitionStrategy) -> PartitionedDataset:
-  '''
-  Splits pd.DataFrame sample_data based on the partition_strategy provided.
-  '''
-  if partition_strategy == PartitionStrategy.FIXED:
-    return _partition_data_fixed(sample_data, _FIXED_PARTITION_STRATEGY)
-  elif partition_strategy == PartitionStrategy.RANDOM:
-    return _partition_data_random(sample_data, _RANDOM_PARTITION_STRATEGY)
-  else:
-    raise ValueError(f"Unknown partition strategy: {partition_strategy}")
-
-def print_split(dataset: PartitionedDataset) -> None:
-  total_len = len(dataset.train)+len(dataset.validation)+len(dataset.test)
-  print(f"Train: {100*len(dataset.train)/total_len:.2f}% ({len(dataset.train)})")
-  print(f"Test: {100*len(dataset.test)/total_len:.2f}% ({len(dataset.test)})")
-  print(f"Validation: {100*len(dataset.validation)/total_len:.2f}% ({len(dataset.validation)})")
 
 def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
   return gen_tabular_dataset_with_coords(monthly, samples_per_site,
@@ -296,9 +241,10 @@ def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
   return  gen_tabular_dataset(monthly=False, samples_per_site=17)
 
 def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
-  partition_data = partition(aggregate_reference_data(reference_csv_filename),
-                             PartitionStrategy.FIXED)
-  print_split(partition_data)
+  partition_data = partitioned_dataset.partition(
+                             aggregate_reference_data(reference_csv_filename),
+                             partitioned_dataset.PartitionStrategy.FIXED)
+  partitioned_dataset.print_split(partition_data)
   return partition_data
 
 def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
@@ -330,7 +276,7 @@ def preprocess_sample_data(df: pd.DataFrame,
                            aggregate_columns: list[str],
                            keep_grouping: bool) -> pd.DataFrame:
   '''
-  Given a pd.DataFRame df:
+  Given a pd.DataFrame df:
   1. Filters in relevant columns using feature_columns, label_columns
   2. Calculates the mean and variance of each column in label_columns grouping
      by a key made of aggregate_columns
@@ -436,7 +382,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
   count = 0
 
   for coord, lab_samp in real_samples_code:
-    if lab_samp.size <= 1 :
+    if lab_samp.size <= 1:
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
