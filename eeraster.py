@@ -3,9 +3,12 @@ import pandas as pd
 import ee
 import eeddf
 import math
+import os
 import raster
 from typing import Tuple, List, Dict, Any
 from multiprocessing import Pool
+from google.cloud import storage
+from osgeo import gdal
 
 
 _PARALLEL_OPS = 30
@@ -151,8 +154,8 @@ def set_props(ee_asset_path: str, properties: Dict[str, Any]):
       e.g. {"p_value" : 0.95}
   """
   eeddf.initialize_ddf()
-  isoscape = ee.Image(f"{EE_ASSET_FOLDER}/{ee_asset_path}")
-  isoscape.set(var_args=properties)
+  ee.data.updateAsset(ee_asset_path, {'properties': properties}, ['properties'])
+
 
 def show_props(ee_asset_path: str):
   
@@ -168,9 +171,9 @@ def show_props(ee_asset_path: str):
   """
   eeddf.initialize_ddf()
   isoscape = ee.Image(ee_asset_path)
-  return isoscape.getInfo().properties()
+  return isoscape.getInfo()['properties']
 
-def del_prop(filename: str, property_name: str):
+def del_prop(ee_asset_path: str, property_name: str):
   """
   del_prop function
   ------------------------
@@ -184,13 +187,10 @@ def del_prop(filename: str, property_name: str):
       Name of the metadata to be deleted
       e.g: "p_value"
   """  
-  eeddf.initialize_ddf()
-  isoscape = ee.Image(e_asset_path)
-  isoscape.set(property_key, None)
 
 def ingest_isoscape(
     isoscape_path: str,
-    ee_dst_path: str=DEFAULT_OXYGEN_EE_ASSET,
+    ee_dst_path: str=STAGING_OXYGEN_EE_ASSET,
     allow_overwrite: bool=False):
   """
   ingest_isoscape function
@@ -221,18 +221,19 @@ def ingest_isoscape(
   _, isoscape_filename = os.path.split(isoscape_path)
   blob = bucket.blob(isoscape_filename)
   
-  blob.upload_from_filename(isoscape_path, if_generation_match=(1 if allow_overwrite else None))
+  blob.upload_from_filename(isoscape_path, if_generation_match=(None if allow_overwrite else 0))
 
   # 2. Copy the file from Google Cloud Storage to Earth Engine. 
-  request_id = ee.data.newTaskId()[0]
+  ee_request_id = ee.data.newTaskId()[0]
   params = {
     "name": ee_dst_path,
     "tilesets": [{"sources": [{"uris": [f"gs://{_BUCKET_NAME}/{isoscape_filename}"]}]}]
   }
-  dataset = gdal.Open(filename)
+  ee.data.startIngestion(request_id=ee_request_id, params=params)
+  
+  dataset = gdal.Open(isoscape_path)
   metadata = dataset.GetMetadata()
-  ee.data.startIngestion(request_id=ee_request_id, params=params,
-                         callback=stamp_isoscape(ee_dst_path, metadata))
+  set_props(ee_dst_path, metadata)
 
 def demXfab():
   """
