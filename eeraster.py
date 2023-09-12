@@ -229,7 +229,10 @@ def ingest_isoscape(
     "name": ee_dst_path,
     "tilesets": [{"sources": [{"uris": [f"gs://{_BUCKET_NAME}/{isoscape_filename}"]}]}]
   }
-  ee.data.startIngestion(request_id=ee_request_id, params=params)
+  ee.data.startIngestion(
+    request_id=ee_request_id,
+    params=params,
+    allow_overwrite=allow_overwrite)
   
   dataset = gdal.Open(isoscape_path)
   metadata = dataset.GetMetadata()
