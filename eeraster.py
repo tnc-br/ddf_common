@@ -173,9 +173,9 @@ def get_props(ee_asset_path: str):
   isoscape_metadata = ee.data.getAsset(ee_asset_path)
   return isoscape_metadata['properties']
 
-def del_prop(ee_asset_path: str, property_name: str):
+def delete_prop(ee_asset_path: str, property_name: str):
   """
-  del_prop function
+  delete_prop function
   ------------------------
   This function deletes a property from an Earth Engine isoscape
   ------------------------
@@ -186,7 +186,11 @@ def del_prop(ee_asset_path: str, property_name: str):
   property_name : str
       Name of the metadata to be deleted
       e.g: "p_value"
-  """  
+  """ 
+  eeddf.initialize_ddf()
+  ee.data.updateAsset(ee_asset_path,
+                      {'properties': {property_name: None}},
+                      ['properties'])
 
 def ingest_isoscape(
     isoscape_path: str,
