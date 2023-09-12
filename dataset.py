@@ -247,7 +247,7 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   partitioned_dataset.print_split(partition_data)
   return partition_data
 
-def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
+def load_reference_samples(org_name , filters: list[ee.Filter] = []) -> pd.DataFrame:
   '''
   Given an optional list of filters, returns a DataFrame containing all current
   reference sample from Earth Engine. You must have the proper authorization
@@ -255,7 +255,7 @@ def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
   to TimberID.org
   '''
   eeddf.initialize_ddf()
-  fc = ee.FeatureCollection('projects/river-sky-386919/assets/timberID/trusted_samples')
+  fc = ee.FeatureCollection('projects/river-sky-386919/assets/ee_org/' + org_name +' /trusted_samples')
   for filter_fc in filters:
     fc = fc.filter(filter_fc)
   info = fc.getInfo()
