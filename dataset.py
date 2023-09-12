@@ -3,14 +3,14 @@
 from dataclasses import dataclass
 from enum import Enum
 from geopy import distance
-from itertools import eeddf
-import permutations
+from itertools import permutations
 from numpy.random import MT19937, RandomState, SeedSequence
 from shapely import Polygon
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import datetime
 import ee
+import eeddf
 from typing import List
 import math
 import numpy as np
