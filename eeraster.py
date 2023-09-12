@@ -4,7 +4,7 @@ import ee
 import eeddf
 import math
 import raster
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Any
 from multiprocessing import Pool
 
 
@@ -135,7 +135,7 @@ class eeRaster(raster.AmazonGeoTiffBase):
       all_dfs = _getPool().starmap(_query_mp, query_list)
       return pd.concat(all_dfs, ignore_index=True)
 
-def set_props(ee_asset_path: str, properties: Dict[str, typing.Any]):
+def set_props(ee_asset_path: str, properties: Dict[str, Any]):
   """
   set_props function
   ------------------------
