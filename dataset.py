@@ -3,22 +3,104 @@
 from dataclasses import dataclass
 from enum import Enum
 from geopy import distance
-from itertools import permutations
+from itertools import eeddf
+import permutations
 from numpy.random import MT19937, RandomState, SeedSequence
 from shapely import Polygon
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import datetime
 import ee
+from typing import List
 import math
 import numpy as np
 import pandas as pd
 import pytest
 import random
+import datetime
+
+SAMPLE_COUNT_COLUMN_NAME_SUFFIX = 'count'
 
 from partitioned_dataset import PartitionedDataset
 import partitioned_dataset
 import raster
+
+@dataclass
+class PartitionedDataset:
+  '''
+  Container of dataframes representing the train, test and validation sets of a sample.
+  '''
+  train: pd.DataFrame
+  test: pd.DataFrame
+  validation: pd.DataFrame
+
+@dataclass
+class DatasetGeographicPartitions:
+  '''
+  Describes the bounds of a geographic area within a dataset.
+  '''
+  min_longitude: float
+  max_longitude: float
+  min_latitude: float
+  max_latitude: float
+
+
+class PartitionStrategy(Enum):
+  '''
+  The strategies you can partition datasets to.
+  '''
+  FIXED = 1
+  RANDOM = 2
+
+
+@dataclass
+class FixedPartitionStrategy:
+  '''
+  Defines the parameters for the FIXED partition strategy
+  '''
+  train_fixed_bounds: DatasetGeographicPartitions
+  validation_fixed_bounds: DatasetGeographicPartitions
+  test_fixed_bounds: DatasetGeographicPartitions
+
+
+_FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
+  # Train
+  DatasetGeographicPartitions(
+    min_longitude=-62.5,
+    max_longitude=float('inf'),
+    min_latitude=-5,
+    max_latitude=float('inf'),
+  ),
+  # Validation
+  DatasetGeographicPartitions(
+    min_longitude=float('-inf'),
+    max_longitude=-62.5,
+    min_latitude=-5,
+    max_latitude=float('inf')
+  ),
+  # Test
+  DatasetGeographicPartitions(
+    min_longitude=float('-inf'),
+    max_longitude=float('inf'),
+    min_latitude=float('-inf'),
+    max_latitude=-5
+  )
+)
+
+@dataclass
+class RandomPartitionStrategy:
+  '''
+  Defines the parameters for the RANDOM partition strategy
+  '''
+  train_fraction: float
+  validation_fraction: float
+  test_fraction: float
+  random_seed: int
+
+
+_RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
+  0.8, 0.1, 0.1, None
+)
 
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
@@ -172,12 +254,7 @@ def load_reference_samples(filters: list[ee.Filter] = []) -> pd.DataFrame:
   to access this data, which is obtained by belonging to an organization added
   to TimberID.org
   '''
-  import google
-  from google.colab import auth
-  auth.authenticate_user()
-
-  credentials, project_id = google.auth.default()
-  ee.Initialize(credentials, project='river-sky-386919')
+  eeddf.initialize_ddf()
   fc = ee.FeatureCollection('projects/river-sky-386919/assets/timberID/trusted_samples')
   for filter_fc in filters:
     fc = fc.filter(filter_fc)
@@ -206,13 +283,18 @@ def preprocess_sample_data(df: pd.DataFrame,
   3. If keep_grouping = True, we export groupings by key aggregate_columns
      otherwise we return the original sample with their matching means/variances.
   '''
-  df.dropna(subset=feature_columns + label_columns, inplace=True)
   df = df[feature_columns + label_columns]
 
   if aggregate_columns:
     grouped = df.groupby(aggregate_columns)
 
     for col in label_columns:
+      counts = grouped.count().reset_index()
+      counts.rename(
+        columns={col: f"{col}_{SAMPLE_COUNT_COLUMN_NAME_SUFFIX}"},
+        inplace=True)
+      counts = counts[aggregate_columns + [f"{col}_{SAMPLE_COUNT_COLUMN_NAME_SUFFIX}"]]
+  
       means = grouped.mean().reset_index()
       means.rename(columns={col: f"{col}_mean"}, inplace=True)
       means = means[aggregate_columns + [f"{col}_mean"]]
@@ -221,6 +303,8 @@ def preprocess_sample_data(df: pd.DataFrame,
       variances.rename(columns={col: f"{col}_variance"}, inplace=True)
       variances = variances[aggregate_columns + [f"{col}_variance"]]
 
+      df = pd.merge(df, counts, how="inner",
+                  left_on=aggregate_columns, right_on=aggregate_columns)
       df = pd.merge(df, means, how="inner",
                     left_on=aggregate_columns, right_on=aggregate_columns)
       df = pd.merge(df, variances, how="inner",
@@ -316,3 +400,77 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
     count += 1
 
   return fake_sample
+
+def _valid_in_all_rasters(
+  lat: float,
+  lon: float,
+  rasters: List[raster.AmazonGeoTiff]) -> bool:
+  '''
+    Args:
+        lat (float): The latitude coordinate.
+        lon (float): The longitude coordinate.
+        rasters (List[AmazonGeoTiff]): lat, lon are checked to be valid coords
+          in each of these rasters
+
+    Returns:
+        bool: True if (lat, lon) is valid in all rasters, False if invalid in
+          at least one.
+  '''
+  for r in rasters:
+    if not raster.is_valid_point(lat, lon, r):
+      return False
+  return True
+
+def nudge_invalid_coords(
+    df: pd.DataFrame,
+      rasters: List[raster.AmazonGeoTiff],
+    max_degrees_deviation: int=2):
+  '''
+    Given a Pandas DataFrame with latitude and longitude columns, maybe 
+    perturb the latitude and longitude (i.e. nudge) values to fit within the 
+    bounds of every AmazonGeoTiff in `rasters`. 
+
+    This may be necessary as some rasters have slightly different coordinate 
+    systems than the one used by data providers. Samples very close to borders 
+    are particularly susceptible to being out-of-bounds and will need nudging.
+
+    Args:
+        df (pd.DataFrame): A dataframe with "lat" and "long" columns.
+        rasters (List[AmazonGeoTiff]): A list of rasters to use to decide whether
+          to nudge coordindates. If a row in the dataframe does not have a value
+          in this raster, nudge it.
+        max_degrees_deviation: The maximum angle a coordinate can be nudged. 
+
+    Returns:
+        pd.DataFrame: Returns a dataframe with nudged coordinates.
+  '''
+  for i, row in df.iterrows():
+    # Get the lat and long for the current row.
+    lat = df.loc[i, "lat"]
+    lon = df.loc[i, "long"]
+
+    if _valid_in_all_rasters(lat, lon, rasters):
+      continue
+
+    # nudge 0.01 degrees at a time.
+    for nudge in [x/100.0 for x in range(1, max_degrees_deviation*100)]:
+      if _valid_in_all_rasters(lat + nudge, lon + nudge, rasters):
+        df.loc[i, "lat"] = lat + nudge
+        df.loc[i, "long"] = lon + nudge
+        break
+      elif _valid_in_all_rasters(lat - nudge, lon - nudge, rasters):
+        df.loc[i, "lat"] = lat - nudge
+        df.loc[i, "long"] = lon - nudge
+        break
+      elif _valid_in_all_rasters(lat + nudge, lon - nudge, rasters):
+        df.loc[i, "lat"] = lat + nudge
+        df.loc[i, "long"] = lon - nudge
+        break
+      elif _valid_in_all_rasters(lat - nudge, lon + nudge, rasters):
+        df.loc[i, "lat"] = lat - nudge
+        df.loc[i, "long"] = lon + nudge
+        break
+    if df.loc[i, "lat"] == lat and df.loc[i, "long"] == lon:
+      raise ValueError("Failed to nudge coordinates into valid space")
+
+  return df
