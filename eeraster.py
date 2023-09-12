@@ -157,10 +157,10 @@ def set_props(ee_asset_path: str, properties: Dict[str, Any]):
   ee.data.updateAsset(ee_asset_path, {'properties': properties}, ['properties'])
 
 
-def show_props(ee_asset_path: str):
+def get_props(ee_asset_path: str):
   
   """
-  show_stamps function
+  get_props function
   ------------------------
   This function returns all the properties on an Earth Engine isoscape
   ------------------------
@@ -170,8 +170,8 @@ def show_props(ee_asset_path: str):
       e.g: projects/river-sky-386919/assets/isoscapes/d18O_isoscape
   """
   eeddf.initialize_ddf()
-  isoscape = ee.Image(ee_asset_path)
-  return isoscape.getInfo()['properties']
+  isoscape_metadata = ee.data.getAsset(ee_asset_path)
+  return isoscape_metadata['properties']
 
 def del_prop(ee_asset_path: str, property_name: str):
   """
