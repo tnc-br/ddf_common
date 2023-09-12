@@ -16,7 +16,10 @@ _CRS = 'EPSG:3857'
 _demXfab = None
 _dem = None
 _BUCKET_NAME = "unprocessed-isoscapes"
-DEFAULT_OXYGEN_EE_ASSET = "projects/river-sky-386919/assets/isoscapes/d18O_isocape"
+
+# Location of the pre-prod Oxygen isoscape asset. 
+# Isoscapes saved here need to be manually copied to prod environments.
+STAGING_OXYGEN_EE_ASSET = "projects/river-sky-386919/assets/isoscapes/d18O_isocape"
 
 #global pool for all rasters in cases of simultaneous parallelization
 _pool = None
@@ -132,12 +135,12 @@ class eeRaster(raster.AmazonGeoTiffBase):
       all_dfs = _getPool().starmap(_query_mp, query_list)
       return pd.concat(all_dfs, ignore_index=True)
 
-def stamp_isoscape(ee_asset_path: str, properties: Dict[str, typing.Any]):
+def set_props(ee_asset_path: str, properties: Dict[str, typing.Any]):
   """
-  stamp_isoscape function
+  set_props function
   ------------------------
-  This function stamps an Earth Engine isoscape with properties.
-  This function can also be used to edit an existing stamp.
+  This function sets properties on an Earth Engine isoscape.
+  This function can also be used to edit an existing property.
   ------------------------
   Parameters:
   ee_asset_path : str
@@ -151,7 +154,7 @@ def stamp_isoscape(ee_asset_path: str, properties: Dict[str, typing.Any]):
   isoscape = ee.Image(f"{EE_ASSET_FOLDER}/{ee_asset_path}")
   isoscape.set(var_args=properties)
 
-def show_stamps(ee_asset_path: str):
+def show_props(ee_asset_path: str):
   
   """
   show_stamps function
@@ -167,9 +170,9 @@ def show_stamps(ee_asset_path: str):
   isoscape = ee.Image(ee_asset_path)
   return isoscape.getInfo().properties()
 
-def del_stamp(filename: str, property_name: str):
+def del_prop(filename: str, property_name: str):
   """
-  del_stamp function
+  del_prop function
   ------------------------
   This function deletes a property from an Earth Engine isoscape
   ------------------------
@@ -187,7 +190,6 @@ def del_stamp(filename: str, property_name: str):
 
 def ingest_isoscape(
     isoscape_path: str,
-    properties: Dict[str, typing.Any],
     ee_dst_path: str=DEFAULT_OXYGEN_EE_ASSET,
     allow_overwrite: bool=False):
   """
@@ -227,6 +229,8 @@ def ingest_isoscape(
     "name": ee_dst_path,
     "tilesets": [{"sources": [{"uris": [f"gs://{_BUCKET_NAME}/{isoscape_filename}"]}]}]
   }
+  dataset = gdal.Open(filename)
+  metadata = dataset.GetMetadata()
   ee.data.startIngestion(request_id=ee_request_id, params=params,
                          callback=stamp_isoscape(ee_dst_path, metadata))
 
