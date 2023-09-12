@@ -5,10 +5,12 @@ import eeddf
 import math
 import os
 import raster
+import time
 from typing import Tuple, List, Dict, Any
 from multiprocessing import Pool
 from google.cloud import storage
 from osgeo import gdal
+
 
 
 _PARALLEL_OPS = 30
@@ -58,6 +60,21 @@ def _query_mp(image, coordinates: pd.DataFrame, column_name: str,
     df_final[column_name] = np.nan
 
   return df_final
+
+def _block_until_ee_operation_completion(operation_name: str):
+  """
+  Query EarthEngine operation manager until the operation finished. 
+  Throws assertion error if the operation does not succeed.
+
+  Args:
+    operation_name: id of the operation.
+  """
+  while (
+    ee.data.getOperation(operation_name)['metadata']['state'] \
+     in ['PENDING', 'RUNNING']):
+     time.sleep(5)
+
+  assert ee.data.getOperation(operation_name)['metadata']['state'] == 'SUCCEEDED'
 
 def set_ee_options(parallel_ops: int = _PARALLEL_OPS,
  chunk_size: int = _CHUNK_SIZE, crs: str = _CRS,
@@ -156,9 +173,7 @@ def set_props(ee_asset_path: str, properties: Dict[str, Any]):
   eeddf.initialize_ddf()
   ee.data.updateAsset(ee_asset_path, {'properties': properties}, ['properties'])
 
-
 def get_props(ee_asset_path: str):
-  
   """
   get_props function
   ------------------------
@@ -173,9 +188,9 @@ def get_props(ee_asset_path: str):
   isoscape_metadata = ee.data.getAsset(ee_asset_path)
   return isoscape_metadata['properties']
 
-def delete_prop(ee_asset_path: str, property_name: str):
+def del_prop(ee_asset_path: str, property_name: str):
   """
-  delete_prop function
+  del_prop function
   ------------------------
   This function deletes a property from an Earth Engine isoscape
   ------------------------
@@ -186,11 +201,7 @@ def delete_prop(ee_asset_path: str, property_name: str):
   property_name : str
       Name of the metadata to be deleted
       e.g: "p_value"
-  """ 
-  eeddf.initialize_ddf()
-  ee.data.updateAsset(ee_asset_path,
-                      {'properties': {property_name: None}},
-                      ['properties'])
+  """  
 
 def ingest_isoscape(
     isoscape_path: str,
@@ -233,11 +244,15 @@ def ingest_isoscape(
     "name": ee_dst_path,
     "tilesets": [{"sources": [{"uris": [f"gs://{_BUCKET_NAME}/{isoscape_filename}"]}]}]
   }
-  ee.data.startIngestion(
+
+  print("Starting ingestion to ", ee_dst_path)
+  op = ee.data.startIngestion(
     request_id=ee_request_id,
     params=params,
     allow_overwrite=allow_overwrite)
-  
+  _block_until_ee_operation_completion(op['name'])
+
+  # 3. Copy the metadata to the EE asset as properties.
   dataset = gdal.Open(isoscape_path)
   metadata = dataset.GetMetadata()
   set_props(ee_dst_path, metadata)
