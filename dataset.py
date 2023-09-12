@@ -3,7 +3,10 @@
 from dataclasses import dataclass
 from enum import Enum
 from geopy import distance
+from itertools import permutations
 from numpy.random import MT19937, RandomState, SeedSequence
+from shapely import Polygon
+from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import datetime
 import ee
@@ -14,6 +17,7 @@ import pytest
 import random
 
 from partitioned_dataset import PartitionedDataset
+import partitioned_dataset
 import raster
 
 # Standard column names in reference samples.
@@ -157,7 +161,7 @@ def aggregate_reference_data(reference_csv_filename: str) -> pd.DataFrame:
 def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDataset:
   partition_data = partitioned_dataset.partition(
                              aggregate_reference_data(reference_csv_filename),
-                             PartitionStrategy.FIXED)
+                             partitioned_dataset.PartitionStrategy.FIXED)
   partitioned_dataset.print_split(partition_data)
   return partition_data
 
