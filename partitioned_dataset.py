@@ -3,11 +3,12 @@
 from dataclasses import dataclass
 from enum import Enum
 from itertools import permutations
-from shapely import Polygon
+from shapely import intersection, Polygon
 from sklearn.neighbors import NearestNeighbors
 import math
 import pandas as pd
 import random
+import matplotlib.pyplot as plt
 
 @dataclass
 class PartitionedDataset:
@@ -118,10 +119,10 @@ class FurthestPointsPartitionStrategy:
 
 _FURTHEST_POINTS_STRATEGY = FurthestPointsPartitionStrategy(
   top_n=5,
-  train_fraction=0.8,
-  validation_fraction=0.1,
-  test_fraction=0.1,
-  random_seed=123,
+  train_fraction=0.6,
+  validation_fraction=0.2,
+  test_fraction=0.2,
+  random_seed=1500,
   max_attempts=1000
 )
 
@@ -291,9 +292,14 @@ def _valid_polygons(
       return False
 
   if (train_polygon.intersects(validation_polygon) or
-     train_polygon.intersects(test_polygon) or
-     validation_polygon.intersects(test_polygon)):
-    return False
+      train_polygon.intersects(test_polygon) or
+      validation_polygon.intersects(test_polygon)):
+    # Sometimes geometries intersect only at the vertices and we don't
+    # want to exclude this kind of candidates.
+    if (intersection(train_polygon, validation_polygon).area >= 0.1 or
+        intersection(train_polygon, test_polygon).area >= 0.1 or
+        intersection(validation_polygon, test_polygon).area >= 0.1):
+      return False
 
   return True
 
@@ -367,6 +373,7 @@ def _maybe_partition_furthest_points(
       validation_coord=sampled_permutation[1],
       test_coord=sampled_permutation[2]
     )
+    
     train_polygon = _polygon(partitioned_dataset.train[
       [_LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME]
     ].values)
