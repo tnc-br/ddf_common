@@ -253,6 +253,8 @@ def load_reference_samples(org_name: str = 'google' , filters: list[ee.Filter] =
   reference sample from Earth Engine. You must have the proper authorization
   to access this data, which is obtained by belonging to an organization added
   to TimberID.org
+  org_name: specifies the organization the user belongs to.
+  env: specifies the ennvironment the user would like to get its isoscapes from 'prd' or 'dev'
   '''
   eeddf.initialize_ddf()
   if env == 'prd' : 
