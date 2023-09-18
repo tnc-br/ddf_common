@@ -1,4 +1,4 @@
-import ee
+from google3.geo.gestalt.client.python import ee
 
 _initialized = False
 
