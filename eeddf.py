@@ -23,6 +23,7 @@ from eeraster import demXfab
 
 _initialized = False
 _test_environment = False
+_project_name = 'river-sky-386919'
 
 def initialize_ddf(test_environment:bool = False):
   '''
@@ -38,6 +39,7 @@ def initialize_ddf(test_environment:bool = False):
   '''    
   global _initialized
   global _test_environment
+  global _project_name
   if not _initialized:
     _test_environment = test_environment
     _initialized = True
@@ -47,10 +49,10 @@ def initialize_ddf(test_environment:bool = False):
     auth.authenticate_user()
 
     credentials, project_id = google.auth.default()
-    if _test_environment:
-      ee.Initialize(credentials, project='river-sky-386919', opt_url='https://earthengine-highvolume.googleapis.com')
-    else:
-      ee.Initialize(credentials, project='timberid-prd', opt_url='https://earthengine-highvolume.googleapis.com')
+    if not _test_environment:
+      _project_name = 'timberid-prd'
+
+    ee.Initialize(credentials, project=_project_name, opt_url='https://earthengine-highvolume.googleapis.com')
 
 def is_test_environment():
   '''
@@ -58,3 +60,9 @@ def is_test_environment():
   '''
   global _test_environment
   return _test_environment
+
+def ee_project_name():
+  '''
+  Returns the name of the EE project used for ddf
+  '''
+  return _project_name

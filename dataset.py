@@ -257,11 +257,7 @@ def load_reference_samples(org_name: str = 'google' , filters: list[ee.Filter] =
   test_environment: if true, returns data from the test environment instead of production
   '''
   eeddf.initialize_ddf(test_environment)
-  if not eeddf.is_test_environment() : 
-    fc = ee.FeatureCollection('projects/timberid-prd/assets/ee_org/' + org_name +'/trusted_samples')
-  else :
-    fc = ee.FeatureCollection('projects/river-sky-386919/assets/ee_org/' + org_name +'/trusted_samples')
-
+  fc = ee.FeatureCollection('projects/' + eeddf.ee_project_name() + '/assets/ee_org/' + org_name + '/trusted_samples')
   for filter_fc in filters:
     fc = fc.filter(filter_fc)
   info = fc.getInfo()
