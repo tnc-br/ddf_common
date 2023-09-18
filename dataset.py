@@ -9,13 +9,12 @@ from shapely import Polygon
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 import datetime
-import ee
+from google3.geo.gestalt.client.python import ee
 import eeddf
 from typing import List
 import math
 import numpy as np
 import pandas as pd
-import pytest
 import random
 import datetime
 
