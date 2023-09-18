@@ -247,21 +247,17 @@ def partitioned_reference_data(reference_csv_filename: str) -> PartitionedDatase
   partitioned_dataset.print_split(partition_data)
   return partition_data
 
-def load_reference_samples(org_name: str = 'google' , filters: list[ee.Filter] = [], env: str = 'prd') -> pd.DataFrame:
+def load_reference_samples(org_name: str = 'google' , filters: list[ee.Filter] = [], test_environment:bool = False) -> pd.DataFrame:
   '''
   Given an optional list of filters, returns a DataFrame containing all current
   reference sample from Earth Engine. You must have the proper authorization
   to access this data, which is obtained by belonging to an organization added
   to TimberID.org
   org_name: specifies the organization the user belongs to.
-  env: specifies the ennvironment the user would like to get its isoscapes from 'prd' or 'dev'
+  test_environment: if true, returns data from the test environment instead of production
   '''
-  eeddf.initialize_ddf()
-  if env == 'prd' : 
-    fc = ee.FeatureCollection('projects/timberid-prd/assets/ee_org/' + org_name +' /trusted_samples')
-  else :
-    fc = ee.FeatureCollection('projects/river-sky-386919/assets/ee_org/' + org_name +' /trusted_samples')
-
+  eeddf.initialize_ddf(test_environment)
+  fc = ee.FeatureCollection('projects/' + eeddf.ee_project_name() + '/assets/ee_org/' + org_name + '/trusted_samples')
   for filter_fc in filters:
     fc = fc.filter(filter_fc)
   info = fc.getInfo()
