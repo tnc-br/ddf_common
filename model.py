@@ -53,4 +53,4 @@ class TFModel(Model):
         return self.vi_model.predict_on_batch(X)
 
     def training_column_names(self) -> typing.List[str]:
-        return self.transformer.feature_names_in_
+        return self.transformer.feature_names_in_ - ['lat', 'lon']
