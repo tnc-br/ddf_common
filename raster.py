@@ -554,7 +554,6 @@ def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
 
 def generate_isoscapes_from_variational_model(
     model: model.Model,
-    required_geotiffs: List[str],
     res_x: int, 
     res_y: int,
     output_geotiff: str,
@@ -567,17 +566,19 @@ def generate_isoscapes_from_variational_model(
   pixel in a (res_x x res_y) tiff of the landscape.
   --------------------------------------------------
   Parameters:
+  model: model.Model 
+    Pretrained model used to make predictions on every pixel.
+  res_x: int
+    The output x resolution
+  res_y: int
+    The output y resolution
   output_geotiff: str
     Name of the file to output. 
-  required_geotiffs: List[str]
-    List of columns required to query the model. All of these 
-    rasters will be loaded into memory and queried at every
-    pixel to query the model.
-  res_x: int
-    The  
-
+  amazon_only: bool
+    Whether to only generate a raster of the Amazon region as opposed to
+    all of Brazil.
   """
-  input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
+  input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in model.training_columns_names()}
 
   arbitrary_geotiff = list(input_geotiffs.values())[0]  
   if amazon_only:

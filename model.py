@@ -2,6 +2,7 @@ from sklearn.compose import ColumnTransformer
 from abc import abstractmethod
 import tensorflow as tf
 import joblib
+import typing
 import pandas as pd
 
 class Model:
@@ -17,6 +18,13 @@ class Model:
     def predict_on_batch(self, X: pd.DataFrame):
         '''
         Makes a prediction on a collection of inputs.
+        '''
+        pass
+    
+    @abstractmethod
+    def training_column_names(self) -> typing.List[str]:
+        '''
+        List of named columns used to train this model, in order of training, if applicable.
         '''
         pass
 
@@ -43,3 +51,6 @@ class TFModel(Model):
     def predict_on_batch(self, X: pd.DataFrame):
         X = self._apply_transformer(X)
         return self.vi_model.predict_on_batch(X)
+
+    def training_column_names(self) -> typing.List[str]:
+        return self.transformer.feature_names_in_
