@@ -578,7 +578,10 @@ def generate_isoscapes_from_variational_model(
     Whether to only generate a raster of the Amazon region as opposed to
     all of Brazil.
   """
-  required_geotiffs = model.training_column_names().remove('lat').remove('lon')
+  required_geotiffs = model.training_column_names()
+  required_geotiffs.remove('lat')
+  required_geotiffs.remove('long')
+  
   input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
 
   arbitrary_geotiff = list(input_geotiffs.values())[0]  
