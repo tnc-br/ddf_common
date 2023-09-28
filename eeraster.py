@@ -281,5 +281,26 @@ def dem():
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
+def ordinary_kriging_means():
+  """
+  Returns an eeRaster representing the mean oxygen isotope value with an isoscape
+  generated using Ordinary Kriging.
+  """
+  eeddf.initialize_ddf()
+  global _ordinary_kriging_means
+  if (_ordinary_kriging_means is None):
+    _ordinary_kriging_means = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
+  return _ordinary_kriging_means
 
-
+def ordinary_kriging_vars():
+  """
+  Returns an eeRaster representing the variance oxygen isotope value with an isoscape
+  generated using Ordinary Kriging.
+  """
+  eeddf.initialize_ddf()
+  global _ordinary_kriging_means
+  if (_ordinary_kriging_means is None):
+    _ordinary_kriging_means = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
+  return _ordinary_kriging_means
