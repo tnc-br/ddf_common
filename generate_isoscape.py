@@ -1,8 +1,14 @@
 import raster
+import model
 import eeraster
-import typing
 
-def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: str):
+import typing
+import numpy as np
+import pandas as pd
+from osgeo import gdal, gdal_array
+from tqdm import tqdm
+
+def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, path: str):
   """Copy metadata from a base geotiff and write raster data + mask from `data`"""
   driver = gdal.GetDriverByName("GTiff")
   metadata = driver.GetMetadata()
@@ -29,9 +35,9 @@ def save_numpy_to_geotiff(bounds: Bounds, prediction: np.ma.MaskedArray, path: s
 
 def get_predictions_at_each_pixel(
     model: model.Model,
-    geotiffs: dict[str, AmazonGeoTiff],
-    bounds: Bounds,
-    geometry_mask: AmazonGeoTiff=None):
+    geotiffs: dict[str, raster.AmazonGeoTiff],
+    bounds: raster.Bounds,
+    geometry_mask: raster.AmazonGeoTiff=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
   at that pixel and passing the parameters to the model. 
@@ -113,20 +119,20 @@ def dispatch_rasters(
   rasters_to_dispatch = {}
 
   if use_earth_engine_assets:
-    for raster in required_rasters:
-      if raster in eeraster.column_name_to_ee_asset_fn:
-        rasters_to_dispatch[raster] = eeraster.column_name_to_ee_asset_fn[raster]()
+    for raster_name in required_rasters:
+      if raster_name in eeraster.column_name_to_ee_asset_fn:
+        rasters_to_dispatch[raster_name] = eeraster.column_name_to_ee_asset_fn[raster_name]()
 
   if not use_earth_engine_assets or local_fallback:
-    for raster in required_rasters:
+    for raster_name in required_rasters:
       
       # Skip loading locally if it was found in EE.
-      if raster in rasters_to_dispatch:
+      if raster_name in rasters_to_dispatch:
         continue
       
       # Load it from local (or gdrive) storage to memory.
-      if raster in raster.column_name_to_geotiff_fn:
-        rasters_to_dispatch[raster] = raster.column_name_to_geotiff_fn[raster]()
+      if raster_name in raster.column_name_to_geotiff_fn:
+        rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
@@ -174,12 +180,12 @@ def generate_isoscapes_from_variational_model(
 
   arbitrary_geotiff = list(input_geotiffs.values())[0]  
   if amazon_only:
-    arbitrary_geotiff = d13C_mean_amazon_only_geotiff()
-  base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
-  output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
+    arbitrary_geotiff = raster.d13C_mean_amazon_only_geotiff()
+  base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
+  output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
   np = get_predictions_at_each_pixel(
     model, input_geotiffs, output_resolution, 
     geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
-      output_resolution, np, get_raster_path(output_geotiff+".tiff"))
+      output_resolution, np, raster.get_raster_path(output_geotiff+".tiff"))
