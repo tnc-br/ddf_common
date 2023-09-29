@@ -130,7 +130,7 @@ def dispatch_rasters(
       if raster_name in rasters_to_dispatch:
         continue
       
-      # Load it from local (or gdrive) storage to memory.
+      # Load it from local (or gdrive).
       if raster_name in raster.column_name_to_geotiff_fn:
         rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
 
@@ -178,7 +178,7 @@ def generate_isoscapes_from_variational_model(
     use_earth_engine_assets=True,
     local_fallback=True)
 
-  arbitrary_geotiff = list(input_geotiffs.values())[0]  
+  arbitrary_geotiff = raster.dem_geotiff()
   if amazon_only:
     arbitrary_geotiff = raster.d13C_mean_amazon_only_geotiff()
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
