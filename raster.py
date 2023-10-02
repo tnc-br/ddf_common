@@ -86,7 +86,11 @@ class AmazonGeoTiff(AmazonGeoTiffBase):
     return get_data_at_coords(self, x, y, -1)
 
   def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
-    return None
+    for i, row in df.iterrows():
+      lat = df.loc[i, "lat"]
+      lon = df.loc[i, "long"]
+      df.loc[i, column_name]=  _try_get_data_at_coords(self, lon, lat, -1)  
+    return df[df[column_name].notna()]
 
 
 @dataclass
