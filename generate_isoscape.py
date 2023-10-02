@@ -35,7 +35,7 @@ def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, 
 
 def get_predictions_at_each_pixel(
     model: model.Model,
-    geotiffs: dict[str, raster.AmazonGeoTiff],
+    geotiffs: dict[str, raster.AmazonGeoTiffBase],
     bounds: raster.Bounds,
     geometry_mask: raster.AmazonGeoTiff=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
