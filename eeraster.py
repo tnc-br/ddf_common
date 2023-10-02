@@ -19,6 +19,7 @@ _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
 _CRS = 'EPSG:3857'
 _demXfab = None
+_vpd = None
 _dem = None
 _pet = None
 _pa = None
