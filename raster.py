@@ -89,8 +89,8 @@ class AmazonGeoTiff(AmazonGeoTiffBase):
     for i, row in df.iterrows():
       lat = df.loc[i, "lat"]
       lon = df.loc[i, "long"]
-      df.loc[i, column_name]=  _try_get_data_at_coords(self, lon, lat, -1)  
-    return df[df[column_name].notna()]
+      df.loc[i, column_name] =  _try_get_data_at_coords(self, lon, lat, -1)  
+    return df
 
 
 @dataclass
