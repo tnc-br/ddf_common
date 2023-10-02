@@ -119,19 +119,19 @@ class eeRaster(raster.AmazonGeoTiffBase):
     def __init__(self, imageCollection: ee.ImageCollection):
       self._imageCollection = imageCollection
 
-    def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
+    def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
       Returns the values of the raster at the specified latitudes and longitudes.
 
       Args:
-          coordinates: A list of tuples consisting of [latitude, longitude].
+          df: A list of tuples consisting of [latitude, longitude].
 
       Returns:
           List[float]: The values of the raster at the specified latitudes and
           longitudes.
       """
-      if len(coordinates) == 0:
-        return coordinates
+      if len(df) == 0:
+        return df
       
       #We round the input to EE and the output from EE to 5 decimals because
       #earth engine very often sends back lat/lon that are off from what was
@@ -140,15 +140,15 @@ class eeRaster(raster.AmazonGeoTiffBase):
 
       #five decimals puts the precision at 11 meters, which is actually smaller
       #than the scale used for the query at 30 meters.
-      coordinates[_LATITUDE_COLUMN_NAME] = coordinates[_LATITUDE_COLUMN_NAME].astype(float).round(5)
-      coordinates[_LONGITUDE_COLUMN_NAME] = coordinates[_LONGITUDE_COLUMN_NAME].astype(float).round(5)
+      df[_LATITUDE_COLUMN_NAME] = df[_LATITUDE_COLUMN_NAME].astype(float).round(5)
+      df[_LONGITUDE_COLUMN_NAME] = df[_LONGITUDE_COLUMN_NAME].astype(float).round(5)
 
       query_list = []
       start = 0
       image = self._imageCollection.mosaic()
-      while (start < len(coordinates)):
+      while (start < len(df)):
         end = start + _CHUNK_SIZE
-        query_list.append([image, coordinates.iloc[start:end, :], column_name,
+        query_list.append([image, df.iloc[start:end, :], column_name,
          _CRS, _LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME])
         start = end
 

@@ -59,7 +59,7 @@ class AmazonGeoTiffBase(ABC): # Inherit from ABC(Abstract base class)
       return value_list
 
     @abstractmethod
-    def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
+    def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
       Returns the values of the raster at the specified latitudes and longitudes.
 
@@ -85,7 +85,7 @@ class AmazonGeoTiff(AmazonGeoTiffBase):
   def value_at(self, x: float, y: float) -> float:
     return get_data_at_coords(self, x, y, -1)
 
-  def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
+  def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
     for i, row in df.iterrows():
       lat = df.loc[i, "lat"]
       lon = df.loc[i, "long"]
