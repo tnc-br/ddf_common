@@ -20,6 +20,9 @@ _LATITUDE_COLUMN_NAME = "lat"
 _CRS = 'EPSG:3857'
 _demXfab = None
 _dem = None
+_pet = None
+_pa = None
+_rh = None
 _BUCKET_NAME = "unprocessed-isoscapes"
 
 # Location of the pre-prod Oxygen isoscape asset. 
@@ -281,9 +284,49 @@ def dem():
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
+def pa():
+  """
+  Returns an eeRaster representing digital elevation (copernicus).
+  See https://gee-community-catalog.org/projects/glo30/
+  """
+  eeddf.initialize_ddf()
+  global _pa
+  if (_pa is None):
+    _pa = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/dem_pa_brasil_raster').select("b2"))
+  return _pa
+
+def pet():
+  eeddf.initialize_ddf()
+  global _pet
+  if (_pet is None):
+    _pet = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/pet').select("b1"))
+  return _pet
+
+def vpd():
+  eeddf.initialize_ddf()
+  global _vpd
+  if (_vpd is None):
+    _vpd = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
+  return _vpd
+  
+def rh():
+  eeddf.initialize_ddf()
+  global _rh
+  if (_rh is None):
+    _rh = eeRaster(ee.ImageCollection(
+      'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
+  return _rh    
+
 # A collection of column names to functions that load the corresponding 
 # earth engine asset.
 column_name_to_ee_asset_fn = {
-  "DEM": dem,
+  "VPD" : vpd,
+  "RH" : rh,
+  "PET" : pet,
+  "DEM" : dem,
+  "PA" : pa,
 }
 
