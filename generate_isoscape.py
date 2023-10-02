@@ -57,18 +57,13 @@ def get_predictions_at_each_pixel(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
       mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
-  for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
+  for x_idx in tqdm(range(0, bounds.raster_size_x)):
     rows = []
-    row_indexes = []
-    for y_idx, y in enumerate(np.arange(bounds.miny, bounds.maxy, -bounds.pixel_size_y, dtype=float)):
-      # Row should contain all the features needed to predict, in the same
-      # column order the model was trained.
+    for y_idx in range(0, bounds.raster_size_y):
       row = {}
-      row["lat"] = y
-      row["long"] = x
-    
-    rows.append(row)
-    row_indexes.append((y_idx,0,))
+      row["lat"] = bounds.miny + (y_idx * -bounds.pixel_size_y)
+      row["long"] = bounds.minx + (x_idx * bounds.pixel_size_x)
+      rows.append(row)
     
     X = pd.DataFrame.from_dict(rows)
     for geotiff_label, geotiff in geotiffs.items():
@@ -79,11 +74,11 @@ def get_predictions_at_each_pixel(
       predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
-      for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
-        predicted_np.mask[x_idx,y_idx,0] = False
-        predicted_np.data[x_idx,y_idx,0] = prediction
+      for prediction, y_idx in zip(means_np, X.index):
+        predicted_np.mask[x_idx, y_idx, 0] = False
+        predicted_np.data[x_idx, y_idx, 0] = prediction
       vars_np = predictions[:, 1]
-      for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
+      for prediction, y_idx in zip (vars_np, X.index):
         predicted_np.mask[x_idx, y_idx, 1] = False
         predicted_np.data[x_idx, y_idx, 1] = prediction
 
