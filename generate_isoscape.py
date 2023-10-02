@@ -66,28 +66,21 @@ def get_predictions_at_each_pixel(
       row = {}
       row["lat"] = y
       row["long"] = x
+    
+    rows.append(row)
+    row_indexes.append((y_idx,0,))
+    
+    X = pd.DataFrame.from_dict(rows)
+    for geotiff_label, geotiff in geotiffs.items():
+      X = geotiff.values_at_df(X, geotiff_label)
+      X = X[X[geotiff_label].notna()]
 
-      # Surround in try/except as we will be trying to fetch out of bounds data.
-      try:
-        if geometry_mask and pd.isnull(geometry_mask.value_at(x, y)):
-          continue
-        for geotiff_label, geotiff in geotiffs.items():
-          row[geotiff_label] = geotiff.value_at(x, y)
-          if pd.isnull(row[geotiff_label]):
-            raise ValueError
-      except (ValueError, IndexError):
-        continue # masked and out-of-bounds coordinates
-
-      rows.append(row)
-      row_indexes.append((y_idx,0,))
-
-    if (len(rows) > 0):
-      X = pd.DataFrame.from_dict(rows)
+    if (len(X.index)):
       predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
       for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
-        predicted_np.mask[x_idx,y_idx,0] = False # unmask since we have data
+        predicted_np.mask[x_idx,y_idx,0] = False
         predicted_np.data[x_idx,y_idx,0] = prediction
       vars_np = predictions[:, 1]
       for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
