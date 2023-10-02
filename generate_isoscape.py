@@ -69,6 +69,8 @@ def get_predictions_at_each_pixel(
     for geotiff_label, geotiff in geotiffs.items():
       X = geotiff.values_at_df(X, geotiff_label)
       X = X[X[geotiff_label].notna()]
+      if not len(X.index):
+        break
 
     if (len(X.index)):
       predictions = model.predict_on_batch(X)
