@@ -127,7 +127,7 @@ class eeRaster(raster.AmazonGeoTiffBase):
       if image:
         self._image = image
       
-      if collection:
+      if image_collection:
         self._image_collection = image_collection
         self._image = self._image_collection.mosaic()
       
