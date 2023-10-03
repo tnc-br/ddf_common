@@ -18,6 +18,7 @@ _CHUNK_SIZE = 80
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
 _CRS = 'EPSG:3857'
+_REFERENCE_BOUNDS = None
 _demXfab = None
 _vpd = None
 _dem = None
@@ -38,32 +39,34 @@ def _getPool():
     _pool = Pool(processes=_PARALLEL_OPS)
   return _pool
 
-def _query_mp(image, coordinates: pd.DataFrame, column_name: str, 
-  crs_value: str, lon_name: str, lat_name:str) -> pd.DataFrame:
-  collection = coordinates.apply(lambda row: ee.Feature(ee.Geometry.Point(
-    [row[lon_name], row[lat_name]])), axis=1).to_list()
+def _query_mp(
+    image : ee.Image,
+    coordinates: pd.DataFrame,
+    column_name: str, 
+    crs_value: str,
+    lon_name: str, 
+    lat_name:str) -> pd.DataFrame:
 
-  points = ee.FeatureCollection(collection)
-  info = image.reduceRegions(points, ee.Reducer.first(), scale=30, crs= crs_value).getInfo()
+  # Note, this assumes the coordinates are in order of descending latitude.
+  top_left = (coordinates.head(1)['long'], coordinates.head(1)['lat'],)
+  bottom_right = (coordinates.tail(1)['long'], coordinates.tail(1)['lat'])
 
-  features = info['features']
-  dictarr = []
+  # Note: lines can be considered rectangles in EE.
+  line_to_sample = ee.Geometry.Rectangle([
+    ee.Geometry.Point(top_left),
+    ee.Geometry.Point(bottom_right)
+  ])
 
-  for f in features:
-    attr = f['properties']
-    attr[lat_name] = f['geometry']['coordinates'][1]
-    attr[lon_name] = f['geometry']['coordinates'][0]
-    dictarr.append(attr)
+  # Sample along the line. 
+  samples = image.sampleRectangle(
+    region=region_to_sample,
+    default_value=0).getInfo()
 
-  df = pd.DataFrame(dictarr).rename(columns={'first': column_name})
-  df[lat_name] = df[lat_name].round(5)
-  df[lon_name] = df[lon_name].round(5)
+  sampled_values = samples['properties']['b1']
+  assert len(sampled_values) == len(coordinates.index)
+  coordinates['column_name'] = np.array(sampled_values)
 
-  df_final = coordinates.merge(df, how='left')
-  if column_name not in df_final.columns:
-    df_final[column_name] = np.nan
-
-  return df_final
+  return coordinates
 
 def _block_until_ee_operation_completion(operation_name: str):
   """
@@ -82,7 +85,8 @@ def _block_until_ee_operation_completion(operation_name: str):
 
 def set_ee_options(parallel_ops: int = _PARALLEL_OPS,
  chunk_size: int = _CHUNK_SIZE, crs: str = _CRS,
- lon_name: str = _LONGITUDE_COLUMN_NAME, lat_name:str = _LATITUDE_COLUMN_NAME):
+ lon_name: str = _LONGITUDE_COLUMN_NAME, lat_name:str = _LATITUDE_COLUMN_NAME, 
+ reference_bounds: raster.Bounds = _REFERENCE_BOUNDS):
   """
   Sets the execution options, such as parallelization level as well as the
   Coordinate Reference System and columns to use for longitude/latitude within
@@ -101,6 +105,7 @@ def set_ee_options(parallel_ops: int = _PARALLEL_OPS,
   _CRS = crs
   _LONGITUDE_COLUMN_NAME = lon_name
   _LATITUDE_COLUMN_NAME = lat_name
+  _REFERENCE_BOUNDS = reference_bounds
 
 """
 `eeRaster` represents an Earth Engine raster. 
@@ -126,14 +131,21 @@ class eeRaster(raster.AmazonGeoTiffBase):
       
       if image:
         self._image = image
-      
-      if image_collection:
+      elif image_collection:
         self._image_collection = image_collection
         self._image = self._image_collection.mosaic()
-      
 
-    def __init_from_image__(self, image: ee.Image):
-      self._image = image
+      # Ensure all rasters have the same resolution and projection. This makes
+      # reduction tasks easier.
+      if _REFERENCE_BOUNDS:
+        if (_REFERENCE_BOUNDS.pixel_size_x != _REFERENCE_BOUNDS.pixel_size_y):
+          raise ValueError("Pixel sizes must be equal on both x and y dimensions")
+        self._image = self._image.reproject({
+          crs: _image.projection(), 
+          scale: _REFERENCE_BOUNDS.pixel_size_x
+        }).reduceResolution({
+          reducer: ee.Reducer.mean(),
+          maxPixels: 1064});
 
     def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
@@ -280,7 +292,8 @@ def demXfab():
   global _demXfab
   eeddf.initialize_ddf()
   if (_demXfab is None):
-    _demXfab = eeRaster(image_collection=ee.ImageCollection(
+    _demXfab = eeRaster(
+      image_collection=ee.ImageCollection(
       'projects/sat-io/open-datasets/FABDEM').select("b1"))
   return _demXfab
 
@@ -315,7 +328,7 @@ def pet():
   global _pet
   if (_pet is None):
     _pet = eeRaster(
-      image=ee.ImageCollection(
+      image=ee.Image(
         'projects/river-sky-386919/assets/reference_rasters/pet').select("b1"))
   return _pet
 
@@ -323,7 +336,7 @@ def vpd():
   eeddf.initialize_ddf()
   global _vpd
   if (_vpd is None):
-    _vpd = eeRaster(image=ee.ImageCollection(
+    _vpd = eeRaster(image=ee.Image(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
   return _vpd
   
@@ -331,7 +344,7 @@ def rh():
   eeddf.initialize_ddf()
   global _rh
   if (_rh is None):
-    _rh = eeRaster(image=ee.ImageCollection(
+    _rh = eeRaster(image=ee.Image(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
   return _rh    
 

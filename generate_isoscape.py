@@ -57,6 +57,8 @@ def get_predictions_at_each_pixel(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
       mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
+  eeraster.set_ee_options(reference_bounds=bounds, chunk_size=bounds.raster_size_x)
+
   for x_idx in tqdm(range(0, bounds.raster_size_x)):
     rows = []
     for y_idx in range(0, bounds.raster_size_y):
@@ -169,14 +171,15 @@ def generate_isoscapes_from_variational_model(
     use_earth_engine_assets=True,
     local_fallback=True)
 
-  brazil_shape = raster.brazil_template()
+
+  output_geometry = raster.brazil_template()
   if amazon_only:
-    arbitrary_geotiff = raster.amazon_template()
-  base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
+    output_geometry = raster.amazon_template()
+  base_bounds = raster.get_extent(output_geometry.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
   np = get_predictions_at_each_pixel(
     model, input_geotiffs, output_resolution, 
-    geometry_mask=arbitrary_geotiff)
+    geometry_mask=output_geometry)
   save_numpy_to_geotiff(
       output_resolution, np, raster.get_raster_path(output_geotiff+".tiff"))

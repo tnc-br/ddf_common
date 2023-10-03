@@ -468,14 +468,14 @@ brazil_template_ = None
 def brazil_template() -> AmazonGeoTiff:
   global brazil_template_
   if not brazil_template_:
-    brazil_template = load_named_raster(get_raster_path("amazon_template.tiff"), "brazil_template", use_only_band_index=0)
+    brazil_template_ = load_named_raster(get_raster_path("brazil_template.tiff"), "brazil_template", use_only_band_index=0)
   return brazil_template_
 
 amazon_template_ = None
 def amazon_template() -> AmazonGeoTiff:
   global amazon_template_
   if not amazon_template_:
-    amazon_template = load_named_raster(get_raster_path("amazon_template.tiff"), "brazil_template", use_only_band_index=0)
+    amazon_template_ = load_named_raster(get_raster_path("amazon_template.tiff"), "amazon_template", use_only_band_index=0)
   return amazon_template_
 
 
