@@ -27,7 +27,7 @@ def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, 
   prediction_transformed = np.flip(np.transpose(prediction, axes=[1,0,2]), axis=0)
   for band_index in range(dataset.RasterCount):
     band = dataset.GetRasterBand(band_index+1)
-    if band.CreateMaskBand(0) == gdal.CE_Failure:
+    if band.CreateMaskBand(0) > gdal.CE_Warning:
       raise RuntimeError("Failed to create mask band")
     mask_band = band.GetMaskBand()
     band.WriteArray(np.choose(prediction_transformed[:, :, band_index].mask, (prediction_transformed[:, :, band_index].data,np.array(band.GetNoDataValue()),)))
@@ -55,7 +55,7 @@ def get_predictions_at_each_pixel(
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
-      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
 
   for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
     rows = []
@@ -86,13 +86,11 @@ def get_predictions_at_each_pixel(
       predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
-      for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
-        predicted_np.mask[x_idx,y_idx,0] = False # unmask since we have data
-        predicted_np.data[x_idx,y_idx,0] = prediction
       vars_np = predictions[:, 1]
-      for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
-        predicted_np.mask[x_idx, y_idx, 1] = False
-        predicted_np.data[x_idx, y_idx, 1] = prediction
+      for mean, var, (y_idx, month_idx) in zip(means_np, vars_np, row_indexes):
+        predicted_np.mask[x_idx, y_idx, 0] = False # unmask since we have data
+        predicted_np.data[x_idx, y_idx, 0] = mean
+        predicted_np.data[x_idx, y_idx, 1] = var     
 
   return predicted_np
 
