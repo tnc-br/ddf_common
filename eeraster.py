@@ -20,6 +20,8 @@ _LATITUDE_COLUMN_NAME = "lat"
 _CRS = 'EPSG:3857'
 _demXfab = None
 _dem = None
+_ordinary_kriging_means = None
+_ordinary_kriging_vars = None
 _BUCKET_NAME = "unprocessed-isoscapes"
 
 # Location of the pre-prod Oxygen isoscape asset. 
@@ -290,7 +292,8 @@ def ordinary_kriging_means():
   global _ordinary_kriging_means
   if (_ordinary_kriging_means is None):
     _ordinary_kriging_means = eeRaster(ee.ImageCollection(
-      'projects/river-sky-386919/assets/reference_rasters/uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
+      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
+      'uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
   return _ordinary_kriging_means
 
 def ordinary_kriging_vars():
@@ -302,5 +305,6 @@ def ordinary_kriging_vars():
   global _ordinary_kriging_vars
   if (_ordinary_kriging_vars is None):
     _ordinary_kriging_vars = eeRaster(ee.ImageCollection(
-      'projects/river-sky-386919/assets/reference_rasters/uc_davis_d18O_cel_ordinary_random_grouped_vars').select("b1"))
+      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
+      'uc_davis_d18O_cel_ordinary_random_grouped_vars').select("b1"))
   return _ordinary_kriging_vars
