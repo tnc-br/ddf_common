@@ -120,8 +120,20 @@ class eeRaster(raster.AmazonGeoTiffBase):
         specified as:
         ee.ImageCollection('projects/<project>/<collection>').select("<band>")
     """
-    def __init__(self, imageCollection: ee.ImageCollection):
-      self._imageCollection = imageCollection
+    def __init__(self, image_collection: ee.ImageCollection=None, image: ee.Image=None):
+      if image and image_collection:
+        raise ValueError("Choose only one of image or image_collection for this constructor")
+      
+      if image:
+        self._image = image
+      
+      if collection:
+        self._image_collection = image_collection
+        self._image = self._image_collection.mosaic()
+      
+
+    def __init_from_image__(self, image: ee.Image):
+      self._image = image
 
     def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
@@ -149,10 +161,9 @@ class eeRaster(raster.AmazonGeoTiffBase):
 
       query_list = []
       start = 0
-      image = self._imageCollection.mosaic()
       while (start < len(df)):
         end = start + _CHUNK_SIZE
-        query_list.append([image, df.iloc[start:end, :], column_name,
+        query_list.append([self._image, df.iloc[start:end, :], column_name,
          _CRS, _LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME])
         start = end
 
@@ -281,7 +292,7 @@ def dem():
   eeddf.initialize_ddf()
   global _dem
   if (_dem is None):
-    _dem = eeRaster(ee.ImageCollection(
+    _dem = eeRaster(collection=ee.ImageCollection(
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
@@ -293,7 +304,7 @@ def pa():
   eeddf.initialize_ddf()
   global _pa
   if (_pa is None):
-    _pa = eeRaster(ee.ImageCollection(
+    _pa = eeRaster(image=ee.Image(
       'projects/river-sky-386919/assets/reference_rasters/dem_pa_brasil_raster').select("b2"))
   return _pa
 
@@ -301,7 +312,7 @@ def pet():
   eeddf.initialize_ddf()
   global _pet
   if (_pet is None):
-    _pet = eeRaster(ee.ImageCollection(
+    _pet = eeRaster(image=ee.ImageCollection(
       'projects/river-sky-386919/assets/reference_rasters/pet').select("b1"))
   return _pet
 
@@ -309,7 +320,7 @@ def vpd():
   eeddf.initialize_ddf()
   global _vpd
   if (_vpd is None):
-    _vpd = eeRaster(ee.ImageCollection(
+    _vpd = eeRaster(image=ee.ImageCollection(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
   return _vpd
   
@@ -317,7 +328,7 @@ def rh():
   eeddf.initialize_ddf()
   global _rh
   if (_rh is None):
-    _rh = eeRaster(ee.ImageCollection(
+    _rh = eeRaster(image=ee.ImageCollection(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
   return _rh    
 
