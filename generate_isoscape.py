@@ -57,8 +57,6 @@ def get_predictions_at_each_pixel(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
       mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
-  eeraster.set_ee_options(reference_bounds=bounds, chunk_size=bounds.raster_size_x)
-
   for x_idx in tqdm(range(0, bounds.raster_size_x)):
     rows = []
     for y_idx in range(0, bounds.raster_size_y):
@@ -162,6 +160,13 @@ def generate_isoscapes_from_variational_model(
     Whether to only generate a raster of the Amazon region as opposed to
     all of Brazil.
   """
+  output_geometry = raster.brazil_template()
+  if amazon_only:
+    output_geometry = raster.amazon_template()
+  base_bounds = raster.get_extent(output_geometry.gdal_dataset)
+  output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
+  eeraster.set_ee_options(reference_bounds=bounds, chunk_size=bounds.raster_size_x)
+
   required_geotiffs = model.training_column_names()
   required_geotiffs.remove('lat')
   required_geotiffs.remove('long')
@@ -170,13 +175,6 @@ def generate_isoscapes_from_variational_model(
     required_geotiffs,
     use_earth_engine_assets=True,
     local_fallback=True)
-
-
-  output_geometry = raster.brazil_template()
-  if amazon_only:
-    output_geometry = raster.amazon_template()
-  base_bounds = raster.get_extent(output_geometry.gdal_dataset)
-  output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
   np = get_predictions_at_each_pixel(
     model, input_geotiffs, output_resolution, 

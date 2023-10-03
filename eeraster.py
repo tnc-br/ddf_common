@@ -12,8 +12,7 @@ from google.cloud import storage
 from osgeo import gdal
 
 
-
-_PARALLEL_OPS = 30
+_PARALLEL_OPS = 1
 _CHUNK_SIZE = 80
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
@@ -26,6 +25,7 @@ _pet = None
 _pa = None
 _rh = None
 _BUCKET_NAME = "unprocessed-isoscapes"
+_METERS_PER_DEGREE = 111000
 
 # Location of the pre-prod Oxygen isoscape asset. 
 # Isoscapes saved here need to be manually copied to prod environments.
@@ -48,9 +48,16 @@ def _query_mp(
     lat_name:str) -> pd.DataFrame:
 
   # Note, this assumes the coordinates are in order of descending latitude.
-  top_left = (coordinates.head(1)['long'], coordinates.head(1)['lat'],)
-  bottom_right = (coordinates.tail(1)['long'], coordinates.tail(1)['lat'])
+  top_left = [
+    coordinates.head(1)['long'].to_numpy()[0],
+    coordinates.head(1)['lat'].to_numpy()[0]]
+  bottom_right = [
+    coordinates.tail(1)['long'].to_numpy()[0], 
+    coordinates.tail(1)['lat'].to_numpy()[0]]
 
+  print(top_left)
+  print(bottom_right)
+  
   # Note: lines can be considered rectangles in EE.
   line_to_sample = ee.Geometry.Rectangle([
     ee.Geometry.Point(top_left),
@@ -59,8 +66,8 @@ def _query_mp(
 
   # Sample along the line. 
   samples = image.sampleRectangle(
-    region=region_to_sample,
-    default_value=0).getInfo()
+    region=line_to_sample,
+    defaultValue=np.nan).getInfo()
 
   sampled_values = samples['properties']['b1']
   assert len(sampled_values) == len(coordinates.index)
@@ -100,6 +107,12 @@ def set_ee_options(parallel_ops: int = _PARALLEL_OPS,
       lon_name: The name of the dataframe column holding longitude.
       lat_name: The name of the dataframe column holding latitude.
   """
+  global _PARALLEL_OPS
+  global _CHUNK_SIZE
+  global _CRS
+  global _LONGITUDE_COLUMN_NAME
+  global _LATITUDE_COLUMN_NAME
+  global _REFERENCE_BOUNDS
   _PARALLEL_OPS = parallel_ops
   _CHUNK_SIZE = chunk_size
   _CRS = crs
@@ -138,14 +151,14 @@ class eeRaster(raster.AmazonGeoTiffBase):
       # Ensure all rasters have the same resolution and projection. This makes
       # reduction tasks easier.
       if _REFERENCE_BOUNDS:
-        if (_REFERENCE_BOUNDS.pixel_size_x != _REFERENCE_BOUNDS.pixel_size_y):
-          raise ValueError("Pixel sizes must be equal on both x and y dimensions")
-        self._image = self._image.reproject({
-          crs: _image.projection(), 
-          scale: _REFERENCE_BOUNDS.pixel_size_x
-        }).reduceResolution({
-          reducer: ee.Reducer.mean(),
-          maxPixels: 1064});
+        # if (_REFERENCE_BOUNDS.pixel_size_x != math.abs(_REFERENCE_BOUNDS.pixel_size_y)):
+        #   raise ValueError("Pixel sizes must be equal on both x and y dimensions")
+        self._image = self._image.reproject(
+          crs=self._image.projection(), 
+          scale=_REFERENCE_BOUNDS.pixel_size_x * _METERS_PER_DEGREE
+        ).reduceResolution(
+          reducer=ee.Reducer.mean(),
+          maxPixels=1064);
 
     def values_at_df(self, df: pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
@@ -338,6 +351,7 @@ def vpd():
   if (_vpd is None):
     _vpd = eeRaster(image=ee.Image(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
+  print(_CHUNK_SIZE)
   return _vpd
   
 def rh():
