@@ -122,6 +122,7 @@ def dispatch_rasters(
       
       # Load it from local (or gdrive).
       if raster_name in raster.column_name_to_geotiff_fn:
+        print(raster_name, "loading locally")
         rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
 
   # Identify missing rasters.
@@ -168,9 +169,9 @@ def generate_isoscapes_from_variational_model(
     use_earth_engine_assets=True,
     local_fallback=True)
 
-  arbitrary_geotiff = raster.dem_geotiff()
+  brazil_shape = raster.brazil_template()
   if amazon_only:
-    arbitrary_geotiff = raster.d13C_mean_amazon_only_geotiff()
+    arbitrary_geotiff = raster.amazon_template()
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
