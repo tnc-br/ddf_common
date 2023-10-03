@@ -184,8 +184,8 @@ def generate_isoscapes_from_variational_model(
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
-  np = get_predictions_at_each_pixel(
+  preds = get_predictions_at_each_pixel(
     model, input_geotiffs, output_resolution, 
     geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
-      output_resolution, np, raster.get_raster_path(output_geotiff+".tiff"))
+      output_resolution, preds, raster.get_raster_path(output_geotiff+".tiff"))
