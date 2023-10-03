@@ -280,7 +280,7 @@ def demXfab():
   global _demXfab
   eeddf.initialize_ddf()
   if (_demXfab is None):
-    _demXfab = eeRaster(ee.ImageCollection(
+    _demXfab = eeRaster(image_collection=ee.ImageCollection(
       'projects/sat-io/open-datasets/FABDEM').select("b1"))
   return _demXfab
 
@@ -292,8 +292,9 @@ def dem():
   eeddf.initialize_ddf()
   global _dem
   if (_dem is None):
-    _dem = eeRaster(collection=ee.ImageCollection(
-      'projects/sat-io/open-datasets/GLO-30').select("b1"))
+    _dem = eeRaster(
+      image_collection=ee.ImageCollection(
+        'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
 def pa():
@@ -304,16 +305,18 @@ def pa():
   eeddf.initialize_ddf()
   global _pa
   if (_pa is None):
-    _pa = eeRaster(image=ee.Image(
-      'projects/river-sky-386919/assets/reference_rasters/dem_pa_brasil_raster').select("b2"))
+    _pa = eeRaster(
+      image=ee.Image(
+        'projects/river-sky-386919/assets/reference_rasters/dem_pa_brasil_raster').select("b2"))
   return _pa
 
 def pet():
   eeddf.initialize_ddf()
   global _pet
   if (_pet is None):
-    _pet = eeRaster(image=ee.ImageCollection(
-      'projects/river-sky-386919/assets/reference_rasters/pet').select("b1"))
+    _pet = eeRaster(
+      image=ee.ImageCollection(
+        'projects/river-sky-386919/assets/reference_rasters/pet').select("b1"))
   return _pet
 
 def vpd():
