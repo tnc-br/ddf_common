@@ -165,7 +165,7 @@ def generate_isoscapes_from_variational_model(
     output_geometry = raster.amazon_template()
   base_bounds = raster.get_extent(output_geometry.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
-  eeraster.set_ee_options(reference_bounds=bounds, chunk_size=bounds.raster_size_x)
+  eeraster.set_ee_options(reference_bounds=base_bounds, chunk_size=base_bounds.raster_size_x)
 
   required_geotiffs = model.training_column_names()
   required_geotiffs.remove('lat')
