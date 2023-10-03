@@ -16,7 +16,7 @@ _PARALLEL_OPS = 1
 _CHUNK_SIZE = 80
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
-_CRS = 'EPSG:3857'
+_CRS = 'EPSG:4362'
 _REFERENCE_BOUNDS = None
 _demXfab = None
 _vpd = None
@@ -55,23 +55,22 @@ def _query_mp(
     coordinates.tail(1)['long'].to_numpy()[0], 
     coordinates.tail(1)['lat'].to_numpy()[0]]
 
-  print(top_left)
-  print(bottom_right)
-  
   # Note: lines can be considered rectangles in EE.
   line_to_sample = ee.Geometry.Rectangle([
     ee.Geometry.Point(top_left),
     ee.Geometry.Point(bottom_right)
   ])
 
-  # Sample along the line. 
+  # Sample along the line.
+  # Set default value to 0, as ee library can't encode None or np.inf in json 
   samples = image.sampleRectangle(
     region=line_to_sample,
-    defaultValue=np.nan).getInfo()
+    defaultValue=0).getInfo()
 
   sampled_values = samples['properties']['b1']
   assert len(sampled_values) == len(coordinates.index)
-  coordinates['column_name'] = np.array(sampled_values)
+  coordinates[column_name] = np.array(sampled_values)
+  coordinates.replace(0, None, inplace=True)
 
   return coordinates
 
@@ -154,7 +153,7 @@ class eeRaster(raster.AmazonGeoTiffBase):
         # if (_REFERENCE_BOUNDS.pixel_size_x != math.abs(_REFERENCE_BOUNDS.pixel_size_y)):
         #   raise ValueError("Pixel sizes must be equal on both x and y dimensions")
         self._image = self._image.reproject(
-          crs=self._image.projection(), 
+          crs=_CRS, 
           scale=_REFERENCE_BOUNDS.pixel_size_x * _METERS_PER_DEGREE
         ).reduceResolution(
           reducer=ee.Reducer.mean(),
@@ -324,16 +323,13 @@ def dem():
   return _dem
 
 def pa():
-  """
-  Returns an eeRaster representing digital elevation (copernicus).
-  See https://gee-community-catalog.org/projects/glo30/
-  """
   eeddf.initialize_ddf()
   global _pa
   if (_pa is None):
     _pa = eeRaster(
       image=ee.Image(
         'projects/river-sky-386919/assets/reference_rasters/dem_pa_brasil_raster').select("b2"))
+    _pa._image.setDefaultProjection(pet()._image.projection())
   return _pa
 
 def pet():
@@ -351,7 +347,6 @@ def vpd():
   if (_vpd is None):
     _vpd = eeRaster(image=ee.Image(
       'projects/river-sky-386919/assets/reference_rasters/vpd').select("b1"))
-  print(_CHUNK_SIZE)
   return _vpd
   
 def rh():
