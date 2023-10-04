@@ -8,6 +8,9 @@ import pandas as pd
 from osgeo import gdal, gdal_array, osr
 from tqdm import tqdm
 
+_WARNING_COLOR = '\033[91m'
+_ENDC = '\033[0m'
+
 def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, path: str):
   """Copy metadata from a base geotiff and write raster data + mask from `data`"""
   driver = gdal.GetDriverByName("GTiff")
@@ -33,6 +36,12 @@ def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, 
     band.WriteArray(np.choose(prediction_transformed[:, :, band_index].mask, (prediction_transformed[:, :, band_index].data,np.array(band.GetNoDataValue()),)))
     mask_band.WriteArray(np.logical_not(prediction_transformed[:, :, band_index].mask))
 
+def check_same_order(expected: typing.List[str], actual: typing.List[str]):
+  actual.remove("lat")
+  actual.remove("long")
+  if (expected != actual):
+    raise ValueError("Geotiff inputs don't match the inputs expected by the model")
+
 def get_predictions_at_each_pixel(
     model: model.Model,
     geotiffs: dict[str, raster.AmazonGeoTiff],
@@ -52,8 +61,7 @@ def get_predictions_at_each_pixel(
   `bounds`: Every pixel within these bounds will have a prediction made on it
   `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
 
-  if geotiffs.keys() + ['lat', 'long'] != model.training_column_names():
-    raise ValueError("Geotiff inputs don't match the inputs expected by the model")
+  check_same_order(list(geotiffs.keys()), model.training_column_names())
 
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
@@ -137,9 +145,10 @@ def dispatch_rasters(
         
         projection = rasters_to_dispatch[raster_name].gdal_dataset.GetProjection()
         geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')
+        
         if geogcs != 'WGS 84':
-          print("WARNING: {} projections will soon no longer be supported. "
-                "Please reproject to WGS 84 instead".format(geogcs))
+          print(f"{_WARNING_COLOR}WARNING: {geogcs} projections will soon no longer be supported. "
+                f"Please reproject to WGS 84 instead{_ENDC}")
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
