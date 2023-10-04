@@ -5,7 +5,7 @@ import eeraster
 import typing
 import numpy as np
 import pandas as pd
-from osgeo import gdal, gdal_array
+from osgeo import gdal, gdal_array, osr
 from tqdm import tqdm
 
 def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, path: str):
@@ -134,6 +134,12 @@ def dispatch_rasters(
       # Load it from local (or gdrive).
       if raster_name in raster.column_name_to_geotiff_fn:
         rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
+        
+        projection = rasters_to_dispatch[raster_name].gdal_dataset.GetProjection()
+        geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')
+        if geogcs != 'WGS 84':
+          print("WARNING: {} projections will soon no longer be supported. "
+                "Please reproject to WGS 84 instead".format(geogcs))
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
