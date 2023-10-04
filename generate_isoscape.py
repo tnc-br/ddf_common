@@ -52,6 +52,9 @@ def get_predictions_at_each_pixel(
   `bounds`: Every pixel within these bounds will have a prediction made on it
   `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
 
+  if geotiffs.keys() + ['lat', 'long'] != model.training_column_names():
+    raise ValueError("Geotiff inputs don't match the inputs expected by the model")
+
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
