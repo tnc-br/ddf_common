@@ -190,7 +190,7 @@ def generate_isoscapes_from_variational_model(
     use_earth_engine_assets=True,
     local_fallback=True)
 
-  arbitrary_geotiff = raster.dem_geotiff()
+  arbitrary_geotiff = raster.vapor_pressure_deficit_geotiff()
   if amazon_only:
     arbitrary_geotiff = raster.d13C_mean_amazon_only_geotiff()
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
