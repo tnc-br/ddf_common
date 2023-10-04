@@ -137,15 +137,14 @@ def dispatch_rasters(
             f"Please reproject to WGS 84 instead{_ENDC}")
 
   rasters_to_dispatch = {}
-
-  for feature in required_rasters:
-    if use_earth_engine_assets:
-      if feature in eeraster.column_name_to_ee_asset_fn:
-        rasters_to_dispatch[feature] = eeraster.column_name_to_ee_asset_fn[feature]()
+  for raster_name in required_rasters:
+    if use_earth_engine_assets and \
+       raster_name in eeraster.column_name_to_ee_asset_fn:
+        rasters_to_dispatch[raster_name] = eeraster.column_name_to_ee_asset_fn[raster_name]()
     elif not use_earth_engine_assets or local_fallback:
-      if feature in raster.column_name_to_geotiff_fn:
-        rasters_to_dispatch[feature] = raster.column_name_to_geotiff_fn[feature]()
-        check_proj(rasters_to_dispatch[feature])
+      if raster_name in raster.column_name_to_geotiff_fn:
+        rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
+        check_proj(rasters_to_dispatch[raster_name])
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
