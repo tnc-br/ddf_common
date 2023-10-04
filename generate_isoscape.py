@@ -68,31 +68,29 @@ def get_predictions_at_each_pixel(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
       mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
-  for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
+   # Initialize a blank plane representing means and variance.
+  predicted_np = np.ma.array(
+      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
+
+  for x_idx in tqdm(range(0, bounds.raster_size_x)):
     rows = []
-    row_indexes = []
-    for y_idx, y in enumerate(np.arange(bounds.miny, bounds.maxy, -bounds.pixel_size_y, dtype=float)):
-      # Row should contain all the features needed to predict, in the same
-      # column order the model was trained.
+    for y_idx in range(0, bounds.raster_size_y):
       row = {}
-      row["lat"] = y
-      row["long"] = x
-
-      # Surround in try/except as we will be trying to fetch out of bounds data.
-      try:
-        if geometry_mask and pd.isnull(geometry_mask.value_at(x, y)):
-          continue
-        for geotiff_label, geotiff in geotiffs.items():
-          row[geotiff_label] = geotiff.value_at(x, y)
-          if pd.isnull(row[geotiff_label]):
-            raise ValueError
-      except (ValueError, IndexError):
-        continue # masked and out-of-bounds coordinates
-
+      row["lat"] = bounds.miny + (y_idx * -bounds.pixel_size_y)
+      row["long"] = bounds.minx + (x_idx * bounds.pixel_size_x)
       rows.append(row)
-      row_indexes.append((y_idx,0,))
+    
+    X = pd.DataFrame.from_dict(rows)
+    for geotiff_label, geotiff in geotiffs.items():
+      X = geotiff.values_at_df(X, geotiff_label)
+      X = X[X[geotiff_label].notna()]
+      if not len(X.index):
+        break
 
-    if (len(rows) > 0):
+    if (len(X.index)):
+      predictions = model.predict_on_batch(X)
+
       X = pd.DataFrame.from_dict(rows)
       predictions = model.predict_on_batch(X)
 
