@@ -142,10 +142,10 @@ def dispatch_rasters(
     if use_earth_engine_assets:
       if feature in eeraster.column_name_to_ee_asset_fn:
         rasters_to_dispatch[feature] = eeraster.column_name_to_ee_asset_fn[feature]()
-      elif not use_earth_engine_assets or local_fallback:
-        if feature in raster.column_name_to_geotiff_fn:
-          rasters_to_dispatch[feature] = raster.column_name_to_geotiff_fn[feature]()
-          check_proj(rasters_to_dispatch[feature])
+    elif not use_earth_engine_assets or local_fallback:
+      if feature in raster.column_name_to_geotiff_fn:
+        rasters_to_dispatch[feature] = raster.column_name_to_geotiff_fn[feature]()
+        check_proj(rasters_to_dispatch[feature])
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
