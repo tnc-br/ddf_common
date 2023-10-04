@@ -40,7 +40,7 @@ def _query_mp(image, coordinates: pd.DataFrame, column_name: str,
     [row[lon_name], row[lat_name]])), axis=1).to_list()
 
   points = ee.FeatureCollection(collection)
-  info = image.reduceRegions(points, ee.Reducer.first(), scale=30, crs= crs_value).getInfo()
+  info = image.sampleRegions(points, scale=30, projection=crs_value).getInfo()
 
   features = info['features']
   dictarr = []
