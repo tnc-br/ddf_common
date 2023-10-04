@@ -39,6 +39,8 @@ def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, 
 def check_same_order(expected: typing.List[str], actual: typing.List[str]):
   actual.remove("lat")
   actual.remove("long")
+  print(actual)
+  print(expected)
   if (expected != actual):
     raise ValueError("Geotiff inputs don't match the inputs expected by the model")
 
@@ -66,7 +68,7 @@ def get_predictions_at_each_pixel(
   # Initialize a blank plane representing means and variance.
   predicted_np = np.ma.array(
       np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
-      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 1], dtype=bool))
+      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
 
   for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
     rows = []
@@ -100,6 +102,7 @@ def get_predictions_at_each_pixel(
       vars_np = predictions[:, 1]
       for mean, var, (y_idx, month_idx) in zip(means_np, vars_np, row_indexes):
         predicted_np.mask[x_idx, y_idx, 0] = False # unmask since we have data
+        predicted_np.mask[x_idx, y_idx, 1] = False # unmask since we have data 
         predicted_np.data[x_idx, y_idx, 0] = mean
         predicted_np.data[x_idx, y_idx, 1] = var     
 
@@ -125,30 +128,24 @@ def dispatch_rasters(
     be found in ee. 
   """
 
+  # Print a warning if the raster's projection is now WGS 84.
+  def check_proj(geotiff: raster.AmazonGeoTiff):
+    projection = geotiff.gdal_dataset.GetProjection()
+    geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')       
+    if geogcs != 'WGS 84':
+      print(f"{_WARNING_COLOR}WARNING: {geogcs} projections will soon no longer be supported. "
+            f"Please reproject to WGS 84 instead{_ENDC}")
+
   rasters_to_dispatch = {}
 
-  if use_earth_engine_assets:
-    for raster_name in required_rasters:
-      if raster_name in eeraster.column_name_to_ee_asset_fn:
-        rasters_to_dispatch[raster_name] = eeraster.column_name_to_ee_asset_fn[raster_name]()
-
-  if not use_earth_engine_assets or local_fallback:
-    for raster_name in required_rasters:
-      
-      # Skip loading locally if it was found in EE.
-      if raster_name in rasters_to_dispatch:
-        continue
-      
-      # Load it from local (or gdrive).
-      if raster_name in raster.column_name_to_geotiff_fn:
-        rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
-        
-        projection = rasters_to_dispatch[raster_name].gdal_dataset.GetProjection()
-        geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')
-        
-        if geogcs != 'WGS 84':
-          print(f"{_WARNING_COLOR}WARNING: {geogcs} projections will soon no longer be supported. "
-                f"Please reproject to WGS 84 instead{_ENDC}")
+  for feature in required_rasters:
+    if use_earth_engine_assets:
+      if feature in eeraster.column_name_to_ee_asset_fn:
+        rasters_to_dispatch[feature] = eeraster.column_name_to_ee_asset_fn[feature]()
+      elif not use_earth_engine_assets or local_fallback:
+        if feature in raster.column_name_to_geotiff_fn:
+          rasters_to_dispatch[feature] = raster.column_name_to_geotiff_fn[feature]()
+          check_proj(rasters_to_dispatch[feature])
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
