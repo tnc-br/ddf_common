@@ -39,8 +39,6 @@ def save_numpy_to_geotiff(bounds: raster.Bounds, prediction: np.ma.MaskedArray, 
 def check_same_order(expected: typing.List[str], actual: typing.List[str]):
   actual.remove("lat")
   actual.remove("long")
-  print(actual)
-  print(expected)
   if (expected != actual):
     raise ValueError("Geotiff inputs don't match the inputs expected by the model")
 
