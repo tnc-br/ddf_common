@@ -106,6 +106,14 @@ def get_predictions_at_each_pixel(
 
   return predicted_np
 
+# Print a warning if the raster's projection is now WGS 84.
+def check_projection(geotiff: raster.AmazonGeoTiff):
+  projection = geotiff.gdal_dataset.GetProjection()
+  geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')       
+  if geogcs != 'WGS 84':
+    print(f"{_WARNING_COLOR}WARNING: {geogcs} projections will soon no longer be supported. "
+          f"Please reproject to WGS 84 instead{_ENDC}")
+
 def dispatch_rasters(
     required_rasters: typing.List[str],
     use_earth_engine_assets : bool=False,
@@ -126,14 +134,6 @@ def dispatch_rasters(
     be found in ee. 
   """
 
-  # Print a warning if the raster's projection is now WGS 84.
-  def check_proj(geotiff: raster.AmazonGeoTiff):
-    projection = geotiff.gdal_dataset.GetProjection()
-    geogcs = osr.SpatialReference(wkt=projection).GetAttrValue('geogcs')       
-    if geogcs != 'WGS 84':
-      print(f"{_WARNING_COLOR}WARNING: {geogcs} projections will soon no longer be supported. "
-            f"Please reproject to WGS 84 instead{_ENDC}")
-
   rasters_to_dispatch = {}
   for raster_name in required_rasters:
     if use_earth_engine_assets and \
@@ -142,7 +142,7 @@ def dispatch_rasters(
     elif not use_earth_engine_assets or local_fallback:
       if raster_name in raster.column_name_to_geotiff_fn:
         rasters_to_dispatch[raster_name] = raster.column_name_to_geotiff_fn[raster_name]()
-        check_proj(rasters_to_dispatch[raster_name])
+        check_projection(rasters_to_dispatch[raster_name])
 
   # Identify missing rasters.
   missing = set(rasters_to_dispatch.keys()) -  set(required_rasters)
