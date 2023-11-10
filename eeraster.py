@@ -293,7 +293,7 @@ def dem():
 def _download_raster(raster_name: str):
   image = ee.Image(
             os.path.join(
-              eedf.ee_reference_rasters_path() +
+              eeddf.ee_reference_rasters_path() +
               f"{raster_name}"))
   task = ee.batch.Export.image.toDrive(
     image=image,
