@@ -70,4 +70,4 @@ def ee_project_name():
 def ee_reference_rasters_path():
   '''
   '''
-  return 'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/
+  return 'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/'
