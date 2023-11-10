@@ -303,6 +303,7 @@ def _download_raster(raster_name: str):
   task.start()
 
   # Wait for 1 min which is the ceiling of time it takes the API to upload
+  print("Wait 1 minute")
   time.sleep(1000*60)
   attempts = 0
   while not os.path.exists(_CACHE_FOLDER_PREFIX, f"{raster_name}.tif") or attempts < _MAX_RASTER_CACHE_POLLING_ATTEMPTS:
