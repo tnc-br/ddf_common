@@ -66,3 +66,8 @@ def ee_project_name():
   Returns the name of the EE project used for ddf
   '''
   return _project_name
+
+def ee_reference_rasters_path():
+  '''
+  '''
+  return 'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/

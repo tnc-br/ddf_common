@@ -28,6 +28,10 @@ _BUCKET_NAME = "unprocessed-isoscapes"
 # Isoscapes saved here need to be manually copied to prod environments.
 STAGING_OXYGEN_EE_ASSET = "projects/river-sky-386919/assets/isoscapes/d18O_isocape"
 
+_CACHE_FOLDER_PREFIX = "/content/gdrive/MyDrive/ddf_raster_cache"
+_CACHE_RASTER_FOLDER_NAME="ddf_raster_cache"
+_MAX_RASTER_CACHE_POLLING_ATTEMPTS = 10
+
 #global pool for all rasters in cases of simultaneous parallelization
 _pool = None
 def _getPool():
@@ -120,6 +124,9 @@ class eeRaster(raster.AmazonGeoTiffBase):
     """
     def __init__(self, imageCollection: ee.ImageCollection):
       self._imageCollection = imageCollection
+    
+    def get_image(self, index: int) -> ee.Image:
+      return self.imageCollection_.get(index)
 
     def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
@@ -283,6 +290,27 @@ def dem():
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
+def _download_raster(raster_name: str):
+  image = ee.Image(
+            os.path.join(
+              eedf.ee_reference_rasters_path() +
+              f"{raster_name}"))
+  task = ee.batch.Export.image.toDrive(
+    image=image,
+    description=raster_name,
+    folder=_CACHE_RASTER_FOLDER_NAME,
+  )
+  task.start()
+
+  # Wait for 1 min which is the ceiling of time it takes the API to upload
+  sleep(1000*60)
+  attempts = 0
+  while not ((os.path.exists(_CACHE_FOLDER_PREFIX, f"{raster_name}.tif")) and
+              attempts < _MAX_RASTER_CACHE_POLLING_ATTEMPTS):
+    # Wait for 1 min which is the ceiling of time it takes the API to upload
+    sleep(1000*60)
+    attempts += 1
+
 def ordinary_kriging_means():
   """
   Returns an eeRaster representing the mean oxygen isotope value with an isoscape
@@ -290,10 +318,14 @@ def ordinary_kriging_means():
   """
   eeddf.initialize_ddf()
   global _ordinary_kriging_means
-  if (_ordinary_kriging_means is None):
-    _ordinary_kriging_means = eeRaster(ee.ImageCollection(
-      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
-      'uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
+  cached_raster_path = os.path.join(_CACHE_FOLDER_PREFIX, 
+    "uc_davis_d18O_cel_ordinary_random_grouped_means.tif")
+  if (_ordinary_kriging_vars is None):
+    if not os.path.exists(cached_raster_path):
+      _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_means")
+
+    _ordinary_kriging_means = eeRaster(
+      ee.ImageCollection(cached_raster_path).select("b1"))
   return _ordinary_kriging_means
 
 def ordinary_kriging_vars():
@@ -303,8 +335,12 @@ def ordinary_kriging_vars():
   """
   eeddf.initialize_ddf()
   global _ordinary_kriging_vars
+  cached_raster_path = os.path.join(_CACHE_FOLDER_PREFIX, 
+    "uc_davis_d18O_cel_ordinary_random_grouped_vars.tif")
   if (_ordinary_kriging_vars is None):
-    _ordinary_kriging_vars = eeRaster(ee.ImageCollection(
-      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
-      'uc_davis_d18O_cel_ordinary_random_grouped_vars').select("b1"))
+    if not os.path.exists(cached_raster_path):
+      _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_vars")
+      
+    _ordinary_kriging_vars = eeRaster(
+      ee.ImageCollection(cached_raster_path).select("b1"))
   return _ordinary_kriging_vars
