@@ -324,8 +324,7 @@ def ordinary_kriging_means():
     if not os.path.exists(cached_raster_path):
       _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_means")
 
-    _ordinary_kriging_means = eeRaster(
-      ee.ImageCollection(cached_raster_path).select("b1"))
+    _ordinary_kriging_means = raster.load_raster(cached_raster_path)
   return _ordinary_kriging_means
 
 def ordinary_kriging_vars():
@@ -341,6 +340,5 @@ def ordinary_kriging_vars():
     if not os.path.exists(cached_raster_path):
       _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_vars")
       
-    _ordinary_kriging_vars = eeRaster(
-      ee.ImageCollection(cached_raster_path).select("b1"))
+    _ordinary_kriging_vars = raster.load_raster(cached_raster_path)
   return _ordinary_kriging_vars
