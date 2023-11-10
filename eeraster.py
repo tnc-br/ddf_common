@@ -303,12 +303,12 @@ def _download_raster(raster_name: str):
   task.start()
 
   # Wait for 1 min which is the ceiling of time it takes the API to upload
-  sleep(1000*60)
+  time.sleep(1000*60)
   attempts = 0
   while not ((os.path.exists(_CACHE_FOLDER_PREFIX, f"{raster_name}.tif")) and
               attempts < _MAX_RASTER_CACHE_POLLING_ATTEMPTS):
     # Wait for 1 min which is the ceiling of time it takes the API to upload
-    sleep(1000*60)
+    time.sleep(1000*60)
     attempts += 1
 
 def ordinary_kriging_means():
