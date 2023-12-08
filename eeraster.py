@@ -283,6 +283,13 @@ def dem():
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
+
+# A collection of column names to functions that load the corresponding 
+# earth engine asset.
+column_name_to_ee_asset_fn = {
+  "DEM": dem,
+}
+
 def ordinary_kriging_means():
   """
   Returns an eeRaster representing the mean oxygen isotope value with an isoscape

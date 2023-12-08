@@ -3,11 +3,13 @@ import pandas as pd
 import dataset
 import raster
 import eeraster
+import generate_isoscape
 import importlib
 
 importlib.reload(dataset)
 importlib.reload(raster)
 importlib.reload(eeraster)
+importlib.reload(generate_isoscape)
 
 from dataset import load_reference_samples
 from eeraster import eeRaster
