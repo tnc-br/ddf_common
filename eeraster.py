@@ -28,8 +28,8 @@ _BUCKET_NAME = "unprocessed-isoscapes"
 # Isoscapes saved here need to be manually copied to prod environments.
 STAGING_OXYGEN_EE_ASSET = "projects/river-sky-386919/assets/isoscapes/d18O_isocape"
 
-_CACHE_FOLDER_PREFIX = "/content/gdrive/MyDrive/ddf_raster_cache_3"
-_CACHE_RASTER_FOLDER_NAME="ddf_raster_cache_3"
+_CACHE_FOLDER_PREFIX = "/content/gdrive/MyDrive/ddf_raster_cache"
+_CACHE_RASTER_FOLDER_NAME="ddf_raster_cache"
 _MAX_RASTER_CACHE_POLLING_ATTEMPTS = 10
 
 #global pool for all rasters in cases of simultaneous parallelization
@@ -309,7 +309,7 @@ def _download_raster(raster_name: str):
   while not os.path.exists(os.path.join(_CACHE_FOLDER_PREFIX, f"{raster_name}.tif")) or attempts < _MAX_RASTER_CACHE_POLLING_ATTEMPTS:
     # Wait for 1 min which is the ceiling of time it takes the API to upload
     print("Wait 1 minute")
-    time.sleep(60)
+    time.sleep(10)
     attempts += 1
 
 def ordinary_kriging_means():
