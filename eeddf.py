@@ -26,7 +26,7 @@ _test_environment = False
 _project_name = 'river-sky-386919'
 
 def initialize_ddf(test_environment:bool = False):
-  '''
+  """
   Initializes the connection to the Ddf earth engine project. You will need to
   log into Earth Engine to succeed and you must have the proper authorization
   to access ddf specific data. Access is obtained by belonging to an
@@ -36,7 +36,7 @@ def initialize_ddf(test_environment:bool = False):
   has been loaded.
     Args:
       test_environment: If True, uses the Test environment and data. Defaults to False
-  '''    
+  """    
   global _initialized
   global _test_environment
   global _project_name
@@ -55,19 +55,20 @@ def initialize_ddf(test_environment:bool = False):
     ee.Initialize(credentials, project=_project_name, opt_url='https://earthengine-highvolume.googleapis.com')
 
 def is_test_environment():
-  '''
+  """
   Returns true if ddf was initialized with a test environment.
-  '''
+  """
   global _test_environment
   return _test_environment
 
 def ee_project_name():
-  '''
+  """
   Returns the name of the EE project used for ddf
-  '''
+  """
   return _project_name
 
 def ee_reference_rasters_path():
-  '''
-  '''
+  """
+  Returns the path of the reference rasters within the EE project
+  """
   return 'projects/' + ee_project_name() + '/assets/reference_rasters/'
