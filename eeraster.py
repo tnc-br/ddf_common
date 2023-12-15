@@ -295,10 +295,13 @@ def _download_raster(raster_name: str):
             os.path.join(
               eeddf.ee_reference_rasters_path() +
               f"{raster_name}"))
+  image.reproject('EPSG:4326')
   task = ee.batch.Export.image.toDrive(
     image=image,
     description=raster_name,
     folder=_CACHE_RASTER_FOLDER_NAME,
+    dimensions=1000x1000,
+    scale=4400,
   )
   task.start()
 
