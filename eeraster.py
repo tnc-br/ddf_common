@@ -300,7 +300,7 @@ def _download_raster(raster_name: str):
     image=image,
     description=raster_name,
     folder=_CACHE_RASTER_FOLDER_NAME,
-    dimensions=1000x1000,
+    dimensions="1000x1000",
     scale=4400,
   )
   task.start()
