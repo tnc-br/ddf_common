@@ -1,4 +1,6 @@
 import typing
+import google
+import eeddf
 from google.cloud import bigquery
 
 _BQ_CLIENT = None
@@ -68,8 +70,8 @@ def insert_eval_result(eval: typing.Dict[str, typing.Any]) -> typing.List[typing
   client = get_big_query_client()
 
   # Check if eval_id exists before writing it.
-  exists = read_eval_result(eval['eval_id']).total_rows
-  if exists and not allow_overwrite:
+  exists = get_eval_result(eval['eval_id']).total_rows
+  if exists:
     return [f"eval_id {eval['eval_id']} already exists"]
 
   # Set up reference to table we write to.
