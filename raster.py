@@ -330,70 +330,6 @@ def get_data_at_coords(dataset: AmazonGeoTiff, x: float, y: float, month: int) -
   else:
     return value
 
-
-def get_predictions_at_each_pixel(
-    model: model.Model,
-    geotiffs: dict[str, AmazonGeoTiff],
-    bounds: Bounds,
-    geometry_mask: AmazonGeoTiff=None):
-  """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
-  Queries are constructed by querying every geotiff in `geotiffs` for information 
-  at that pixel and passing the parameters to the model. 
-  
-  Parameters are standardized using feature_transformer, a set of standardizers used
-  to fit training data.
-  
-  `model`: Tensorflow model used to make predictions
-  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
-                         Input must be transformed prior to predictions
-  `geotiffs`: The set of geotiffs required to make the prediction
-  `bounds`: Every pixel within these bounds will have a prediction made on it
-  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
-
-  # Initialize a blank plane representing means and variance.
-  predicted_np = np.ma.array(
-      np.zeros([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=float),
-      mask=np.ones([bounds.raster_size_x, bounds.raster_size_y, 2], dtype=bool))
-
-  for x_idx, x in enumerate(tqdm(np.arange(bounds.minx, bounds.maxx, bounds.pixel_size_x, dtype=float))):
-    rows = []
-    row_indexes = []
-    for y_idx, y in enumerate(np.arange(bounds.miny, bounds.maxy, -bounds.pixel_size_y, dtype=float)):
-      # Row should contain all the features needed to predict, in the same
-      # column order the model was trained.
-      row = {}
-      row["lat"] = y
-      row["long"] = x
-
-      # Surround in try/except as we will be trying to fetch out of bounds data.
-      try:
-        if geometry_mask and pd.isnull(geometry_mask.value_at(x, y)):
-          continue
-        for geotiff_label, geotiff in geotiffs.items():
-          row[geotiff_label] = geotiff.value_at(x, y)
-          if pd.isnull(row[geotiff_label]):
-            raise ValueError
-      except (ValueError, IndexError):
-        continue # masked and out-of-bounds coordinates
-
-      rows.append(row)
-      row_indexes.append((y_idx,0,))
-
-    if (len(rows) > 0):
-      X = pd.DataFrame.from_dict(rows)
-      predictions = model.predict_on_batch(X)
-
-      means_np = predictions[:, 0]
-      for prediction, (y_idx, month_idx) in zip(means_np, row_indexes):
-        predicted_np.mask[x_idx,y_idx,0] = False # unmask since we have data
-        predicted_np.data[x_idx,y_idx,0] = prediction
-      vars_np = predictions[:, 1]
-      for prediction, (y_idx, month_idx) in zip (vars_np, row_indexes):
-        predicted_np.mask[x_idx, y_idx, 1] = False
-        predicted_np.data[x_idx, y_idx, 1] = prediction
-
-  return predicted_np
-
 def is_valid_point(lat: float, lon: float, reference_isocape: AmazonGeoTiff) -> bool:  
   return _try_get_data_at_coords(reference_isocape, lon, lat, -1) is not None
 
@@ -551,50 +487,6 @@ def create_bounds_from_res(res_x: int, res_y: int, base_bounds: Bounds):
   new_bounds.raster_size_x = res_x
   new_bounds.raster_size_y = res_y
   return new_bounds
-
-def generate_isoscapes_from_variational_model(
-    model: model.Model,
-    res_x: int, 
-    res_y: int,
-    output_geotiff: str,
-    amazon_only: bool=False):
-  """
-  generate_isoscapes_from_variational_model function
-  --------------------------------------------------
-  This function generates an isoscape using a model, according
-  to the resolution specs. It queries the model for every 
-  pixel in a (res_x x res_y) tiff of the landscape.
-  --------------------------------------------------
-  Parameters:
-  model: model.Model 
-    Pretrained model used to make predictions on every pixel.
-  res_x: int
-    The output x resolution
-  res_y: int
-    The output y resolution
-  output_geotiff: str
-    Name of the file to output. 
-  amazon_only: bool
-    Whether to only generate a raster of the Amazon region as opposed to
-    all of Brazil.
-  """
-  required_geotiffs = model.training_column_names()
-  required_geotiffs.remove('lat')
-  required_geotiffs.remove('long')
-  
-  input_geotiffs = {column: column_name_to_geotiff_fn[column]() for column in required_geotiffs}
-
-  arbitrary_geotiff = list(input_geotiffs.values())[0]  
-  if amazon_only:
-    arbitrary_geotiff = d13C_mean_amazon_only_geotiff()
-  base_bounds = get_extent(arbitrary_geotiff.gdal_dataset)
-  output_resolution = create_bounds_from_res(res_x, res_y, base_bounds) 
-
-  np = get_predictions_at_each_pixel(
-    model, input_geotiffs, output_resolution, 
-    geometry_mask=arbitrary_geotiff)
-  save_numpy_to_geotiff(
-      output_resolution, np, get_raster_path(output_geotiff+".tiff"))
 
 def stamp_isoscape(filename: str, metadata_name: str, metadata_value: str):
   """
