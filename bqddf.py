@@ -2,29 +2,32 @@ import typing
 import google
 import eeddf
 from google.cloud import bigquery
+from google.api_core.exceptions import GoogleAPIError
 
 _BQ_CLIENT = None
 
 _TEST_CONFIG = {
-    "TABLE" : "eval_results",
+    "METADATA_TABLE" : "eval_metadata",
+    "PR_CURVE_TABLE" : "eval_pr_curves",
     "DATASET" : "harness_test_db",
     "PROJECT_NAME" : "river-sky-386919",
 }
 
 _PROD_CONFIG = {
-    "TABLE" : "eval_results",
+    "METADATA_TABLE" : "eval_metadata",
+    "PR_CURVE_TABLE" : "eval_pr_curves",
     "DATASET" : "harness_prod_db",
     "PROJECT_NAME" : "timberidprd",
 }
 
-def get_config() -> typing.Dict[str, str]:
+def _get_config() -> typing.Dict[str, str]:
   if eeddf.is_test_environment():
     global _TEST_CONFIG
     return _TEST_CONFIG
   global _PROD_CONFIG
   return _PROD_CONFIG
 
-def get_big_query_client() -> bigquery.Client:
+def _get_big_query_client() -> bigquery.Client:
   """
     Initializes and returns a connection to the BigQuery table.
   """
@@ -61,26 +64,67 @@ def get_eval_result(eval_id: str) -> bigquery.table.RowIterator:
     return ReferenceError(f"Two or more evals found for eval_id {eval_id}")
   return results
 
-def insert_eval_result(eval: typing.Dict[str, typing.Any]) -> typing.List[typing.Dict[str, typing.Any]]:
+def _insert_eval_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List[typing.Dict[str, typing.Any]]:
+  client = _get_big_query_client()
+
+  # Check if eval_id exists before writing it.
+  exists = get_eval_result(metadata['eval_id']).total_rows
+  if exists:
+    raise GoogleAPIError(f"eval_id {metadata['eval_id']} already exists.
+                          An eval with these params has already run.")
+  
+  # Set up reference to table we write to.
+  table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['METADATA_TABLE'])
+  job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+
+  # Automatically populate the timestamp field with the BigQuery commit time.
+  metadata['completion_timestamp'] = 'AUTO'
+  
+  # Write and block until complete.
+  load_job = client.load_table_from_json(metadata, table_ref, job_config=job_config)
+  return load_job.result()
+
+def _insert_eval_results(pr_curves: typing.List[typing.Dict[str, typing.Any]]) -> typing.List[typing.Dict[str, typing.Any]]:
+  client = get_big_query_client()
+  
+  # Set up reference to table we write to.
+  table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['PR_CURVE_TABLE'])
+  job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+
+  # Write and block until complete.
+  load_job = client.load_table_from_json(metadata, table_ref, job_config=job_config)
+  return load_job.result()
+
+def _generate_eval_id(metadata: typing.Dict[str, typing.Any]) -> str:
+  return str(hash(metadata.items()))
+
+def insert_eval(
+    metadata: typing.Dict[str, typing.Any],
+    results: typing.List[typing.Dict[str, typing.Any]]) -> typing.List[typing.Dict[str, typing.Any]]:
   """
     Writes the eval result to the BigQuery table. Each key in the dict must correspond 
     to a column in the table's schema. Duplicate eval_ids can not be written. The dict's 
     values must also adhere to the table's schema. Returns a list of errors.
+
+    This writes to two tables. Metadata is written to METADATA_TABLE and precision recall
+    numbers are written to PR_CURVE_TABLE.
+
+    Upon success, returns eval_id.
   """
-  client = get_big_query_client()
 
-  # Check if eval_id exists before writing it.
-  exists = get_eval_result(eval['eval_id']).total_rows
-  if exists:
-    return [f"eval_id {eval['eval_id']} already exists"]
+  # Generate the eval_id and set it for metadata and PR curves.
+  metadata['eval_id'] = _generate_eval_id(metadata)
+  for result in results:
+    result['eval_id'] = metadata['eval_id']
 
-  # Set up reference to table we write to.
-  table_ref = client.dataset(get_config()['DATASET']).table(get_config()['TABLE'])
-  table = client.get_table(table_ref)
-
-  # Automatically populate the timestamp field with the BigQuery commit time.
-  eval['completion_timestamp'] = 'AUTO'
-
-  # Insert data into BigQuery table.
-  errors = client.insert_rows(table, [eval])
-  return errors
+  # Write to metadata table
+  metadata_write = _insert_eval_metadata(metadata)
+  if (metadata_write.errors):
+    raise GoogleAPIError(metadata_write.errors)
+  
+  # Write to PR curve table.
+  result_write = _insert_eval_results(results)
+  if (result_write.errors):
+    raise GoogleAPIError(result_write.errors)
+  
+  return metadata['eval_id']
