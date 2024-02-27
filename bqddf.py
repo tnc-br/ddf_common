@@ -42,7 +42,7 @@ def _get_big_query_client() -> bigquery.Client:
         return PermissionError(
             "You must authenticate yourself with your google cloud project before using this API.")
     
-    _BQ_CLIENT = bigquery.Client(get_config()['PROJECT_NAME'])
+    _BQ_CLIENT = bigquery.Client(_get_config()['PROJECT_NAME'])
   
   return _BQ_CLIENT
 
@@ -52,10 +52,10 @@ def get_eval_result(eval_id: str) -> bigquery.table.RowIterator:
     until the query completes and returns the result. Returns a row iterator pointing
     to the beginning the results, but this iterator should continue just one value. 
   """
-  client = get_big_query_client()
+  client = _get_big_query_client()
 
   # Set up SQL query
-  table_name = f"{get_config()['DATASET']}.{get_config()['TABLE']}"
+  table_name = f"{_get_config()['DATASET']}.{_get_config()['METADATA_TABLE']}"
   query = f"SELECT * FROM {table_name} WHERE eval_id = '{eval_id}'"
 
   # Execute the query
@@ -70,33 +70,34 @@ def _insert_eval_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List
   # Check if eval_id exists before writing it.
   exists = get_eval_result(metadata['eval_id']).total_rows
   if exists:
-    raise GoogleAPIError(f"eval_id {metadata['eval_id']} already exists.
-                          An eval with these params has already run.")
+    raise GoogleAPIError(f"eval_id {metadata['eval_id']} already exists. " +
+                          "An eval with these params has already run.")
   
   # Set up reference to table we write to.
   table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
-  # Automatically populate the timestamp field with the BigQuery commit time.
-  metadata['completion_timestamp'] = 'AUTO'
-  
   # Write and block until complete.
-  load_job = client.load_table_from_json(metadata, table_ref, job_config=job_config)
+  load_job = client.load_table_from_json(
+    [metadata], table_ref, job_config=job_config)
   return load_job.result()
 
 def _insert_eval_results(pr_curves: typing.List[typing.Dict[str, typing.Any]]) -> typing.List[typing.Dict[str, typing.Any]]:
-  client = get_big_query_client()
+  client = _get_big_query_client()
   
   # Set up reference to table we write to.
   table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['PR_CURVE_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
   # Write and block until complete.
-  load_job = client.load_table_from_json(metadata, table_ref, job_config=job_config)
+  load_job = client.load_table_from_json(
+    pr_curves, table_ref, job_config=job_config)
   return load_job.result()
 
+# Sort the keys and hash the printed result.
 def _generate_eval_id(metadata: typing.Dict[str, typing.Any]) -> str:
-  return str(hash(metadata.items()))
+  encoded = json.dumps(metadata, sort_keys=True)
+  return "eval-" + str(hash(encoded))
 
 def insert_eval(
     metadata: typing.Dict[str, typing.Any],
