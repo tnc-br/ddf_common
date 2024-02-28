@@ -141,7 +141,8 @@ class eeRaster(raster.AmazonGeoTiffBase):
       """
       if len(coordinates) == 0:
         return coordinates
-      
+      print("values_at")
+
       #We round the input to EE and the output from EE to 5 decimals because
       #earth engine very often sends back lat/lon that are off from what was
       #sent by what looks like could be epsilon, meaning a bit representation
@@ -156,11 +157,13 @@ class eeRaster(raster.AmazonGeoTiffBase):
       start = 0
       image = self._imageCollection.mosaic()
       while (start < len(coordinates)):
+        print(start, "<", len(coordinates))
         end = start + _CHUNK_SIZE
         query_list.append([image, coordinates.iloc[start:end, :], column_name,
          _CRS, _LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME])
         start = end
 
+      print("starmap")
       all_dfs = _getPool().starmap(_query_mp, query_list)
       return pd.concat(all_dfs, ignore_index=True)
 
