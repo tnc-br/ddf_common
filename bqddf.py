@@ -6,26 +6,11 @@ from google.api_core.exceptions import GoogleAPIError
 
 _BQ_CLIENT = None
 
-_TEST_CONFIG = {
+_CONFIG = {
     "METADATA_TABLE" : "eval_metadata",
     "PR_CURVE_TABLE" : "eval_pr_curves",
     "DATASET" : "harness_test_db",
-    "PROJECT_NAME" : "river-sky-386919",
 }
-
-_PROD_CONFIG = {
-    "METADATA_TABLE" : "eval_metadata",
-    "PR_CURVE_TABLE" : "eval_pr_curves",
-    "DATASET" : "harness_prod_db",
-    "PROJECT_NAME" : "timberidprd",
-}
-
-def _get_config() -> typing.Dict[str, str]:
-  if eeddf.is_test_environment():
-    global _TEST_CONFIG
-    return _TEST_CONFIG
-  global _PROD_CONFIG
-  return _PROD_CONFIG
 
 def _get_big_query_client() -> bigquery.Client:
   """
@@ -34,16 +19,7 @@ def _get_big_query_client() -> bigquery.Client:
 
   global _BQ_CLIENT
   if not _BQ_CLIENT:
-
-    # Make sure user is authenticated. They should call eeddf.initialize_ddf() or
-    # some other authentication mechanism before establishing a BigQuery connection.
-    credentials, _ = google.auth.default()
-    if not credentials:
-        return PermissionError(
-            "You must authenticate yourself with your google cloud project before using this API.")
-    
-    _BQ_CLIENT = bigquery.Client(_get_config()['PROJECT_NAME'])
-  
+    _BQ_CLIENT = bigquery.Client(eeddf.get_project_name())
   return _BQ_CLIENT
 
 def get_eval_result(eval_id: str) -> bigquery.table.RowIterator:
@@ -55,7 +31,7 @@ def get_eval_result(eval_id: str) -> bigquery.table.RowIterator:
   client = _get_big_query_client()
 
   # Set up SQL query
-  table_name = f"{_get_config()['DATASET']}.{_get_config()['METADATA_TABLE']}"
+  table_name = f"{_CONFIG['DATASET']}.{_CONFIG['METADATA_TABLE']}"
   query = f"SELECT * FROM {table_name} WHERE eval_id = '{eval_id}'"
 
   # Execute the query
@@ -74,7 +50,7 @@ def _insert_eval_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List
                           "An eval with these params has already run.")
   
   # Set up reference to table we write to.
-  table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['METADATA_TABLE'])
+  table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
   # Write and block until complete.
@@ -86,7 +62,7 @@ def _insert_eval_results(pr_curves: typing.List[typing.Dict[str, typing.Any]]) -
   client = _get_big_query_client()
   
   # Set up reference to table we write to.
-  table_ref = client.dataset(_get_config()['DATASET']).table(_get_config()['PR_CURVE_TABLE'])
+  table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['PR_CURVE_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
   # Write and block until complete.
