@@ -18,6 +18,9 @@ import pandas as pd
 import pytest
 import random
 import datetime
+from sklearn.preprocessing import StandardScaler, Normalizer, MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from dataclasses import dataclass
 
 SAMPLE_COUNT_COLUMN_NAME_SUFFIX = 'count'
 
@@ -476,3 +479,95 @@ def nudge_invalid_coords(
       raise ValueError("Failed to nudge coordinates into valid space")
 
   return df
+
+def load_dataset(path: str, columns_to_keep: List[str], side_raster_input):
+  df = pd.read_csv(path, encoding="ISO-8859-1", sep=',')
+  df = df[df[VARIANCE_LABEL_TO_PREDICT].notna()]
+
+  df = dataset.nudge_invalid_coords(
+      df, list(side_raster_input.values()), max_degrees_deviation=2)
+
+  for name, geotiff in side_raster_input.items():
+    df[name] = df.apply(lambda row: geotiff.value_at(row['long'], row['lat']), axis=1)
+  for name, geotiff in side_raster_input.items():
+    df = df[df[name].notnull()]
+
+  X = df.drop(df.columns.difference(columns_to_keep), axis=1)
+  Y = df[[MEAN_LABEL_TO_PREDICT, VARIANCE_LABEL_TO_PREDICT]]
+
+  return X, Y
+
+@dataclass
+class FeaturesToLabels:
+  def __init__(self, X: pd.DataFrame, Y: pd.DataFrame):
+    self.X = X
+    self.Y = Y
+
+  def as_tuple(self):
+    return (self.X, self.Y)
+
+
+def create_feature_scaler(X: pd.DataFrame,
+                          columns_to_passthrough,
+                          columns_to_scale,
+                          columns_to_standardize) -> ColumnTransformer:
+  feature_scaler = ColumnTransformer(
+      [(column+'_scaler', MinMaxScaler(), [column]) for column in columns_to_scale] +
+      [(column+'_standardizer', StandardScaler(), [column]) for column in columns_to_standardize],
+      remainder='passthrough')
+  feature_scaler.fit(X)
+  return feature_scaler
+
+def create_label_scaler(Y: pd.DataFrame) -> ColumnTransformer:
+  label_scaler = ColumnTransformer([
+      ('var_minmax_scaler', MinMaxScaler(), [VARIANCE_LABEL_TO_PREDICT]),
+      ('mean_std_scaler', StandardScaler(), [MEAN_LABEL_TO_PREDICT])],
+      remainder='passthrough')
+  label_scaler.fit(Y)
+  return label_scaler
+
+def scale(X: pd.DataFrame, feature_scaler):
+  # transform() outputs numpy arrays :(  need to convert back to DataFrame.
+  X_standardized = pd.DataFrame(feature_scaler.transform(X),
+                        index=X.index, columns=X.columns)
+  return X_standardized
+
+  # Just a class organization, holds each scaled dataset and the scaler used.
+# Useful for unscaling predictions.
+@dataclass
+class ScaledPartitions():
+  def __init__(self,
+               feature_scaler: ColumnTransformer,
+               label_scaler: ColumnTransformer,
+               train: FeaturesToLabels, val: FeaturesToLabels,
+               test: FeaturesToLabels):
+    self.feature_scaler = feature_scaler
+    self.label_scaler = label_scaler
+    self.train = train
+    self.val = val
+    self.test = test
+
+
+def load_and_scale(config: Dict,
+                   columns_to_passthrough: List[str],
+                   columns_to_scale: List[str],
+                   columns_to_standardize: List[str],
+                   extra_columns_from_geotiffs: Dict[str, raster.AmazonGeoTiff]) -> ScaledPartitions:
+  columns_to_keep = columns_to_passthrough + columns_to_scale + columns_to_standardize
+  X_train, Y_train = load_dataset(config['TRAIN'], columns_to_keep, extra_columns_from_geotiffs)
+  X_val, Y_val = load_dataset(config['VALIDATION'], columns_to_keep, extra_columns_from_geotiffs)
+  X_test, Y_test = load_dataset(config['TEST'], columns_to_keep, extra_columns_from_geotiffs)
+
+  # Fit the scaler:
+  feature_scaler = create_feature_scaler(
+      X_train,
+      columns_to_passthrough,
+      columns_to_scale,
+      columns_to_standardize)
+  label_scaler = create_label_scaler(Y_train)
+
+  # Apply the scaler:
+  train = FeaturesToLabels(scale(X_train, feature_scaler), Y_train)
+  val = FeaturesToLabels(scale(X_val, feature_scaler), Y_val)
+  test = FeaturesToLabels(scale(X_test, feature_scaler), Y_test)
+  return ScaledPartitions(feature_scaler, label_scaler, train, val, test)
