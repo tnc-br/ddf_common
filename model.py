@@ -13,6 +13,7 @@ import joblib
 import typing
 import pandas as pd
 from dataset import ScaledPartitions
+from typing import List
 
 class Model:
     '''
