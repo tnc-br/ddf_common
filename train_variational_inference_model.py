@@ -2,7 +2,7 @@ import model
 import dataset
 import raster
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 # Container for parameters for training VI model
 @dataclass
