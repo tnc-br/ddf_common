@@ -12,7 +12,6 @@ import tensorflow_probability as tfp
 import joblib
 import typing
 import pandas as pd
-
 from dataset import ScaledPartitions
 
 class Model:
