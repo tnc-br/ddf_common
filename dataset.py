@@ -570,7 +570,7 @@ def load_and_scale(config: Dict,
       columns_to_passthrough,
       columns_to_scale,
       columns_to_standardize)
-  label_scaler = create_label_scaler(Y_train)
+  label_scaler = create_label_scaler(Y_train, mean_label=mean_label, var_label=var_label)
 
   # Apply the scaler:
   train = FeaturesToLabels(scale(X_train, feature_scaler), Y_train)
