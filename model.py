@@ -1,4 +1,5 @@
 from sklearn.compose import ColumnTransformer
+from sklearn.metrics import mean_squared_error
 from abc import abstractmethod
 from functools import partial
 import tensorflow as tf
