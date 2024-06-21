@@ -13,6 +13,8 @@ import joblib
 import typing
 import pandas as pd
 
+from dataset import ScaledPartitions
+
 class Model:
     '''
     Abstract class representing a model, trained in any way.
