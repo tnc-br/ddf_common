@@ -120,8 +120,10 @@ def kl_divergence_helper(real, predicted, num_to_sample=0):
     return tf.math.reduce_mean(kl_loss)
 
 def kl_divergence(real, predicted, double_sided, num_to_sample):
-  return kl_divergence_helper(real, predicted, num_to sample) + (
-    kl_divergence_helper(predicted, real, num_to_sample) if double_sided else 0)
+  if double_sided:
+    return kl_divergence_helper(real, predicted, num_to_sample) + \
+     kl_divergence_helper(predicted, real, num_to_sample)
+  return kl_divergence_helper(real, predicted, num_to_sample)
 
 def get_early_stopping_callback(patience: int):
   return EarlyStopping(monitor='val_loss', patience=patience, min_delta=0.001,
@@ -203,12 +205,14 @@ def render_plot_loss(history, name):
 def train(
     sp: ScaledPartitions,
     run_id: str, 
-    epochs: int
+    epochs: int,
     hidden_layers: List[int], 
     training_batch_size: int,
     learning_rate: float,
     double_sided_kl: bool,
     kl_num_samples_from_pred_dist: int,
+    mean_label: str,
+    var_label: str,
     patience: int):
   print("==================")
   print(run_id)
@@ -226,8 +230,8 @@ def train(
   print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
 
   predictions = model.predict_on_batch(sp.test.X)
-  predictions = pd.DataFrame(predictions, columns=[MEAN_LABEL_TO_PREDICT, VARIANCE_LABEL_TO_PREDICT])
-  rmse = np.sqrt(mean_squared_error(sp.test.Y[MEAN_LABEL_TO_PREDICT], predictions[MEAN_LABEL_TO_PREDICT]))
+  predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
+  rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
   print("dO18 RMSE: "+ str(rmse))
-  return model
+  return model, rmse
 

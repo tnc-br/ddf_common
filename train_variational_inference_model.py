@@ -13,6 +13,9 @@ class VIModelTrainingParams:
     num_nodes_per_layer: int
     training_batch_size: int
     learning_rate: float
+
+    mean_label: str
+    var_label: str
     
 
     # Wait this many epochs without loss improvement before stopping training
@@ -30,6 +33,9 @@ class VIModelTrainingParams:
 
     # Unscaled, unnormallized raw feature data.
     features_to_passthrough: List[str]
+
+    resolution_x: int
+    resolution_y: int
 
 def train_variational_inference_model(params: VIModelTrainingParams, files: Dict):
 
@@ -52,7 +58,7 @@ def train_variational_inference_model(params: VIModelTrainingParams, files: Dict
     data = dataset.load_and_scale(
         files, params.features_to_passthrough, [], params.features_to_standardize, extra_columns_from_geotiffs)
 
-    model.train(
+    vi_model, rmse = model.train(
         data, 
         run_id=params.training_id, 
         epochs=params.num_epochs,
@@ -61,5 +67,11 @@ def train_variational_inference_model(params: VIModelTrainingParams, files: Dict
         learning_rate=params.learning_rate,
         double_sided_kl=params.double_sided_kl,
         kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
+        mean_label=params.mean_label,
+        var_label=params.var_label,
         patience=params.patience)
 
+    generate_isoscape.generate_isoscapes_from_variational_model(
+        vi_model, params.resolution_x, params.resolution_y, params.training_id, False)
+    
+    # TODO: Write to BQ
