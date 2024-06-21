@@ -488,7 +488,7 @@ def load_dataset(path: str,
   df = pd.read_csv(path, encoding="ISO-8859-1", sep=',')
   df = df[df[var_label].notna()]
 
-  df = dataset.nudge_invalid_coords(
+  df = nudge_invalid_coords(
       df, list(side_raster_input.values()), max_degrees_deviation=2)
 
   for name, geotiff in side_raster_input.items():
