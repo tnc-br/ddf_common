@@ -11,7 +11,7 @@ from tqdm import tqdm
 import datetime
 import ee
 import eeddf
-from typing import List
+from typing import List, Dict
 import math
 import numpy as np
 import pandas as pd
