@@ -154,7 +154,7 @@ def dispatch_rasters(
   
 
 def generate_isoscapes_from_variational_model(
-    model: model.Model,
+    vi_model: model.Model,
     res_x: int, 
     res_y: int,
     output_geotiff_save_location: str,
@@ -179,7 +179,7 @@ def generate_isoscapes_from_variational_model(
     Whether to only generate a raster of the Amazon region as opposed to
     all of Brazil.
   """
-  required_geotiffs = model.training_column_names()
+  required_geotiffs = vi_model.training_column_names()
   required_geotiffs.remove('lat')
   required_geotiffs.remove('long')
   
@@ -195,7 +195,7 @@ def generate_isoscapes_from_variational_model(
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
   preds = get_predictions_at_each_pixel(
-    model, input_geotiffs, output_resolution, 
+    vi_model, input_geotiffs, output_resolution, 
     geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
       output_resolution, preds, output_geotiff_save_location)

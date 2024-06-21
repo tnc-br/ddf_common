@@ -4,6 +4,7 @@ import raster
 import generate_isoscape
 from dataclasses import dataclass
 from typing import List, Dict
+from joblib import dump
 
 # Container for parameters for training VI model
 @dataclass
@@ -82,9 +83,19 @@ def train_variational_inference_model(
         var_label=params.var_label,
         patience=params.early_stopping_patience,
         model_checkpoint=model_save_location)
-    vi_model.save(model_save_location, save_format="h5")
-    
+
+    # Package the scaling info and model weights together.
+    vi_model.save(get_model_save_location(
+        f"{model_save_location}.tf"), save_format='tf')
+    dump(data.feature_scaler, f"{model_save_location}.pkl")
+    packaged_model = model.TFModel(f"{model_save_location}.tf", f"{model_save_location}.pkl")
+
+
     generate_isoscape.generate_isoscapes_from_variational_model(
-        vi_model, params.resolution_x, params.resolution_y, params.training_id, False)
+        packaged_model, 
+        params.resolution_x,
+        params.resolution_y,
+        isoscape_save_location, 
+        amazon_only=False) 
     
     # TODO: Write to BQ
