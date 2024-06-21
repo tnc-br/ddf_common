@@ -85,8 +85,7 @@ def train_variational_inference_model(
         model_checkpoint=model_save_location)
 
     # Package the scaling info and model weights together.
-    vi_model.save(get_model_save_location(
-        f"{model_save_location}.tf"), save_format='tf')
+    vi_model.save(f"{model_save_location}.tf", save_format='tf')
     dump(data.feature_scaler, f"{model_save_location}.pkl")
     packaged_model = model.TFModel(f"{model_save_location}.tf", f"{model_save_location}.pkl")
 
