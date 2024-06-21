@@ -37,7 +37,11 @@ class VIModelTrainingParams:
     resolution_x: int
     resolution_y: int
 
-def train_variational_inference_model(params: VIModelTrainingParams, files: Dict):
+def train_variational_inference_model(
+    params: VIModelTrainingParams, 
+    files: Dict,
+    isoscape_save_location: str,
+    model_save_location: str):
 
     # Columns not found in the training data, but their corresponding value have
     # strong signals.
@@ -75,8 +79,10 @@ def train_variational_inference_model(params: VIModelTrainingParams, files: Dict
         kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
         mean_label=params.mean_label,
         var_label=params.var_label,
-        patience=params.early_stopping_patience)
-
+        patience=params.early_stopping_patience,
+        model_checkpoint=model_save_location)
+    vi_model.save(model_save_location, save_format="h5")
+    
     generate_isoscape.generate_isoscapes_from_variational_model(
         vi_model, params.resolution_x, params.resolution_y, params.training_id, False)
     

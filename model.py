@@ -137,7 +137,7 @@ tf.keras.utils.set_random_seed(18731)
 # checkpointing callback to periodically save the model. It's optional.
 def get_checkpoint_callback(model_file):
   return ModelCheckpoint(
-      get_model_save_location(model_file),
+      model_file,
       monitor='val_loss', verbose=0, save_best_only=True, mode='min')
 
 def train_or_update_variational_model(
@@ -215,16 +215,16 @@ def train(
     kl_num_samples_from_pred_dist: int,
     mean_label: str,
     var_label: str,
-    patience: int):
+    patience: int, 
+    model_checkpoint: str):
   print("==================")
   print(run_id)
   history, model = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, patience=patience, double_sided_kl=double_sided_kl,
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist,
-    model_file=run_id+".h5", use_checkpoint=False)
+    model_file=model_checkpoint, use_checkpoint=False)
   render_plot_loss(history, run_id+" kl_loss")
-  model.save(get_model_save_location(run_id+".h5"), save_format="h5")
 
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
   print('Val loss:', history.history['val_loss'][best_epoch_index])

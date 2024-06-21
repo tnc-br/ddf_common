@@ -157,7 +157,7 @@ def generate_isoscapes_from_variational_model(
     model: model.Model,
     res_x: int, 
     res_y: int,
-    output_geotiff: str,
+    output_geotiff_save_location: str,
     amazon_only: bool=False):
   """
   generate_isoscapes_from_variational_model function
@@ -173,7 +173,7 @@ def generate_isoscapes_from_variational_model(
     The output x resolution
   res_y: int
     The output y resolution
-  output_geotiff: str
+  output_geotiff_save_location: str
     Name of the file to output. 
   amazon_only: bool
     Whether to only generate a raster of the Amazon region as opposed to
@@ -198,4 +198,4 @@ def generate_isoscapes_from_variational_model(
     model, input_geotiffs, output_resolution, 
     geometry_mask=arbitrary_geotiff)
   save_numpy_to_geotiff(
-      output_resolution, preds, raster.get_raster_path(output_geotiff+".tiff"))
+      output_resolution, preds, output_geotiff_save_location)
