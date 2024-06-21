@@ -75,7 +75,7 @@ def train_variational_inference_model(params: VIModelTrainingParams, files: Dict
         kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
         mean_label=params.mean_label,
         var_label=params.var_label,
-        patience=params.patience)
+        patience=params.early_stopping_patience)
 
     generate_isoscape.generate_isoscapes_from_variational_model(
         vi_model, params.resolution_x, params.resolution_y, params.training_id, False)
