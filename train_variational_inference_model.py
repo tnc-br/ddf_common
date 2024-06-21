@@ -56,7 +56,13 @@ def train_variational_inference_model(params: VIModelTrainingParams, files: Dict
             extra_columns_from_geotiffs[feature] = raster.column_name_to_geotiff_fn[feature]()
 
     data = dataset.load_and_scale(
-        files, params.features_to_passthrough, [], params.features_to_standardize, extra_columns_from_geotiffs)
+        files, 
+        params.mean_label, 
+        params.var_label, 
+        params.features_to_passthrough, 
+        [],
+        params.features_to_standardize, 
+        extra_columns_from_geotiffs)
 
     vi_model, rmse = model.train(
         data, 

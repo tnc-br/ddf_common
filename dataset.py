@@ -480,9 +480,13 @@ def nudge_invalid_coords(
 
   return df
 
-def load_dataset(path: str, columns_to_keep: List[str], side_raster_input):
+def load_dataset(path: str, 
+    mean_label: str, 
+    var_label: str, 
+    columns_to_keep: List[str], 
+    side_raster_input):
   df = pd.read_csv(path, encoding="ISO-8859-1", sep=',')
-  df = df[df[VARIANCE_LABEL_TO_PREDICT].notna()]
+  df = df[df[var_label].notna()]
 
   df = dataset.nudge_invalid_coords(
       df, list(side_raster_input.values()), max_degrees_deviation=2)
@@ -493,7 +497,7 @@ def load_dataset(path: str, columns_to_keep: List[str], side_raster_input):
     df = df[df[name].notnull()]
 
   X = df.drop(df.columns.difference(columns_to_keep), axis=1)
-  Y = df[[MEAN_LABEL_TO_PREDICT, VARIANCE_LABEL_TO_PREDICT]]
+  Y = df[[mean_label, var_label]]
 
   return X, Y
 
@@ -518,10 +522,10 @@ def create_feature_scaler(X: pd.DataFrame,
   feature_scaler.fit(X)
   return feature_scaler
 
-def create_label_scaler(Y: pd.DataFrame) -> ColumnTransformer:
+def create_label_scaler(Y: pd.DataFrame, mean_label: str, var_label: str) -> ColumnTransformer:
   label_scaler = ColumnTransformer([
-      ('var_minmax_scaler', MinMaxScaler(), [VARIANCE_LABEL_TO_PREDICT]),
-      ('mean_std_scaler', StandardScaler(), [MEAN_LABEL_TO_PREDICT])],
+      ('var_minmax_scaler', MinMaxScaler(), [var_label]),
+      ('mean_std_scaler', StandardScaler(), [mean_label])],
       remainder='passthrough')
   label_scaler.fit(Y)
   return label_scaler
@@ -549,14 +553,16 @@ class ScaledPartitions():
 
 
 def load_and_scale(config: Dict,
+                   mean_label: str,
+                   var_label: str,
                    columns_to_passthrough: List[str],
                    columns_to_scale: List[str],
                    columns_to_standardize: List[str],
                    extra_columns_from_geotiffs: Dict[str, raster.AmazonGeoTiff]) -> ScaledPartitions:
   columns_to_keep = columns_to_passthrough + columns_to_scale + columns_to_standardize
-  X_train, Y_train = load_dataset(config['TRAIN'], columns_to_keep, extra_columns_from_geotiffs)
-  X_val, Y_val = load_dataset(config['VALIDATION'], columns_to_keep, extra_columns_from_geotiffs)
-  X_test, Y_test = load_dataset(config['TEST'], columns_to_keep, extra_columns_from_geotiffs)
+  X_train, Y_train = load_dataset(config['TRAIN'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
+  X_val, Y_val = load_dataset(config['VALIDATION'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
+  X_test, Y_test = load_dataset(config['TEST'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
 
   # Fit the scaler:
   feature_scaler = create_feature_scaler(
