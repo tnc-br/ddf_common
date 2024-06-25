@@ -94,7 +94,6 @@ def sample_normal_distribution(
 import tensorflow_probability as tfp
 
 # log(σ2/σ1) + ( σ1^2+(μ1−μ2)^2 ) / 2* σ^2   − 1/2
-@tf.function
 def kl_divergence_closure(double_sided, num_to_sample):
     def kl_divergence_calc(real, predicted):
         '''
