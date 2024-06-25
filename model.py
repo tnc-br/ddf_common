@@ -186,14 +186,14 @@ def train_or_update_variational_model(
     model.compile( 
         optimizer=optimizer, 
         loss=kl_divergence_closure(
-            tf.constant(double_sided_kl_tf),
-            tf.constant(num_samples_tf)))
+            tf.constant(double_sided_kl),
+            tf.constant(num_samples)))
     model.summary()
   else:
     model = keras.models.load_model(
         get_model_save_location(model_file),
         custom_objects={"kl_divergence_closure": kl_divergence_closure})
-  history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
+  history = model.fit(sp.train.X, sp.train.Y, verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
                       epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
   return history, model
 
