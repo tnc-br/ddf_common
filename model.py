@@ -94,34 +94,41 @@ def sample_normal_distribution(
 import tensorflow_probability as tfp
 
 # log(σ2/σ1) + ( σ1^2+(μ1−μ2)^2 ) / 2* σ^2   − 1/2
-def kl_divergence_helper(real, predicted, num_to_sample=0):
-    '''
-    real: tf.Tensor of the real mean and standard deviation of sample to compare
-    predicted: tf.Tensor of the predicted mean and standard deviation to compare
-    sample: Whether or not to sample the predicted distribution to get a new
-            mean and standard deviation.
-    '''
-    if real.shape != predicted.shape:
-      raise ValueError(
-          f"real.shape {real.shape} != predicted.shape {predicted.shape}")
+def kl_divergence_closure(double_sided, num_to_sample):
+    def kl_divergence_calc(real, predicted):
+        '''
+        real: tf.Tensor of the real mean and standard deviation of sample to compare
+        predicted: tf.Tensor of the predicted mean and standard deviation to compare
+        sample: Whether or not to sample the predicted distribution to get a new
+                mean and standard deviation.
+        '''
+        if real.shape != predicted.shape:
+            raise ValueError(
+                f"real.shape {real.shape} != predicted.shape {predicted.shape}")
 
-    real_value = tf.gather(real, [0], axis=1)
-    real_std = tf.math.sqrt(tf.gather(real, [1], axis=1))
+        real_value = tf.gather(real, [0], axis=1)
+        real_std = tf.math.sqrt(tf.gather(real, [1], axis=1))
 
 
-    predicted_value = tf.gather(predicted, [0], axis=1)
-    predicted_std = tf.math.sqrt(tf.gather(predicted, [1], axis=1))
-    # If num_to_sample>0, sample from the distribution defined by the predicted mean
-    # and standard deviation to use for mean and stdev used in KL divergence loss.
-    if num_to_sample:
-      predicted_value, predicted_std = sample_normal_distribution(
-          mean=predicted_value, stdev=predicted_std, n=num_to_sample)
+        predicted_value = tf.gather(predicted, [0], axis=1)
+        predicted_std = tf.math.sqrt(tf.gather(predicted, [1], axis=1))
+        # If num_to_sample>0, sample from the distribution defined by the predicted mean
+        # and standard deviation to use for mean and stdev used in KL divergence loss.
+        if num_to_sample:
+            predicted_value, predicted_std = sample_normal_distribution(
+                mean=predicted_value, stdev=predicted_std, n=num_to_sample)
 
-    kl_loss = -0.5 + tf.math.log(predicted_std/real_std) + \
-     (tf.square(real_std) + tf.square(real_value - predicted_value))/ \
-     (2*tf.square(predicted_std))
+        kl_loss = -0.5 + tf.math.log(predicted_std/real_std) + \
+        (tf.square(real_std) + tf.square(real_value - predicted_value))/ \
+        (2*tf.square(predicted_std))
 
-    return tf.math.reduce_mean(kl_loss)
+        return tf.math.reduce_mean(kl_loss)
+
+    def kl_divergence_driver(real, predicted):
+        return kl_divergence_calc(real, predicted) + kl_divergence_calc(predicted, real) if double_sided else 0
+    
+    return kl_divergence_driver
+
 
 def kl_divergence(real, predicted, double_sided, num_to_sample):
   if double_sided:
@@ -189,7 +196,7 @@ def train_or_update_variational_model(
     model = keras.models.load_model(
         get_model_save_location(model_file),
         custom_objects={"kl_divergence": kl_divergence})
-  history = model.fit(sp.train.X, sp.train.Y, verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+  history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
                       epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
   return history, model
 
