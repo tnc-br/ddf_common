@@ -185,7 +185,7 @@ def generate_isoscapes_from_variational_model(
   
   input_geotiffs = dispatch_rasters(
     required_geotiffs,
-    use_earth_engine_assets=True,
+    use_earth_engine_assets=False,
     local_fallback=True)
 
   arbitrary_geotiff = raster.vapor_pressure_deficit_geotiff()
