@@ -114,7 +114,7 @@ def kl_divergence_closure(double_sided, num_to_sample):
         predicted_std = tf.math.sqrt(tf.gather(predicted, [1], axis=1))
         # If num_to_sample>0, sample from the distribution defined by the predicted mean
         # and standard deviation to use for mean and stdev used in KL divergence loss.
-        if num_to_sample:
+        if num_to_sample is not None:
             predicted_value, predicted_std = sample_normal_distribution(
                 mean=predicted_value, stdev=predicted_std, n=num_to_sample)
 
