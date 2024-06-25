@@ -189,7 +189,7 @@ def train_or_update_variational_model(
   else:
     model = keras.models.load_model(
         get_model_save_location(model_file),
-        custom_objects={"kl_divergence": kl_divergence})
+        custom_objects={"kl_divergence_closure": kl_divergence_closure})
   history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
                       epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
   return history, model
