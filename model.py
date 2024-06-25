@@ -130,12 +130,6 @@ def kl_divergence_closure(double_sided, num_to_sample):
     return kl_divergence_driver
 
 
-def kl_divergence(real, predicted, double_sided, num_to_sample):
-  if double_sided:
-    return kl_divergence_helper(real, predicted, num_to_sample) + \
-     kl_divergence_helper(predicted, real, num_to_sample)
-  return kl_divergence_helper(real, predicted, num_to_sample)
-
 def get_early_stopping_callback(patience: int):
   return EarlyStopping(monitor='val_loss', patience=patience, min_delta=0.001,
                        verbose=1, restore_best_weights=True, start_from_epoch=0)
