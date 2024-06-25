@@ -94,6 +94,7 @@ def sample_normal_distribution(
 import tensorflow_probability as tfp
 
 # log(σ2/σ1) + ( σ1^2+(μ1−μ2)^2 ) / 2* σ^2   − 1/2
+@tf.function
 def kl_divergence_closure(double_sided, num_to_sample):
     def kl_divergence_calc(real, predicted):
         '''
@@ -184,7 +185,9 @@ def train_or_update_variational_model(
     optimizer = keras.optimizers.Adam(learning_rate=lr)
     model.compile( 
         optimizer=optimizer, 
-        loss=kl_divergence_closure(double_sided_kl, kl_num_samples_from_pred_dist))
+        loss=kl_divergence_closure(
+            tf.constant(double_sided_kl_tf),
+            tf.constant(num_samples_tf)))
     model.summary()
   else:
     model = keras.models.load_model(
