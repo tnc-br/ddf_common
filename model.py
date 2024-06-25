@@ -125,7 +125,7 @@ def kl_divergence_closure(double_sided, num_to_sample):
         return tf.math.reduce_mean(kl_loss)
 
     def kl_divergence_driver(real, predicted):
-        return kl_divergence_calc(real, predicted) + kl_divergence_calc(predicted, real) if double_sided else 0
+        return kl_divergence_calc(real, predicted) + (kl_divergence_calc(predicted, real) if double_sided else 0)
     
     return kl_divergence_driver
 
@@ -177,16 +177,16 @@ def train_or_update_variational_model(
     unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
     untransformed_var = keras.layers.Lambda(lambda t: tf.math.log(1 + tf.exp(t)))(unscaled_var)
 
-    # Output mean,  tuples.
+    # Output mean, tuples.
     outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
     model = keras.Model(inputs=inputs, outputs=outputs)
 
     optimizer = keras.optimizers.Adam(learning_rate=lr)
+    double_sided_kl_tf = tf.constant(double_sided_kl)
+    num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
     model.compile( 
         optimizer=optimizer, 
-        loss=kl_divergence_closure(
-            tf.constant(double_sided_kl),
-            tf.constant(kl_num_samples_from_pred_dist)))
+        loss=kl_divergence_closure(double_sided_kl_tf, num_samples_tf))
     model.summary()
   else:
     model = keras.models.load_model(
