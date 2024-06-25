@@ -201,7 +201,7 @@ def train_or_update_variational_model(
     model = keras.models.load_model(
         model_file,
         custom_objects={"KLCustomLoss": KLCustomLoss})
-  history = model.fit(sp.train.X, sp.train.Y, verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+  history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
                       epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
   return history, model
 
