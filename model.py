@@ -125,7 +125,7 @@ def kl_divergence_closure(double_sided, num_to_sample):
         return tf.math.reduce_mean(kl_loss)
 
     def kl_divergence_driver(real, predicted):
-        return kl_divergence_calc(real, predicted) + (kl_divergence_calc(predicted, real) if double_sided else 0)
+        return kl_divergence_calc(real, predicted) + (kl_divergence_calc(predicted, real) if double_sided else 0.0)
     
     return kl_divergence_driver
 
