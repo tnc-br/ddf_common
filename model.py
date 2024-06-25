@@ -187,7 +187,7 @@ def train_or_update_variational_model(
         optimizer=optimizer, 
         loss=kl_divergence_closure(
             tf.constant(double_sided_kl),
-            tf.constant(num_samples)))
+            tf.constant(kl_num_samples_from_pred_dist)))
     model.summary()
   else:
     model = keras.models.load_model(
