@@ -190,7 +190,7 @@ def train_or_update_variational_model(
     optimizer = keras.optimizers.Adam(learning_rate=lr)
     model.compile( 
         optimizer=optimizer, 
-        loss=lambda y_true, y_pred: kl_divergence(y_true, y_pred, double_sided_kl, kl_num_samples_from_pred_dist))
+        loss=kl_divergence_closure(double_sided_kl, kl_num_samples_from_pred_dist))
     model.summary()
   else:
     model = keras.models.load_model(
