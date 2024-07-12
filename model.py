@@ -158,6 +158,7 @@ def train_or_update_variational_model(
         epochs: int,
         batch_size: int,
         lr: float,
+        dropout_rate: float,
         patience: int,
         double_sided_kl: bool,
         kl_num_samples_from_pred_dist: int,
@@ -171,6 +172,9 @@ def train_or_update_variational_model(
     for layer_size in hidden_layers:
       x = keras.layers.Dense(
           layer_size, activation='relu', kernel_initializer=glorot_normal)(x)
+      if dropout_rate > 0:
+        x = keras.layers.Dropout(dropout_rate=dropout_rate)(x)
+
     mean_output = keras.layers.Dense(
         1, name='mean_output', kernel_initializer=glorot_normal)(x)
 
@@ -223,6 +227,7 @@ def train(
     hidden_layers: List[int], 
     training_batch_size: int,
     learning_rate: float,
+    dropout_rate: float,
     double_sided_kl: bool,
     kl_num_samples_from_pred_dist: int,
     mean_label: str,
@@ -233,7 +238,7 @@ def train(
   print(run_id)
   history, model = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
-    lr=learning_rate, patience=patience, double_sided_kl=double_sided_kl,
+    lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist,
     model_file=model_checkpoint, use_checkpoint=False)
   render_plot_loss(history, run_id+" kl_loss")

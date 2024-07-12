@@ -15,6 +15,7 @@ class VIModelTrainingParams:
     num_nodes_per_layer: int
     training_batch_size: int
     learning_rate: float
+    dropout_rate: float
 
     mean_label: str
     var_label: str
@@ -77,6 +78,7 @@ def train_variational_inference_model(
         hidden_layers=[params.num_nodes_per_layer]*params.num_layers,
         training_batch_size=params.training_batch_size,
         learning_rate=params.learning_rate,
+        
         double_sided_kl=params.double_sided_kl,
         kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
         mean_label=params.mean_label,
