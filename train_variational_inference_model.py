@@ -19,8 +19,13 @@ class VIModelTrainingParams:
 
     mean_label: str
     var_label: str
-    
 
+    # E.g. relu, linear, or one of these:
+    # https://www.tensorflow.org/api_docs/python/tf/keras/activations
+    #
+    # No sanitation is done on this param.
+    activation_func: str
+    
     # Wait this many epochs without loss improvement before stopping training
     early_stopping_patience: int
 
@@ -78,11 +83,12 @@ def train_variational_inference_model(
         hidden_layers=[params.num_nodes_per_layer]*params.num_layers,
         training_batch_size=params.training_batch_size,
         learning_rate=params.learning_rate,
-        
+        dropout_rate=params.dropout_rate,
         double_sided_kl=params.double_sided_kl,
         kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
         mean_label=params.mean_label,
         var_label=params.var_label,
+        activation_func=params.activation_func,
         patience=params.early_stopping_patience,
         model_checkpoint=model_save_location)
 
@@ -90,7 +96,6 @@ def train_variational_inference_model(
     vi_model.save(f"{model_save_location}.tf", save_format='tf')
     dump(data.feature_scaler, f"{model_save_location}.pkl")
     packaged_model = model.TFModel(f"{model_save_location}.tf", f"{model_save_location}.pkl")
-
 
     generate_isoscape.generate_isoscapes_from_variational_model(
         packaged_model, 

@@ -162,6 +162,7 @@ def train_or_update_variational_model(
         patience: int,
         double_sided_kl: bool,
         kl_num_samples_from_pred_dist: int,
+        activation_func: str,
         model_file=None,
         use_checkpoint=False):
   callbacks_list = [get_early_stopping_callback(patience),
@@ -171,7 +172,7 @@ def train_or_update_variational_model(
     x = inputs
     for layer_size in hidden_layers:
       x = keras.layers.Dense(
-          layer_size, activation='relu', kernel_initializer=glorot_normal)(x)
+          layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
       if dropout_rate > 0:
         x = keras.layers.Dropout(dropout_rate=dropout_rate)(x)
 
