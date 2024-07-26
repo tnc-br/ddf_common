@@ -174,7 +174,7 @@ def train_or_update_variational_model(
       x = keras.layers.Dense(
           layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
       if dropout_rate > 0:
-        x = keras.layers.Dropout(dropout_rate=dropout_rate)(x)
+        x = keras.layers.Dropout(rate=dropout_rate)(x)
 
     mean_output = keras.layers.Dense(
         1, name='mean_output', kernel_initializer=glorot_normal)(x)
