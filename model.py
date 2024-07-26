@@ -231,6 +231,7 @@ def train(
     dropout_rate: float,
     double_sided_kl: bool,
     kl_num_samples_from_pred_dist: int,
+    activation_func: str,
     mean_label: str,
     var_label: str,
     patience: int, 
@@ -240,7 +241,7 @@ def train(
   history, model = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
-    kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist,
+    kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
     model_file=model_checkpoint, use_checkpoint=False)
   render_plot_loss(history, run_id+" kl_loss")
 
