@@ -14,8 +14,6 @@ import os
 import matplotlib.animation as animation
 from sklearn.compose import ColumnTransformer
 
-import model
-
 
 GDRIVE_BASE = "/content/gdrive"
 RASTER_BASE = "/MyDrive/amazon_rainforest_files/amazon_rasters/" #@param
