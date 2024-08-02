@@ -144,7 +144,7 @@ def evaluate(
     end_max_fraud_radius=end_max_fraud_radius,
     radius_pace=radius_pace,
     max_trusted_radius=max_trusted_radius,
-    min_trusted_radius=min_trusted_radius, 
+    min_fraud_radius=min_trusted_radius, 
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
     reference_isoscape=means_isoscape)
