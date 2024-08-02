@@ -55,12 +55,12 @@ def generate_fake_samples(
   min_fraud_radius: int,
   real_samples_data: pd.DataFrame,
   elements: List[str],
-  reference_isoscape: raster.AmazonGeoTiff):
+  reference_isoscapes: List[raster.AmazonGeoTiff]):
   fake_samples = {}
   for max_radius in range(start_max_fraud_radius, end_max_fraud_radius+1, radius_pace):
     fake_samples[max_radius] = dataset.create_fraudulent_samples(
       real_samples_data,
-      reference_isoscape,
+      reference_isoscapes,
       elements,
       max_trusted_radius,
       max_radius,
@@ -188,7 +188,7 @@ def evaluate(
     min_fraud_radius=min_trusted_radius, 
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
-    reference_isoscape=means_isoscape)
+    reference_isoscapes=[means_isoscape, vars_isoscape])
   
   # Test the isoscape against the mixture of real and fake samples. 
   auc_scores, p_values_found, precision_targets_found, recall_targets_found = evaluate_fake_true_mixture(
