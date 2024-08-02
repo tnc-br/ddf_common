@@ -1,8 +1,11 @@
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import auc
 import raster
 import pandas as pd
 import dataset
 import hypothesis
+import numpy as np
 from typing import Dict, Any, List
 
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
@@ -96,7 +99,9 @@ def evaluate_fake_true_mixture(
   real: pd.DataFrame,
   mean_isoscapes: List[raster.AmazonGeoTiff],
   var_isoscapes: List[raster.AmazonGeoTiff],
-  isotope_column_names: List[str]
+  isotope_column_names: List[str],
+  precision_target: float,
+  recall_target: float
 ):
   auc_scores = {}
   p_values_found = {}
@@ -104,8 +109,7 @@ def evaluate_fake_true_mixture(
   recall_targets_found ={}
 
   for radius, fake_sample in dist_to_fake_samples.items():
-
-    test_dataset = pd.concat([real, pd.DataFrame([fake_sample])], ignore_index=True)
+    test_dataset = pd.concat([real, pd.DataFrame(fake_sample)], ignore_index=True)
     test_dataset = dataset.nudge_invalid_coords(
         df=test_dataset,
         rasters=mean_isoscapes + var_isoscapes
@@ -115,7 +119,7 @@ def evaluate_fake_true_mixture(
         test_dataset=test_dataset,
         isotope_column_names=isotope_column_names,
         means_isoscapes=mean_isoscapes,
-        vars_isoscapes=var_isoscape
+        vars_isoscapes=var_isoscapes
     )
 
     auc_score = auc(recall, precision)
@@ -131,8 +135,8 @@ def evaluate_fake_true_mixture(
 
     p_values_found[radius] = p_value_found[0]
     precision_targets_found[radius] = precision_target_found[0]
-    recalls_target_found[radius] = recall_target_found[0]
-  return auc_scores, p_values_found, precisions_target_found, recall_targets_found
+    recall_targets_found[radius] = recall_target_found[0]
+  return auc_scores, p_values_found, precision_targets_found, recall_targets_found
 
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
@@ -197,6 +201,8 @@ def evaluate(
     real=real,
     mean_isoscapes=[means_isoscape],
     var_isoscapes=[vars_isoscape],
-    isotope_column_names=[isotope_column_name])
+    isotope_column_names=[isotope_column_name],
+    precision_target=precision_target,
+    recall_target=recall_target)
 
   return eval_results, auc_scores, p_values_found, precision_targets_found, recall_targets_found
