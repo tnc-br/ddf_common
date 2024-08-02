@@ -104,7 +104,8 @@ def evaluate_fake_true_mixture(
   recall_targets_found ={}
 
   for radius, fake_sample in dist_to_fake_samples.items():
-    test_dataset = real.append(fake_sample, ignore_index=True)
+
+    test_dataset = pd.concat([real, pd.DataFrame([fake_sample])], ignore_index=True)
     test_dataset = dataset.nudge_invalid_coords(
         df=test_dataset,
         rasters=mean_isoscapes + var_isoscapes
