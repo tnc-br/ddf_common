@@ -94,8 +94,8 @@ def find_p_value(
 def evaluate_fake_true_mixture(
   dist_to_fake_samples: Dict,
   real: pd.DataFrame,
-  mean_isoscapes: List[rasters.AmazonGeoTiff],
-  var_isoscapes: List[rasters.AmazonGeoTiff],
+  mean_isoscapes: List[raster.AmazonGeoTiff],
+  var_isoscapes: List[raster.AmazonGeoTiff],
   isotope_column_names: List[str]
 ):
   auc_scores = {}
