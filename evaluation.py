@@ -39,6 +39,9 @@ def evaluate(
   Runs a minimal one-sided evaluation pipeline. 
   '''
 
+  # Sanitize
+  eval_dataset = eval_dataset.dropna(subset=[var_label])
+
   mean_predicted_label = mean_label + "_predicted"
   var_predicted_label = var_label + "_predicted"
 
@@ -48,7 +51,7 @@ def evaluate(
       eval_dataset, means_isoscape, vars_isoscape, mean_label, var_label,
       mean_predicted_label, var_predicted_label)
 
-  eval_dataset[fraud] = False
+  eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
   inferences_df = hypothesis.get_predictions_grouped(
       eval_dataset, [mean_label], [var_label], ['cel_count'],
