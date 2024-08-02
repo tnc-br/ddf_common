@@ -91,6 +91,48 @@ def find_p_value(
 
   return precision_target_found, recall_target_found, p_value_found
 
+def evaluate_fake_true_mixture(
+  dist_to_fake_samples: Dict,
+  real: pd.DataFrame,
+  mean_isoscapes: List[rasters.AmazonGeoTiff],
+  var_isoscapes: List[rasters.AmazonGeoTiff],
+  isotope_column_names: List[str]
+):
+  auc_scores = {}
+  p_values_found = {}
+  precision_targets_found = {}
+  recall_targets_found ={}
+
+  for radius, fake_sample in dist_to_fake_samples.items():
+    test_dataset = real.append(fake_sample, ignore_index=True)
+    test_dataset = dataset.nudge_invalid_coords(
+        df=test_dataset,
+        rasters=mean_isoscapes + var_isoscapes
+    )
+
+    precision, recall, thresholds = isoscape_precision_recall_thresholds(
+        test_dataset=test_dataset,
+        isotope_column_names=isotope_column_names,
+        means_isoscapes=mean_isoscapes,
+        vars_isoscapes=var_isoscape
+    )
+
+    auc_score = auc(recall, precision)
+    auc_scores[radius] = auc_score
+
+    precision_target_found, recall_target_found, p_value_found = find_p_value(
+        precision=precision,
+        recall=recall,
+        thresholds=thresholds,
+        precision_target=precision_target,
+        recall_target=recall_target
+    )
+
+    p_values_found[radius] = p_value_found[0]
+    precision_targets_found[radius] = precision_target_found[0]
+    recalls_target_found[radius] = recall_target_found[0]
+  return auc_scores, p_values_found, precisions_target_found, recall_targets_found
+
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
   vars_isoscape: raster.AmazonGeoTiff,
@@ -138,8 +180,7 @@ def evaluate(
   real = real_samples_data[['Code','lat','long'] + [isotope_column_name]]
   real = real.assign(fraud=False)
 
-
-  fake_samples = generate_fake_samples(
+  dist_to_fake_samples = generate_fake_samples(
     start_max_fraud_radius=start_max_fraud_radius,
     end_max_fraud_radius=end_max_fraud_radius,
     radius_pace=radius_pace,
@@ -148,4 +189,13 @@ def evaluate(
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
     reference_isoscape=means_isoscape)
-  return eval_results
+  
+  # Test the isoscape against the mixture of real and fake samples. 
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found = evaluate_fake_true_mixture(
+    dist_to_fake_samples=dist_to_fake_samples, 
+    real=real,
+    mean_isoscapes=[means_isoscape],
+    var_isoscapes=[vars_isoscape],
+    isotope_column_names=[isotope_column_name])
+
+    return eval_results, auc_scores, p_values_found, precision_targets_found, recall_targets_found
