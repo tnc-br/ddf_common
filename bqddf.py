@@ -1,5 +1,6 @@
 import typing
 import google
+import json
 import eeddf
 from google.cloud import bigquery
 from google.api_core.exceptions import GoogleAPIError
@@ -10,6 +11,8 @@ _CONFIG = {
     "METADATA_TABLE" : "eval_metadata",
     "PR_CURVE_TABLE" : "eval_pr_curves",
     "DATASET" : "harness_test_db",
+    "TRAINING_METADATA_TABLE" : "training_runs",
+    "PROJECT_NAME" : "river-sky-386919",
 }
 
 def _get_big_query_client() -> bigquery.Client:
@@ -105,3 +108,67 @@ def insert_eval(
     raise GoogleAPIError(result_write.errors)
   
   return metadata['eval_id']
+
+def get_training_result(training_id: str) -> bigquery.table.RowIterator:
+  """
+    Queries the experiment results table for training information on the given id. Blocks
+    until the query completes and returns the result. Returns a row iterator pointing
+    to the beginning the results, but this iterator should continue just one value. 
+  """
+  client = _get_big_query_client()
+
+  # Set up SQL query
+  table_name = f"{_CONFIG['DATASET']}.{_CONFIG['TRAINING_METADATA_TABLE']}"
+  query = f"SELECT * FROM {table_name} WHERE training_id = '{training_id}'"
+
+  # Execute the query
+  results = client.query_and_wait(query)
+  if results.total_rows > 1:
+    return ReferenceError(f"Two or more trainings found for training_id {training_id}")
+  return results
+
+# Sort the keys and hash the printed result.
+def _generate_training_id(metadata: typing.Dict[str, typing.Any]) -> str:
+  encoded = json.dumps(metadata, sort_keys=True)
+  return "training-" + str(hash(encoded))
+
+def _insert_training_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List[typing.Dict[str, typing.Any]]:
+  client = _get_big_query_client()
+
+  # Check if eval_id exists before writing it.
+  exists = get_training_result(metadata['training_id']).total_rows
+  if exists:
+    raise GoogleAPIError(f"training_id {metadata['training_id']} already exists. " +
+                          "A training with these params has already run.")
+  
+  # Set up reference to table we write to.
+  table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['TRAINING_METADATA_TABLE'])
+  job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+
+  # Write and block until complete.
+  load_job = client.load_table_from_json(
+    [metadata], table_ref, job_config=job_config)
+  return load_job.result()
+
+def insert_training_metadata(
+    metadata: typing.Dict[str, typing.Any]) -> typing.List[typing.Dict[str, typing.Any]]:
+  """
+    Writes the training metadata to the BigQuery table. Each key in the dict must correspond 
+    to a column in the table's schema. Duplicate training_id can not be written. The dict's 
+    values must also adhere to the table's schema. Returns a list of errors.
+
+    This writes to TRAINING_METADATA_TABLE.
+
+    Upon success, returns training_id.
+  """
+
+  # Generate the training_id and set it for training metadata.
+  metadata['training_id'] = _generate_training_id(metadata)
+
+  # Write to metadata table
+  metadata_write = _insert_training_metadata(metadata)
+  if (metadata_write.errors):
+    raise GoogleAPIError(metadata_write.errors)
+  
+  
+  return metadata['training_id']
