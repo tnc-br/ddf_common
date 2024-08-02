@@ -3,7 +3,7 @@ import raster
 import pandas as pd
 import dataset
 import hypothesis
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
   '''
@@ -26,16 +26,87 @@ def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_n
          mean_squared_error(df[var_true_name].values, df[var_pred_name].values, squared=False),
          mean_squared_error(truths, predictions, squared=False))
 
+def isoscape_precision_recall_thresholds(
+    test_dataset: pd.DataFrame,
+    isotope_column_names: list[str],
+    means_isoscapes: list[raster.AmazonGeoTiff],
+    vars_isoscapes: list[raster.AmazonGeoTiff]) -> list[list[float]]:
+  predictions = hypothesis.get_predictions(
+    sample_data=test_dataset,
+    isotope_column_names=isotope_column_names,
+    means_isoscapes=means_isoscapes,
+    variances_isoscapes=vars_isoscapes,
+    sample_size_per_location=5)
+
+  predictions.dropna(subset=['fraud', 'fraud_p_value'], inplace=True)
+
+  y_true = predictions['fraud']
+  # Fraud p value is lower the more positive a prediction/label is.
+  # Inverting it gives us the probability of positive label class (fraud).
+  y_pred = 1 - predictions['fraud_p_value']
+
+  return precision_recall_curve(y_true, y_pred)
+
+def generate_fake_samples(
+  start_max_fraud_radius: int, 
+  end_max_fraud_radius: int,
+  radius_pace: int,
+  max_trusted_radius: int,
+  min_fraud_radius: int,
+  real_samples_data: pd.DataFrame,
+  elements: List[str],
+  reference_isoscape: raster.AmazonGeoTiff):
+  fake_samples = {}
+  for max_radius in range(start_max_fraud_radius, end_max_fraud_radius+1, radius_pace):
+    fake_samples[max_radius] = dataset.create_fraudulent_samples(
+      real_samples_data,
+      reference_isoscape,
+      elements,
+      max_trusted_radius,
+      max_radius,
+      min_fraud_radius)
+  return fake_samples
+
+def find_p_value(
+    precision: list[float],
+    recall: list[float],
+    thresholds: list[float],
+    precision_target: float,
+    recall_target: float) -> list[float]:
+  assert(precision_target or recall_target)
+  if precision_target:
+    target_pos = np.argwhere(precision[:-1] >= precision_target)
+  else:
+    target_pos = np.argwhere(recall[:-1] >= recall_target)
+  # No precision/recall is greater than or equal to the target
+  if len(target_pos) < 1:
+    if precision_target:
+      target_pos = [[np.argmax(precision[:-1])]]
+    else:
+      target_pos = [[np.argmax(recall[:-1])]]
+
+  precision_target_found = precision[:-1][target_pos[0]]
+  recall_target_found = recall[:-1][target_pos[0]]
+  p_value_found = (1-thresholds)[target_pos[0]]
+
+  return precision_target_found, recall_target_found, p_value_found
+
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
   vars_isoscape: raster.AmazonGeoTiff,
   original_dataset: pd.DataFrame,
+  isotope_column_name: str,
   eval_dataset: pd.DataFrame,
   mean_label: str,
   var_label: str,
   sample_size_per_location: int,
   precision_target: float,
-  recall_target: float) -> Dict[str, Any]:
+  recall_target: float,
+  start_max_fraud_radius: int,
+  end_max_fraud_radius: int,
+  radius_pace: int,
+  max_trusted_radius: int,
+  min_trusted_radius: int) -> Dict[str, Any]:
   '''
   Runs a minimal one-sided evaluation pipeline. 
   '''
@@ -59,20 +130,22 @@ def evaluate(
       [means_isoscape], [vars_isoscape], sample_size_per_location)
 
   inferences_df.dropna(subset=[var_label, var_predicted_label], inplace=True)
-  eval_results['mse'] = mean_squared_error(
-      inferences_df[var_label],
-      inferences_df[var_predicted_label],
-      squared=False)
-
-  # elements = ['d18O_cel', 'd15N_wood', 'd13C_wood']
-  # isotope_column_names = ['d18O_cel', 'd15N_wood', 'd13C_wood']
-  elements = ['d18O_cel']
-  isotope_column_names = ['d18O_cel']
 
   real_samples_data = pd.merge(
     eval_dataset[['Code','lat','long', mean_label, var_label]],
     original_dataset, how="inner", 
     left_on=['Code', 'lat', 'long'], right_on=['Code', 'lat', 'long'])
-  real = real_samples_data[['Code','lat','long'] + elements]
+  real = real_samples_data[['Code','lat','long'] + [isotope_column_name]]
   real = real.assign(fraud=False)
+
+
+  fake_samples = generate_fake_samples(
+    start_max_fraud_radius=start_max_fraud_radius,
+    end_max_fraud_radius=end_max_fraud_radius,
+    radius_pace=radius_pace,
+    max_trusted_radius=max_trusted_radius,
+    min_trusted_radius=min_trusted_radius, 
+    real_samples_data=real_samples_data,
+    elements=[isotope_column_name],
+    reference_isoscape=means_isoscape)
   return eval_results
