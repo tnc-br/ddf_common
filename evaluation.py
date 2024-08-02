@@ -198,4 +198,4 @@ def evaluate(
     var_isoscapes=[vars_isoscape],
     isotope_column_names=[isotope_column_name])
 
-    return eval_results, auc_scores, p_values_found, precision_targets_found, recall_targets_found
+  return eval_results, auc_scores, p_values_found, precision_targets_found, recall_targets_found
