@@ -152,7 +152,7 @@ def evaluate(
   start_max_fraud_radius: int,
   end_max_fraud_radius: int,
   radius_pace: int,
-  max_trusted_radius: int,
+  max_fraud_radius: int,
   min_trusted_radius: int) -> Dict[str, Any]:
   '''
   Runs a minimal one-sided evaluation pipeline. 
@@ -164,8 +164,8 @@ def evaluate(
   var_predicted_label = var_label + "_predicted"
 
   # RMSE
-  eval_results = {}
-  eval_results['mean_rmse'], eval_results['var_rmse'], eval_results['overall_rmse'] = calculate_rmse(
+  rmse = {}
+  rmse['mean_rmse'], rmse['var_rmse'], rmse['overall_rmse'] = calculate_rmse(
       eval_dataset, means_isoscape, vars_isoscape, mean_label, var_label,
       mean_predicted_label, var_predicted_label)
 
@@ -189,7 +189,7 @@ def evaluate(
     start_max_fraud_radius=start_max_fraud_radius,
     end_max_fraud_radius=end_max_fraud_radius,
     radius_pace=radius_pace,
-    max_trusted_radius=max_trusted_radius,
+    max_trusted_radius=max_fraud_radius,
     min_fraud_radius=min_trusted_radius, 
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
@@ -205,4 +205,4 @@ def evaluate(
     precision_target=precision_target,
     recall_target=recall_target)
 
-  return eval_results, auc_scores, p_values_found, precision_targets_found, recall_targets_found
+  return rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found
