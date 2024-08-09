@@ -160,16 +160,16 @@ def evaluate(
 
   # Sanitize
   eval_dataset = eval_dataset.dropna(subset=[var_label])
-
   mean_predicted_label = mean_label + "_predicted"
   var_predicted_label = var_label + "_predicted"
 
+  # RMSE
   eval_results = {}
-
   eval_results['mean_rmse'], eval_results['var_rmse'], eval_results['overall_rmse'] = calculate_rmse(
       eval_dataset, means_isoscape, vars_isoscape, mean_label, var_label,
       mean_predicted_label, var_predicted_label)
 
+  # Group and set up fake data
   eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
   inferences_df = hypothesis.get_predictions_grouped(
