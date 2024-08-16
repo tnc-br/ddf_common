@@ -135,7 +135,7 @@ def train_variational_inference_model(
         eval_params.start_max_fraud_radius,
         eval_params.end_max_fraud_radius,
         eval_params.radius_pace,
-        eval_params.max_trusted_radius,
+        eval_params.max_fraud_radius,
         eval_params.min_trusted_radius)
         
     return eval_results
