@@ -123,9 +123,9 @@ def train_variational_inference_model(
     eval_dataset = pd.read_csv(raster.get_sample_db_path(EVAL_DATASET), index_col=0)
     original_dataset = pd.read_csv(raster.get_sample_db_path(ORIGINAL_DATASET), index_col=0)
     
-    rmse, auc, p, precisions, recalls = evaluation.evaluate(
-        oxygen_means_isoscape,
-        oxygen_vars_isoscape,
+    eval_results = evaluation.evaluate(
+        means_isoscape,
+        vars_isoscape,
         files['original_dataset'],
         eval_params.elements_to_eval,
         files['eval_dataset'],
@@ -140,5 +140,5 @@ def train_variational_inference_model(
         eval_params.max_trusted_radius,
         eval_params.min_trusted_radius)
         
-    return rmse, auc, p, precisions, recalls
+    return eval_results
     # TODO: Write to BQ

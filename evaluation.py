@@ -138,6 +138,18 @@ def evaluate_fake_true_mixture(
     recall_targets_found[radius] = recall_target_found[0]
   return auc_scores, p_values_found, precision_targets_found, recall_targets_found
 
+@dataclass
+class EvalResults:
+  '''
+  Container for results from `evaluate`
+  '''
+  rmse: Dict[str, float]
+  auc_scores: Dict[int, float]
+  p_values_found: [int, float]
+  precision_targets_found: Dict[int, float]
+  recall_targets_found: Dict[int, float]
+
+
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
   vars_isoscape: raster.AmazonGeoTiff,
@@ -205,4 +217,4 @@ def evaluate(
     precision_target=precision_target,
     recall_target=recall_target)
 
-  return rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found
+  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found)
