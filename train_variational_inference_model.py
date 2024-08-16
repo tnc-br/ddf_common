@@ -120,15 +120,12 @@ def train_variational_inference_model(
     means_isoscape = raster.load_raster(raster.get_raster_path(isoscape_save_location), use_only_band_index=0)
     vars_isoscape = raster.load_raster(raster.get_raster_path(isoscape_save_location), use_only_band_index=1)
     
-    eval_dataset = pd.read_csv(raster.get_sample_db_path(EVAL_DATASET), index_col=0)
-    original_dataset = pd.read_csv(raster.get_sample_db_path(ORIGINAL_DATASET), index_col=0)
-    
     eval_results = evaluation.evaluate(
         means_isoscape,
         vars_isoscape,
-        files['original_dataset'],
+        files['ORIGINAL'],
         eval_params.elements_to_eval,
-        files['eval_dataset'],
+        files['EVAL'],
         params.mean_label,
         params.var_label,
         eval_params.samples_per_location,
