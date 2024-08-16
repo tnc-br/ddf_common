@@ -117,8 +117,8 @@ def train_variational_inference_model(
         isoscape_save_location, 
         amazon_only=False) 
 
-    means_isoscape = raster.load_raster(raster.get_raster_path(isoscape_save_location), use_only_band_index=0)
-    vars_isoscape = raster.load_raster(raster.get_raster_path(isoscape_save_location), use_only_band_index=1)
+    means_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=0)
+    vars_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=1)
     
     eval_results = evaluation.evaluate(
         means_isoscape,
