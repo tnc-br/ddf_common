@@ -140,7 +140,7 @@ class KLCustomLoss:
           "double_sided": self.double_sided.numpy().item(),
           "num_to_sample": self.num_to_sample.numpy().item()}
 
-    def from_config(cls, config):
+    def from_config(self, cls, config):
         # Convert config values back to TensorFlow tensors if needed
         config["double_sided"] = tf.constant(config["double_sided"], dtype=tf.bool)
         config["num_to_sample"] = tf.constant(config["num_to_sample"], dtype=tf.int32) 
