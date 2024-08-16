@@ -4,6 +4,7 @@ from sklearn.metrics import auc
 import raster
 import pandas as pd
 import dataset
+from dataclasses import dataclass
 import hypothesis
 import numpy as np
 from typing import Dict, Any, List
