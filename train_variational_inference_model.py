@@ -64,8 +64,7 @@ def train_variational_inference_model(
     eval_params: VIModelEvalParams,
     files: Dict,
     isoscape_save_location: str,
-    model_save_location: str,
-    render_output: bool = True):
+    model_save_location: str):
 
     # Columns not found in the training data, but their corresponding value have
     # strong signals.
@@ -123,11 +122,6 @@ def train_variational_inference_model(
     # Evaluation setup
     means_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=0)
     vars_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=1)
-
-    if render_output:
-        from matplotlib import rc
-        rc('animation', html='jshtml')
-        raster.animate(means_isoscape,  1, 1)
 
     eval_dataset = pd.read_csv(files['EVAL'], index_col=0)
     original_dataset = pd.read_csv(files['ORIGINAL'], index_col=0)
