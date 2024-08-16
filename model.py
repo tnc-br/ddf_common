@@ -62,7 +62,7 @@ class TFModel(Model):
                             index=X.index, columns=X.columns)
     
     def _load_tf_model(self, tf_model_path: str) -> tf.keras.Model:
-        return tf.keras.models.load_model(tf_model_path, safe_mode=False)
+        return tf.keras.models.load_model(tf_model_path)
     
     def predict_on_batch(self, X: pd.DataFrame):
         X = self._apply_transformer(X)
@@ -152,6 +152,14 @@ def get_checkpoint_callback(model_file):
       model_file,
       monitor='val_loss', verbose=0, save_best_only=True, mode='min')
 
+# You could use:
+@tf.keras.utils.register_keras_serializable()
+class SoftplusLayer(tf.keras.layers.Layer):
+    def call(self, inputs):
+        return tf.math.log(1 + tf.exp(inputs))
+
+untransformed_var = SoftplusLayer()(unscaled_var)
+
 def train_or_update_variational_model(
         sp: ScaledPartitions,
         hidden_layers: List[int],
@@ -189,7 +197,7 @@ def train_or_update_variational_model(
 
     var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
     unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-    untransformed_var = keras.layers.Lambda(lambda t: tf.math.log(1 + tf.exp(t)))(unscaled_var)
+    untransformed_var = SoftplusLayer()(unscaled_var)
 
     # Output mean, tuples.
     outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
