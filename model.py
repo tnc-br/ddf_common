@@ -140,6 +140,12 @@ class KLCustomLoss:
           "double_sided": self.double_sided.numpy().item(),
           "num_to_sample": self.num_to_sample.numpy().item()}
 
+    def from_config(cls, config):
+        # Convert config values back to TensorFlow tensors if needed
+        config["double_sided"] = tf.constant(config["double_sided"], dtype=tf.bool)
+        config["num_to_sample"] = tf.constant(config["num_to_sample"], dtype=tf.int32) 
+        return cls(**config)  # Create an instance using the config
+
 
 def get_early_stopping_callback(patience: int):
   return EarlyStopping(monitor='val_loss', patience=patience, min_delta=0.001,
