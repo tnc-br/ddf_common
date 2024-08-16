@@ -214,7 +214,7 @@ def evaluate(
     real=real,
     mean_isoscapes=[means_isoscape],
     var_isoscapes=[vars_isoscape],
-    isotope_column_names=[isotope_column_name],
+    isotope_column_names=isotope_column_names,
     precision_target=precision_target,
     recall_target=recall_target)
 
