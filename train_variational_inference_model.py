@@ -6,6 +6,7 @@ import evaluation
 from dataclasses import dataclass
 from typing import List, Dict
 from joblib import dump
+import pandas as pd
 
 # Container for parameters for training VI model
 @dataclass
