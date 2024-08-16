@@ -195,7 +195,7 @@ def evaluate(
     eval_dataset[['Code','lat','long', mean_label, var_label]],
     original_dataset, how="inner", 
     left_on=['Code', 'lat', 'long'], right_on=['Code', 'lat', 'long'])
-  real = real_samples_data[['Code','lat','long'] + isotope_column_name]
+  real = real_samples_data[['Code','lat','long'] + isotope_column_names]
   real = real.assign(fraud=False)
 
   dist_to_fake_samples = generate_fake_samples(
@@ -205,7 +205,7 @@ def evaluate(
     max_trusted_radius=max_fraud_radius,
     min_fraud_radius=min_trusted_radius, 
     real_samples_data=real_samples_data,
-    elements=isotope_column_name,
+    elements=isotope_column_names,
     reference_isoscapes=[means_isoscape, vars_isoscape])
   
   # Test the isoscape against the mixture of real and fake samples. 
