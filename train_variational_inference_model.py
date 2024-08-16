@@ -2,6 +2,7 @@ import model
 import dataset
 import raster
 import generate_isoscape
+import evaluation
 from dataclasses import dataclass
 from typing import List, Dict
 from joblib import dump
