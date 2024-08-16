@@ -107,8 +107,8 @@ def train_variational_inference_model(
 
     # Package the scaling info and model weights together.
     vi_model.save(model_save_location)
-    dump(data.feature_scaler, f"{model_save_location.strip(".keras")}.pkl")
-    packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip(".keras")}.pkl")
+    dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+    packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
 
     generate_isoscape.generate_isoscapes_from_variational_model(
         packaged_model, 
