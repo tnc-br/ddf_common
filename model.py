@@ -158,8 +158,6 @@ class SoftplusLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         return tf.math.log(1 + tf.exp(inputs))
 
-untransformed_var = SoftplusLayer()(unscaled_var)
-
 def train_or_update_variational_model(
         sp: ScaledPartitions,
         hidden_layers: List[int],
