@@ -89,33 +89,33 @@ def train_variational_inference_model(
         params.features_to_standardize, 
         extra_columns_from_geotiffs)
 
-    vi_model, rmse = model.train(
-        data, 
-        run_id=params.training_id, 
-        epochs=params.num_epochs,
-        hidden_layers=[params.num_nodes_per_layer]*params.num_layers,
-        training_batch_size=params.training_batch_size,
-        learning_rate=params.learning_rate,
-        dropout_rate=params.dropout_rate,
-        double_sided_kl=params.double_sided_kl,
-        kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
-        mean_label=params.mean_label,
-        var_label=params.var_label,
-        activation_func=params.activation_func,
-        patience=params.early_stopping_patience,
-        model_checkpoint=model_save_location)
+    # vi_model, rmse = model.train(
+    #     data, 
+    #     run_id=params.training_id, 
+    #     epochs=params.num_epochs,
+    #     hidden_layers=[params.num_nodes_per_layer]*params.num_layers,
+    #     training_batch_size=params.training_batch_size,
+    #     learning_rate=params.learning_rate,
+    #     dropout_rate=params.dropout_rate,
+    #     double_sided_kl=params.double_sided_kl,
+    #     kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
+    #     mean_label=params.mean_label,
+    #     var_label=params.var_label,
+    #     activation_func=params.activation_func,
+    #     patience=params.early_stopping_patience,
+    #     model_checkpoint=model_save_location)
 
-    # Package the scaling info and model weights together.
-    vi_model.save(model_save_location)
-    dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
-    packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
+    # # Package the scaling info and model weights together.
+    # vi_model.save(model_save_location)
+    # dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+    # packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
 
-    generate_isoscape.generate_isoscapes_from_variational_model(
-        packaged_model, 
-        params.resolution_x,
-        params.resolution_y,
-        isoscape_save_location, 
-        amazon_only=False) 
+    # generate_isoscape.generate_isoscapes_from_variational_model(
+    #     packaged_model, 
+    #     params.resolution_x,
+    #     params.resolution_y,
+    #     isoscape_save_location, 
+    #     amazon_only=False) 
 
     means_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=0)
     vars_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=1)
