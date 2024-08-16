@@ -62,7 +62,7 @@ class TFModel(Model):
                             index=X.index, columns=X.columns)
     
     def _load_tf_model(self, tf_model_path: str) -> tf.keras.Model:
-        return tf.keras.saving.load_model(tf_model_path)
+        return tf.keras.models.load_model(tf_model_path)
     
     def predict_on_batch(self, X: pd.DataFrame):
         X = self._apply_transformer(X)
