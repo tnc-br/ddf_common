@@ -2,9 +2,11 @@ import model
 import dataset
 import raster
 import generate_isoscape
+import evaluation
 from dataclasses import dataclass
 from typing import List, Dict
 from joblib import dump
+import pandas as pd
 
 # Container for parameters for training VI model
 @dataclass
@@ -45,8 +47,21 @@ class VIModelTrainingParams:
     resolution_x: int
     resolution_y: int
 
+@dataclass 
+class VIModelEvalParams:
+    samples_per_location: int
+    precision_target: float
+    recall_target: float
+    start_max_fraud_radius: int
+    end_max_fraud_radius: int
+    radius_pace: int
+    max_fraud_radius: int
+    min_trusted_radius: int
+    elements_to_eval: List[str]
+
 def train_variational_inference_model(
     params: VIModelTrainingParams, 
+    eval_params: VIModelEvalParams,
     files: Dict,
     isoscape_save_location: str,
     model_save_location: str):
@@ -93,9 +108,9 @@ def train_variational_inference_model(
         model_checkpoint=model_save_location)
 
     # Package the scaling info and model weights together.
-    vi_model.save(f"{model_save_location}.tf", save_format='tf')
-    dump(data.feature_scaler, f"{model_save_location}.pkl")
-    packaged_model = model.TFModel(f"{model_save_location}.tf", f"{model_save_location}.pkl")
+    vi_model.save(model_save_location)
+    dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+    packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
 
     generate_isoscape.generate_isoscapes_from_variational_model(
         packaged_model, 
@@ -103,5 +118,30 @@ def train_variational_inference_model(
         params.resolution_y,
         isoscape_save_location, 
         amazon_only=False) 
+
+    # Evaluation setup
+    means_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=0)
+    vars_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=1)
+
+    eval_dataset = pd.read_csv(files['EVAL'], index_col=0)
+    original_dataset = pd.read_csv(files['ORIGINAL'], index_col=0)
     
+    eval_results = evaluation.evaluate(
+        means_isoscape,
+        vars_isoscape,
+        original_dataset,
+        eval_params.elements_to_eval,
+        eval_dataset,
+        params.mean_label,
+        params.var_label,
+        eval_params.samples_per_location,
+        eval_params.precision_target,
+        eval_params.recall_target,
+        eval_params.start_max_fraud_radius,
+        eval_params.end_max_fraud_radius,
+        eval_params.radius_pace,
+        eval_params.max_fraud_radius,
+        eval_params.min_trusted_radius)
+        
+    return eval_results
     # TODO: Write to BQ
