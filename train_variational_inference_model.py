@@ -86,7 +86,7 @@ class VIModelEvalParams:
         'recall_target': self.recall_target,
         'start_max_fraud_radius': self.start_max_fraud_radius,
         'end_max_fraud_radius': self.end_max_fraud_radius,
-        'radius_pace': int,
+        'radius_pace': self.radius_pace,
         'max_fraud_dist': self.max_fraud_dist,
         'min_trusted_dist': self.min_trusted_dist,
         'elements_to_eval': self.elements_to_eval,

@@ -124,7 +124,10 @@ def evaluate_fake_true_mixture(
         vars_isoscapes=var_isoscapes
     )
 
-    pr_curves[radius] = {"precision": precision, "recall": recall, "thresholds": thresholds}
+    pr_curves[radius] = {
+      "precision": precision.tolist(), 
+      "recall": recall.tolist(),
+      "thresholds": thresholds.tolist()}
 
     auc_score = auc(recall, precision)
     auc_scores[radius] = auc_score
