@@ -107,7 +107,8 @@ def evaluate_fake_true_mixture(
   auc_scores = {}
   p_values_found = {}
   precision_targets_found = {}
-  recall_targets_found ={}
+  recall_targets_found = {}
+  pr_curves = {}
 
   for radius, fake_sample in dist_to_fake_samples.items():
     test_dataset = pd.concat([real, pd.DataFrame(fake_sample)], ignore_index=True)
@@ -123,6 +124,8 @@ def evaluate_fake_true_mixture(
         vars_isoscapes=var_isoscapes
     )
 
+    pr_curves[radius] = {"precision": precision, "recall": recall, "thresholds": thresholds}
+
     auc_score = auc(recall, precision)
     auc_scores[radius] = auc_score
 
@@ -137,7 +140,7 @@ def evaluate_fake_true_mixture(
     p_values_found[radius] = p_value_found[0]
     precision_targets_found[radius] = precision_target_found[0]
     recall_targets_found[radius] = recall_target_found[0]
-  return auc_scores, p_values_found, precision_targets_found, recall_targets_found
+  return auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves
 
 @dataclass
 class EvalResults:
@@ -146,10 +149,23 @@ class EvalResults:
   '''
   rmse: Dict[str, float]
   auc_scores: Dict[int, float]
-  p_values_found: [int, float]
+  p_values_found: Dict[int, float]
   precision_targets_found: Dict[int, float]
-  recall_targets_found: Dict[int, float]
+  recall_targets_found: Dict[int, float] 
+  pr_curves: Dict[int, Dict[str, List[float]]]
 
+  def convert_to_bq_dict(self):
+    bq_dict = rmse
+    for radius in auc_scores.keys():
+      bq_dict[radius] = {}
+      bq_dict[radius]['auc'] = auc_scores[radius]
+      bq_dict[radius]['p_value'] = p_values_found[radius]
+      bq_dict[radius]['precision_target'] = precision_targets_found[radius]
+      bq_dict[radius]['recall_targets_found'] = recall_targets_found[radius]
+      bq_dict[radius]['pr_curve'] = pr_curves[radius]
+    return bq_dict
+
+{0 : {"AUC": 100, "PR_CURVE": {}}}
 
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
@@ -209,7 +225,7 @@ def evaluate(
     reference_isoscapes=[means_isoscape, vars_isoscape])
   
   # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found = evaluate_fake_true_mixture(
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=[means_isoscape],
@@ -218,4 +234,4 @@ def evaluate(
     precision_target=precision_target,
     recall_target=recall_target)
 
-  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found)
+  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves)
