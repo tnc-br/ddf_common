@@ -12,6 +12,7 @@ _CONFIG = {
     "PR_CURVE_TABLE" : "eval_pr_curves",
     "DATASET" : "harness_test_db",
     "TRAINING_METADATA_TABLE" : "training_runs",
+    "FLATTENED_TABLE" : "harness_flattened_results",
     "PROJECT_NAME" : "river-sky-386919",
 }
 
@@ -22,7 +23,7 @@ def _get_big_query_client() -> bigquery.Client:
 
   global _BQ_CLIENT
   if not _BQ_CLIENT:
-    _BQ_CLIENT = bigquery.Client(eeddf.get_project_name())
+    _BQ_CLIENT = bigquery.Client(eeddf.ee_project_name())
   return _BQ_CLIENT
 
 def get_eval_result(eval_id: str) -> bigquery.table.RowIterator:
@@ -170,5 +171,50 @@ def insert_training_metadata(
   if (metadata_write.errors):
     raise GoogleAPIError(metadata_write.errors)
   
-  
   return metadata['training_id']
+
+def get_training_result_from_flattened(training_id: str) -> bigquery.table.RowIterator:
+  """
+    Queries the experiment results table for training information on the given id. Blocks
+    until the query completes and returns the result. Returns a row iterator pointing
+    to the beginning the results, but this iterator should continue just one value. 
+  """
+  client = _get_big_query_client()
+
+  # Set up SQL query
+  table_name = f"{_CONFIG['DATASET']}.{_CONFIG['FLATTENED_TABLE']}"
+  query = f"SELECT * FROM {table_name} WHERE training_id = '{training_id}'"
+
+  # Execute the query
+  results = client.query_and_wait(query)
+  if results.total_rows > 1:
+    return ReferenceError(f"Two or more trainings found for training_id {training_id}")
+  return results
+
+def insert_harness_run(
+  training_metadata: typing.Dict[str, typing.Any],
+  eval_results: typing.Dict[str, typing.Any]):
+  """
+  Writes training and eval results to flattened BQ table. 
+  If the training_id already exists, don't overwrite it. 
+  """
+
+  client = _get_big_query_client()
+
+  # Check if eval_id exists before writing it.
+  exists = get_training_result_from_flattened(training_metadata['training_id']).total_rows
+  if exists:
+    raise GoogleAPIError(f"training_id {training_metadata['training_id']} already exists. " +
+                          "A training with these params has already run.")
+
+  eval_results['eval_id'] = _generate_eval_id(eval_results)
+  flattened = training_metadata | eval_results
+
+  table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['FLATTENED_TABLE'])
+  job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+
+  # Write and block until complete.
+  load_job = client.load_table_from_json(
+    [flattened], table_ref, job_config=job_config)
+  return load_job.result()
+

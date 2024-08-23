@@ -155,17 +155,18 @@ class EvalResults:
   pr_curves: Dict[int, Dict[str, List[float]]]
 
   def convert_to_bq_dict(self):
-    bq_dict = rmse
-    for radius in auc_scores.keys():
-      bq_dict[radius] = {}
-      bq_dict[radius]['auc'] = auc_scores[radius]
-      bq_dict[radius]['p_value'] = p_values_found[radius]
-      bq_dict[radius]['precision_target'] = precision_targets_found[radius]
-      bq_dict[radius]['recall_targets_found'] = recall_targets_found[radius]
-      bq_dict[radius]['pr_curve'] = pr_curves[radius]
+    bq_dict = self.rmse
+    bq_dict['per_radius_eval'] = []
+    for radius in self.auc_scores.keys():
+      radius_result = {}
+      radius_result['radius'] = radius
+      radius_result['auc'] = self.auc_scores[radius]
+      radius_result['p_value'] = self.p_values_found[radius]
+      radius_result['precision_target'] = self.precision_targets_found[radius]
+      radius_result['recall_target'] = self.recall_targets_found[radius]
+      radius_result['pr_curve'] = self.pr_curves[radius]
+      bq_dict['per_radius_eval'].append(radius_result)
     return bq_dict
-
-{0 : {"AUC": 100, "PR_CURVE": {}}}
 
 def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
