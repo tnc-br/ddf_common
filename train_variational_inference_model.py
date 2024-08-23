@@ -104,9 +104,9 @@ def train_variational_inference_model(
     files: Dict,
     isoscape_save_location: str,
     model_save_location: str,
-    skip_training: bool):
+    eval_only: bool):
 
-    if not skip_training:
+    if not eval_only:
       # Crash if a run with this training_id already happened.
       check_training_run_exists(params.training_id)
       
