@@ -60,7 +60,7 @@ class VIModelTrainingParams:
         additional_params[key] = value
   
     def convert_to_bq_dict(self):
-      as_dict {
+      as_dict = {
         'training_id': self.training_id,
         'num_epochs': self.num_epochs,
         'num_layers': self.num_layers,
