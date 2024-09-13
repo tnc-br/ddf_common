@@ -11,54 +11,68 @@ import pandas as pd
 from google.api_core.exceptions import GoogleAPIError
 
 # Container for parameters for training VI model
-@dataclass
+
 class VIModelTrainingParams:
-    training_id: str
-    num_epochs: int
-    num_layers: int
-    num_nodes_per_layer: int
-    training_batch_size: int
-    learning_rate: float
-    dropout_rate: float
+    def __init__(
+        self,
+        training_id: str,
+        num_epochs: int,
+        num_layers: int,
+        num_nodes_per_layer: int,
+        training_batch_size: int,
+        learning_rate: float,
+        dropout_rate: float,
+        mean_label: str,
+        var_label: str,
+        # E.g. relu, linear, or one of these:
+        # https://www.tensorflow.org/api_docs/python/tf/keras/activations
+        #
+        # No sanitation is done on this param.
+        activation_func: str,
+        
+        # Wait this many epochs without loss improvement before stopping training
+        early_stopping_patience: int,
 
-    mean_label: str
-    var_label: str
+        # If true, loss = KL(real, predicted) + KL(predicted, real), else
+        # it's just KL(real, predicted)
+        double_sided_kl: bool,
 
-    # E.g. relu, linear, or one of these:
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations
-    #
-    # No sanitation is done on this param.
-    activation_func: str
-    
-    # Wait this many epochs without loss improvement before stopping training
-    early_stopping_patience: int
+        # If 0, compute loss by comparing distributions directly
+        kl_num_samples_from_pred_dist: int,
 
-    # If true, loss = KL(real, predicted) + KL(predicted, real), else
-    # it's just KL(real, predicted)
-    double_sided_kl: bool
+        # Features to standardize.
+        features_to_standardize: List[str],
 
-    # If 0, compute loss by comparing distributions directly
-    kl_num_samples_from_pred_dist: int
+        # Unscaled, unnormallized raw feature data.
+        features_to_passthrough: List[str],
 
-    # Features to standardize.
-    features_to_standardize: List[str]
+        resolution_x: int,
+        resolution_y: int,
 
-    # Unscaled, unnormallized raw feature data.
-    features_to_passthrough: List[str]
+        # Arbitrary tags passed in by experimenter. 
+        tags: List[str],
+        **kwargs
+    ):
+        self.training_id = training_id
+        self.num_epochs = num_epochs
+        self.num_layers = num_layers
+        self.num_nodes_per_layer = num_nodes_per_layer
+        self.training_batch_size = training_batch_size
+        self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
+        self.mean_label = mean_label
+        self.var_label = var_label
+        self.activation_func = activation_func
+        self.early_stopping_patience = early_stopping_patience
+        self.double_sided_kl = double_sided_kl
+        self.kl_num_samples_from_pred_dist = kl_num_samples_from_pred_dist
+        self.features_to_standardize = features_to_standardize
+        self.features_to_passthrough = features_to_passthrough
+        self.resolution_x = resolution_x
+        self.resolution_y = resolution_y
+        self.tags = tags
+        self.additional_params = {key: value for key, value in kwargs.items()}
 
-    resolution_x: int
-    resolution_y: int
-
-    # Arbitrary tags passed in by experimenter. 
-    tags: List[str]
-
-    additional_params: Dict[str, Any] = field(default_factory=dict)
-
-    # Also accept arbitrary args as input.
-    def __post_init__(self, **kwargs):
-      for key, value in kwargs.items():
-        additional_params[key] = value
-  
     def convert_to_bq_dict(self):
       as_dict = {
         'training_id': self.training_id,
@@ -107,15 +121,8 @@ class VIModelEvalParams:
     # Which elements in the eval dataset to test for. 
     elements_to_eval: List[str]
 
-    additional_params: Dict[str, Any] = field(default_factory=dict)
-
-    # Also accept arbitrary args as input
-    def __post_init__(self, **kwargs):
-      for key, value in kwargs.items():
-        additional_params[key] = value
-
     def convert_to_bq_dict(self):
-      as_dict = {
+      return {
         'samples_per_location': self.samples_per_location,
         'precision_target': self.precision_target,
         'recall_target': self.recall_target,
@@ -125,9 +132,6 @@ class VIModelEvalParams:
         'trusted_buffer_radius': self.trusted_buffer_radius,
         'elements_to_eval': self.elements_to_eval,
       }
-      plus_adl_params = as_dict.copy()
-      plus_adl_params['as_json'] = as_dict | additional_params
-      return plus_adl_params
 
 def check_training_run_exists(training_id: str):
   exists = bqddf.get_training_result_from_flattened(training_id).total_rows
