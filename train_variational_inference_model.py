@@ -4,7 +4,7 @@ import raster
 import generate_isoscape
 import evaluation
 import bqddf
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Any
 from joblib import dump
 import pandas as pd
