@@ -52,7 +52,7 @@ class VIModelTrainingParams:
     # Arbitrary tags passed in by experimenter. 
     tags: List[str]
 
-    additional_params: Dict[str, Any] = {}
+    additional_params: Dict[str, Any] = field(default_factory=dict)
 
     # Also accept arbitrary args as input.
     def __post_init__(self, **kwargs):
@@ -107,7 +107,7 @@ class VIModelEvalParams:
     # Which elements in the eval dataset to test for. 
     elements_to_eval: List[str]
 
-    additional_params: Dict[str, Any] = {}
+    additional_params: Dict[str, Any] = field(default_factory=dict)
 
     # Also accept arbitrary args as input
     def __post_init__(self, **kwargs):
