@@ -67,7 +67,7 @@ class VIModelTrainingParams:
         'kl_num_samples_from_pred_dist': self.kl_num_samples_from_pred_dist,
         'features': self.features_to_standardize + self.features_to_passthrough,
         'resolution_x': self.resolution_x,
-        'resolution_y': self.resolution_y
+        'resolution_y': self.resolution_y,
         'tags': self.tags
       }
 
