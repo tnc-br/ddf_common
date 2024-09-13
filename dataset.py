@@ -354,16 +354,15 @@ def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: flo
   return False
 
 #This function creates a dataset based on real samples adding a Fraud column
-def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str],max_trusted_radius: float,max_fraud_radius:float,min_fraud_radius:float) -> pd.DataFrame:
+def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str], max_fraud_radius:float, trusted_buffer_radius:float) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
   - real_samples_data: dataset containing real samples
   - elements: element that will be used in the ttest: Oxygen (e.g: d18O_cel), Carbon or Nitrogen.
   - mean_isoscapes: Isoscapes of mean values of isotope values from elements
-  - max_trusted_radius, In km, the maximum distance from a real point where its value is still considered legitimate.
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
-  - min_fraud_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  - trusted_buffer_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''

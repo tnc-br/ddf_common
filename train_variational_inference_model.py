@@ -48,6 +48,9 @@ class VIModelTrainingParams:
 
     resolution_x: int
     resolution_y: int
+
+    # Arbitrary tags passed in by experimenter. 
+    tags: List[str]
   
     def convert_to_bq_dict(self):
       return {
@@ -65,18 +68,33 @@ class VIModelTrainingParams:
         'features': self.features_to_standardize + self.features_to_passthrough,
         'resolution_x': self.resolution_x,
         'resolution_y': self.resolution_y
+        'tags': self.tags
       }
 
 @dataclass 
 class VIModelEvalParams:
+    # Number of isoscape ratio measurements for sample. Should be 5.
     samples_per_location: int
+
+    # Generates a PR curve, and uses the p_value at precision_target
+    # for evaluation. Can not be used at the same time as recall_target.
     precision_target: float
+
+    # Like precision target but for recall. Can not be used at the same time
+    # as precision target.
     recall_target: float
+
+    # Run evaluation generating fake samples at various radii from a real sample.
+    # Run the first eval at `start_max_fraud_radius`, and increment by `radius pace`
+    # and run it again until `end_max_fraud_radius` is reached. 
     start_max_fraud_radius: int
     end_max_fraud_radius: int
     radius_pace: int
-    max_fraud_dist: int
-    min_trusted_dist: int
+
+    # Forbid generating fake samples this close to a real sample.  
+    trusted_buffer_radius: int
+
+    # Which elements in the eval dataset to test for. 
     elements_to_eval: List[str]
 
     def convert_to_bq_dict(self):
@@ -87,8 +105,7 @@ class VIModelEvalParams:
         'start_max_fraud_radius': self.start_max_fraud_radius,
         'end_max_fraud_radius': self.end_max_fraud_radius,
         'radius_pace': self.radius_pace,
-        'max_fraud_dist': self.max_fraud_dist,
-        'min_trusted_dist': self.min_trusted_dist,
+        'trusted_buffer_radius': self.trusted_buffer_radius,
         'elements_to_eval': self.elements_to_eval,
       }
 
@@ -184,8 +201,7 @@ def train_variational_inference_model(
         eval_params.start_max_fraud_radius,
         eval_params.end_max_fraud_radius,
         eval_params.radius_pace,
-        eval_params.max_fraud_dist,
-        eval_params.min_trusted_dist)
+        eval_params.trusted_buffer_radius)
 
     training_run = params.convert_to_bq_dict()
     training_run['dataset_id'] = files['TRAIN']
