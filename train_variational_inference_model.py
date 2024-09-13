@@ -5,7 +5,7 @@ import generate_isoscape
 import evaluation
 import bqddf
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Any
 from joblib import dump
 import pandas as pd
 from google.api_core.exceptions import GoogleAPIError
@@ -51,9 +51,16 @@ class VIModelTrainingParams:
 
     # Arbitrary tags passed in by experimenter. 
     tags: List[str]
+
+    additional_params: Dict[str, Any]
+
+    # Also accept arbitrary args as input.
+    def __post_init__(self, **kwargs):
+      for key, value in kwargs.items():
+        additional_params[key] = value
   
     def convert_to_bq_dict(self):
-      return {
+      as_dict {
         'training_id': self.training_id,
         'num_epochs': self.num_epochs,
         'num_layers': self.num_layers,
@@ -70,6 +77,9 @@ class VIModelTrainingParams:
         'resolution_y': self.resolution_y,
         'tags': self.tags
       }
+      plus_adl_params = as_dict.copy()
+      plus_adl_params['as_json'] = as_dict | additional_params
+      return plus_adl_params
 
 @dataclass 
 class VIModelEvalParams:
@@ -97,8 +107,15 @@ class VIModelEvalParams:
     # Which elements in the eval dataset to test for. 
     elements_to_eval: List[str]
 
+    additional_params: Dict[str, Any]
+
+    # Also accept arbitrary args as input
+    def __post_init__(self, **kwargs):
+      for key, value in kwargs.items():
+        additional_params[key] = value
+
     def convert_to_bq_dict(self):
-      return {
+      as_dict = {
         'samples_per_location': self.samples_per_location,
         'precision_target': self.precision_target,
         'recall_target': self.recall_target,
@@ -108,6 +125,9 @@ class VIModelEvalParams:
         'trusted_buffer_radius': self.trusted_buffer_radius,
         'elements_to_eval': self.elements_to_eval,
       }
+      plus_adl_params = as_dict.copy()
+      plus_adl_params['as_json'] = as_dict | additional_params
+      return plus_adl_params
 
 def check_training_run_exists(training_id: str):
   exists = bqddf.get_training_result_from_flattened(training_id).total_rows
