@@ -92,7 +92,7 @@ class VIModelTrainingParams:
         'tags': self.tags
       }
       plus_adl_params = as_dict.copy()
-      plus_adl_params['as_json'] = as_dict | additional_params
+      plus_adl_params['as_json'] = as_dict | self.additional_params
       return plus_adl_params
 
 @dataclass 
