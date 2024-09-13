@@ -65,9 +65,8 @@ def generate_fake_samples(
       real_samples_data,
       reference_isoscapes,
       elements,
-      trusted_buffer_radius,
       max_radius,
-      min_fraud_radius)
+      trusted_buffer_radius)
   return fake_samples
 
 def find_p_value(
