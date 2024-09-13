@@ -372,9 +372,9 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
   count = 0
   lab_samp = real_samples
 
-  if max_fraud_radius <= min_fraud_radius:
-    raise ValueError("max_fraud_radius {} <= min_fraud_radius {}".format(
-        max_fraud_radius, min_fraud_radius))
+  if max_fraud_radius <= trusted_buffer_radius:
+    raise ValueError("max_fraud_radius {} <= trusted_buffer_radius {}".format(
+        max_fraud_radius, trusted_buffer_radius))
     
   fake_sample = pd.DataFrame(columns=['Code',
           'lat',
@@ -390,7 +390,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
-          _is_nearby_real_point(lat, lon, real_samples, min_fraud_radius)) and
+          _is_nearby_real_point(lat, lon, real_samples, trusted_buffer_radius)) and
           attempts < max_random_sample_attempts):
       lat, lon = _random_nearby_point(coord[0], coord[1], max_fraud_radius)
       attempts += 1
