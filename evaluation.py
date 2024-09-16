@@ -55,8 +55,7 @@ def generate_fake_samples(
   start_max_fraud_radius: int, 
   end_max_fraud_radius: int,
   radius_pace: int,
-  max_trusted_radius: int,
-  min_fraud_radius: int,
+  trusted_buffer_radius: int,
   real_samples_data: pd.DataFrame,
   elements: List[str],
   reference_isoscapes: List[raster.AmazonGeoTiff]):
@@ -66,9 +65,8 @@ def generate_fake_samples(
       real_samples_data,
       reference_isoscapes,
       elements,
-      max_trusted_radius,
       max_radius,
-      min_fraud_radius)
+      trusted_buffer_radius)
   return fake_samples
 
 def find_p_value(
@@ -185,8 +183,7 @@ def evaluate(
   start_max_fraud_radius: int,
   end_max_fraud_radius: int,
   radius_pace: int,
-  max_fraud_radius: int,
-  min_trusted_radius: int) -> Dict[str, Any]:
+  trusted_buffer_radius: int) -> Dict[str, Any]:
   '''
   Runs a minimal one-sided evaluation pipeline. 
   '''
@@ -222,8 +219,7 @@ def evaluate(
     start_max_fraud_radius=start_max_fraud_radius,
     end_max_fraud_radius=end_max_fraud_radius,
     radius_pace=radius_pace,
-    max_trusted_radius=max_fraud_radius,
-    min_fraud_radius=min_trusted_radius, 
+    trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
     elements=isotope_column_names,
     reference_isoscapes=[means_isoscape, vars_isoscape])

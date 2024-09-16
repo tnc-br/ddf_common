@@ -4,53 +4,77 @@ import raster
 import generate_isoscape
 import evaluation
 import bqddf
-from dataclasses import dataclass
-from typing import List, Dict
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
 from joblib import dump
 import pandas as pd
 from google.api_core.exceptions import GoogleAPIError
 
 # Container for parameters for training VI model
-@dataclass
+
 class VIModelTrainingParams:
-    training_id: str
-    num_epochs: int
-    num_layers: int
-    num_nodes_per_layer: int
-    training_batch_size: int
-    learning_rate: float
-    dropout_rate: float
+    def __init__(
+        self,
+        training_id: str,
+        num_epochs: int,
+        num_layers: int,
+        num_nodes_per_layer: int,
+        training_batch_size: int,
+        learning_rate: float,
+        dropout_rate: float,
+        mean_label: str,
+        var_label: str,
+        # E.g. relu, linear, or one of these:
+        # https://www.tensorflow.org/api_docs/python/tf/keras/activations
+        #
+        # No sanitation is done on this param.
+        activation_func: str,
+        
+        # Wait this many epochs without loss improvement before stopping training
+        early_stopping_patience: int,
 
-    mean_label: str
-    var_label: str
+        # If true, loss = KL(real, predicted) + KL(predicted, real), else
+        # it's just KL(real, predicted)
+        double_sided_kl: bool,
 
-    # E.g. relu, linear, or one of these:
-    # https://www.tensorflow.org/api_docs/python/tf/keras/activations
-    #
-    # No sanitation is done on this param.
-    activation_func: str
-    
-    # Wait this many epochs without loss improvement before stopping training
-    early_stopping_patience: int
+        # If 0, compute loss by comparing distributions directly
+        kl_num_samples_from_pred_dist: int,
 
-    # If true, loss = KL(real, predicted) + KL(predicted, real), else
-    # it's just KL(real, predicted)
-    double_sided_kl: bool
+        # Features to standardize.
+        features_to_standardize: List[str],
 
-    # If 0, compute loss by comparing distributions directly
-    kl_num_samples_from_pred_dist: int
+        # Unscaled, unnormallized raw feature data.
+        features_to_passthrough: List[str],
 
-    # Features to standardize.
-    features_to_standardize: List[str]
+        resolution_x: int,
+        resolution_y: int,
 
-    # Unscaled, unnormallized raw feature data.
-    features_to_passthrough: List[str]
+        # Arbitrary tags passed in by experimenter. 
+        tags: List[str],
+        **kwargs
+    ):
+        self.training_id = training_id
+        self.num_epochs = num_epochs
+        self.num_layers = num_layers
+        self.num_nodes_per_layer = num_nodes_per_layer
+        self.training_batch_size = training_batch_size
+        self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
+        self.mean_label = mean_label
+        self.var_label = var_label
+        self.activation_func = activation_func
+        self.early_stopping_patience = early_stopping_patience
+        self.double_sided_kl = double_sided_kl
+        self.kl_num_samples_from_pred_dist = kl_num_samples_from_pred_dist
+        self.features_to_standardize = features_to_standardize
+        self.features_to_passthrough = features_to_passthrough
+        self.resolution_x = resolution_x
+        self.resolution_y = resolution_y
+        self.tags = tags
+        self.additional_params = {key: value for key, value in kwargs.items()}
 
-    resolution_x: int
-    resolution_y: int
-  
     def convert_to_bq_dict(self):
-      return {
+      as_dict = {
         'training_id': self.training_id,
         'num_epochs': self.num_epochs,
         'num_layers': self.num_layers,
@@ -64,19 +88,37 @@ class VIModelTrainingParams:
         'kl_num_samples_from_pred_dist': self.kl_num_samples_from_pred_dist,
         'features': self.features_to_standardize + self.features_to_passthrough,
         'resolution_x': self.resolution_x,
-        'resolution_y': self.resolution_y
+        'resolution_y': self.resolution_y,
+        'tags': self.tags
       }
+      plus_adl_params = as_dict.copy()
+      plus_adl_params['as_json'] = as_dict | self.additional_params
+      return plus_adl_params
 
 @dataclass 
 class VIModelEvalParams:
+    # Number of isoscape ratio measurements for sample. Should be 5.
     samples_per_location: int
+
+    # Generates a PR curve, and uses the p_value at precision_target
+    # for evaluation. Can not be used at the same time as recall_target.
     precision_target: float
+
+    # Like precision target but for recall. Can not be used at the same time
+    # as precision target.
     recall_target: float
+
+    # Run evaluation generating fake samples at various radii from a real sample.
+    # Run the first eval at `start_max_fraud_radius`, and increment by `radius pace`
+    # and run it again until `end_max_fraud_radius` is reached. 
     start_max_fraud_radius: int
     end_max_fraud_radius: int
     radius_pace: int
-    max_fraud_dist: int
-    min_trusted_dist: int
+
+    # Forbid generating fake samples this close to a real sample.  
+    trusted_buffer_radius: int
+
+    # Which elements in the eval dataset to test for. 
     elements_to_eval: List[str]
 
     def convert_to_bq_dict(self):
@@ -87,8 +129,7 @@ class VIModelEvalParams:
         'start_max_fraud_radius': self.start_max_fraud_radius,
         'end_max_fraud_radius': self.end_max_fraud_radius,
         'radius_pace': self.radius_pace,
-        'max_fraud_dist': self.max_fraud_dist,
-        'min_trusted_dist': self.min_trusted_dist,
+        'trusted_buffer_radius': self.trusted_buffer_radius,
         'elements_to_eval': self.elements_to_eval,
       }
 
@@ -184,8 +225,7 @@ def train_variational_inference_model(
         eval_params.start_max_fraud_radius,
         eval_params.end_max_fraud_radius,
         eval_params.radius_pace,
-        eval_params.max_fraud_dist,
-        eval_params.min_trusted_dist)
+        eval_params.trusted_buffer_radius)
 
     training_run = params.convert_to_bq_dict()
     training_run['dataset_id'] = files['TRAIN']
