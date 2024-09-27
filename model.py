@@ -1,5 +1,6 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold
 from abc import abstractmethod
 from functools import partial
 import tensorflow as tf
@@ -177,6 +178,7 @@ def train_or_update_variational_model(
         double_sided_kl: bool,
         kl_num_samples_from_pred_dist: int,
         activation_func: str,
+        n_cv_folds: int,
         model_file=None,
         use_checkpoint=False):
   callbacks_list = [get_early_stopping_callback(patience),
@@ -220,8 +222,24 @@ def train_or_update_variational_model(
     model = keras.models.load_model(
         model_file,
         custom_objects={"KLCustomLoss": KLCustomLoss})
-  history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
-                      epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
+  
+  if sp.val: 
+    assert not n_cv_folds, "Cross validation not possible if manually specifying a validation dataset."
+    history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
+                        epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
+  else:
+    assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
+    kf = KFold(n_splits=n_cv_folds)
+    elapsed_epochs = 0
+    while elapsed_epochs < epochs:
+        for train_index, val_index in kf.Split(sp.train.X):
+            X_train, X_val = sp.train.X[train_index], sp.train.X[val_index]
+            Y_train, Y_val = sp.train.Y[train_index], sp.train.Y[val_index]
+            history = model.fit(    
+                X_train, Y_train, verbose=0, validation_data=(X_val, Y_val), shuffle=True,
+                epochs=10, batch_size=batch_size, callbacks=callbacks_list)
+            val_loss, val_acc = model.evaluate(X_val, Y_val, verbose=0)
+            elapsed_epochs += 10
   return history, model
 
 def render_plot_loss(history, name):
@@ -248,7 +266,8 @@ def train(
     activation_func: str,
     mean_label: str,
     var_label: str,
-    patience: int, 
+    patience: int,
+    n_cv_folds: int, 
     model_checkpoint: str):
   print("==================")
   print(run_id)
@@ -256,7 +275,7 @@ def train(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
-    model_file=model_checkpoint, use_checkpoint=False)
+    n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
   render_plot_loss(history, run_id+" kl_loss")
 
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))

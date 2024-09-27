@@ -46,8 +46,8 @@ class VIModelTrainingParams:
         # Unscaled, unnormallized raw feature data.
         features_to_passthrough: List[str],
 
-        # Cross validation folds.
-        cv_folds: int,
+        # Number of cross validation folds.
+        n_cv_folds: int,
 
         resolution_x: int,
         resolution_y: int,
@@ -193,6 +193,7 @@ def train_variational_inference_model(
           var_label=training_params.var_label,
           activation_func=training_params.activation_func,
           patience=training_params.early_stopping_patience,
+          n_cv_folds=training_params.n_cv_folds,
           model_checkpoint=model_save_location)
 
       # Package the scaling info and model weights together.
