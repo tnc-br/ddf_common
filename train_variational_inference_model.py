@@ -46,6 +46,9 @@ class VIModelTrainingParams:
         # Unscaled, unnormallized raw feature data.
         features_to_passthrough: List[str],
 
+        # Cross validation folds.
+        cv_folds: int,
+
         resolution_x: int,
         resolution_y: int,
 
@@ -140,7 +143,7 @@ def check_training_run_exists(training_id: str):
                           "Choose a different training_id (overwrites not supported).")
 
 def train_variational_inference_model(
-    params: VIModelTrainingParams, 
+    training_params: VIModelTrainingParams, 
     eval_params: VIModelEvalParams,
     files: Dict,
     isoscape_save_location: str,
@@ -149,7 +152,7 @@ def train_variational_inference_model(
 
     if not eval_only:
       # Crash if a run with this training_id already happened.
-      check_training_run_exists(params.training_id)
+      check_training_run_exists(training_params.training_id)
       
       # Columns not found in the training data, but their corresponding value have
       # strong signals.
@@ -161,35 +164,35 @@ def train_variational_inference_model(
           "ordinary_kriging_linear_d18O_predicted_variance",
       ]
 
-      #Load the geotiff it the params request it.
+      #Load the geotiff it the training_params request it.
       extra_columns_from_geotiffs = {}
-      for feature in params.features_to_passthrough + params.features_to_standardize:
+      for feature in training_params.features_to_passthrough + training_params.features_to_standardize:
           if feature in potentially_extra_columns:
               extra_columns_from_geotiffs[feature] = raster.column_name_to_geotiff_fn[feature]()
 
       data = dataset.load_and_scale(
           files, 
-          params.mean_label, 
-          params.var_label, 
-          params.features_to_passthrough, 
+          training_params.mean_label, 
+          training_params.var_label, 
+          training_params.features_to_passthrough, 
           [],
-          params.features_to_standardize, 
+          training_params.features_to_standardize, 
           extra_columns_from_geotiffs)
 
       vi_model, rmse = model.train(
           data, 
-          run_id=params.training_id, 
-          epochs=params.num_epochs,
-          hidden_layers=[params.num_nodes_per_layer]*params.num_layers,
-          training_batch_size=params.training_batch_size,
-          learning_rate=params.learning_rate,
-          dropout_rate=params.dropout_rate,
-          double_sided_kl=params.double_sided_kl,
-          kl_num_samples_from_pred_dist=params.kl_num_samples_from_pred_dist,
-          mean_label=params.mean_label,
-          var_label=params.var_label,
-          activation_func=params.activation_func,
-          patience=params.early_stopping_patience,
+          run_id=training_params.training_id, 
+          epochs=training_params.num_epochs,
+          hidden_layers=[training_params.num_nodes_per_layer]*training_params.num_layers,
+          training_batch_size=training_params.training_batch_size,
+          learning_rate=training_params.learning_rate,
+          dropout_rate=training_params.dropout_rate,
+          double_sided_kl=training_params.double_sided_kl,
+          kl_num_samples_from_pred_dist=training_params.kl_num_samples_from_pred_dist,
+          mean_label=training_params.mean_label,
+          var_label=training_params.var_label,
+          activation_func=training_params.activation_func,
+          patience=training_params.early_stopping_patience,
           model_checkpoint=model_save_location)
 
       # Package the scaling info and model weights together.
@@ -199,8 +202,8 @@ def train_variational_inference_model(
 
       generate_isoscape.generate_isoscapes_from_variational_model(
           packaged_model, 
-          params.resolution_x,
-          params.resolution_y,
+          training_params.resolution_x,
+          training_params.resolution_y,
           isoscape_save_location, 
           amazon_only=False) 
 
@@ -217,8 +220,8 @@ def train_variational_inference_model(
         original_dataset,
         eval_params.elements_to_eval,
         eval_dataset,
-        params.mean_label,
-        params.var_label,
+        training_params.mean_label,
+        training_params.var_label,
         eval_params.samples_per_location,
         eval_params.precision_target,
         eval_params.recall_target,
@@ -227,7 +230,7 @@ def train_variational_inference_model(
         eval_params.radius_pace,
         eval_params.trusted_buffer_radius)
 
-    training_run = params.convert_to_bq_dict()
+    training_run = training_params.convert_to_bq_dict()
     training_run['dataset_id'] = files['TRAIN']
 
     eval_metadata = eval_params.convert_to_bq_dict()
