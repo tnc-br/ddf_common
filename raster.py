@@ -335,126 +335,126 @@ brazil_map_geotiff_ = None
 def brazil_map_geotiff() -> AmazonGeoTiff:
   global brazil_map_geotiff_
   if not brazil_map_geotiff_:
-    brazil_map_geotiff_ = load_raster(get_raster_path("brasil_clim_raster.tiff"))
+    brazil_map_geotiff_ = load_raster(get_raster_path("wsg/Precipitation_Stack_mean.tif"))
   return brazil_map_geotiff_
 
 relative_humidity_geotiff_ = None
 def relative_humidity_geotiff() -> AmazonGeoTiff:
   global relative_humidity_geotiff_
   if not relative_humidity_geotiff_:
-    relative_humidity_geotiff_ = load_named_raster(get_raster_path("R.rh_Stack.tif"), "rh")
+    relative_humidity_geotiff_ = load_named_raster(get_raster_path("wsg/R.rh_Stack.tif"), "rh")
   return relative_humidity_geotiff_
 
 temperature_geotiff_ = None
 def temperature_geotiff() -> AmazonGeoTiff:
   global temperature_geotiff_
   if not temperature_geotiff_:
-    temperature_geotiff_ = load_named_raster(get_raster_path("Temperatura_Stack.tif"), "temp")
+    temperature_geotiff_ = load_named_raster(get_raster_path("wsg/Temperatura_Stack_mean.tif"), "temp")
   return temperature_geotiff_
 
 vapor_pressure_deficit_geotiff_ = None
 def vapor_pressure_deficit_geotiff() -> AmazonGeoTiff:
   global vapor_pressure_deficit_geotiff_
   if not vapor_pressure_deficit_geotiff_:
-    vapor_pressure_deficit_geotiff_ = load_named_raster(get_raster_path("R.vpd_Stack.tif"), "vpd")
+    vapor_pressure_deficit_geotiff_ = load_named_raster(get_raster_path("wsg/R.vpd_Stack.tif"), "vpd")
   return vapor_pressure_deficit_geotiff_
 
 atmosphere_isoscape_geotiff_ = None
 def atmosphere_isoscape_geotiff() -> AmazonGeoTiff:
   global atmosphere_isoscape_geotiff_
   if not atmosphere_isoscape_geotiff_:
-    atmosphere_isoscape_geotiff_ = load_named_raster(get_raster_path("Iso_Oxi_Stack.tif"), "atmosphere_oxygen_ratio")
+    atmosphere_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/Iso_Oxi_Stack.tif"), "atmosphere_oxygen_ratio")
   return atmosphere_isoscape_geotiff_
 
 cellulose_isoscape_geotiff_ = None
 def cellulose_isoscape_geotiff() -> AmazonGeoTiff:
   global cellulose_isoscape_geotiff_
   if not cellulose_isoscape_geotiff_:
-    cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
+    cellulose_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/iso_O_cellulose.tif"), "cellulose_oxygen_ratio")
   return cellulose_isoscape_geotiff_
 
 pet_geotiff_ = None
 def pet_geotiff() -> AmazonGeoTiff:
   global pet_geotiff_
   if not pet_geotiff_:
-    pet_geotiff_ = load_named_raster(get_raster_path("pet_Stack_mean.tiff"), "pet")
+    pet_geotiff_ = load_named_raster(get_raster_path("wsg/pet.tif"), "pet")
   return pet_geotiff_
 
 dem_geotiff_ = None
 def dem_geotiff() -> AmazonGeoTiff:
   global dem_geotiff_
   if not dem_geotiff_:
-    dem_geotiff_ = load_named_raster(get_raster_path("dem_pa_brasil_raster.tiff"), "dem",  use_only_band_index=0)
+    dem_geotiff_ = load_named_raster(get_raster_path("wsg/dem.tif"), "dem")
   return dem_geotiff_
 
 pa_geotiff_ = None
 def pa_geotiff() -> AmazonGeoTiff:
   global pa_geotiff_
   if not pa_geotiff_:
-    pa_geotiff_ = load_named_raster(get_raster_path("dem_pa_brasil_raster.tiff"), "pa",  use_only_band_index=1)
+    pa_geotiff_ = load_named_raster(get_raster_path("wsg/pa.tif"), "pa")
   return pa_geotiff_
 
 krig_means_isoscape_geotiff_ = None
 def krig_means_isoscape_geotiff() -> AmazonGeoTiff:
   global krig_means_isoscape_geotiff_
   if not krig_means_isoscape_geotiff_:
-    krig_means_isoscape_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_means.tiff"), "ordinary_krig_means")
+    krig_means_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/uc_davis_d18O_cel_ordinary_random_grouped_means.tiff"), "ordinary_krig_means")
   return krig_means_isoscape_geotiff_
 
 krig_variances_isoscape_geotiff_ = None
 def krig_variances_isoscape_geotiff() -> AmazonGeoTiff:
   global krig_variances_isoscape_geotiff_
   if not krig_variances_isoscape_geotiff_:
-    krig_variances_isoscape_geotiff_ = load_named_raster(get_raster_path("uc_davis_d18O_cel_ordinary_random_grouped_vars.tiff"), "ordinary_krig_vars")
+    krig_variances_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/uc_davis_d18O_cel_ordinary_random_grouped_vars.tiff"), "ordinary_krig_vars")
   return krig_variances_isoscape_geotiff_  
 
 precipitation_regression_isoscape_geotiff_ = None
 def precipitation_regression_isoscape_geotiff() -> AmazonGeoTiff:
   global precipitation_regression_isoscape_geotiff_
   if not precipitation_regression_isoscape_geotiff_:
-    precipitation_regression_isoscape_geotiff_ = load_named_raster(get_raster_path("isoscape_fullmodel_d18O_prec_REGRESSION.tiff"), "precipitation_regression_isoscape_geotiff")
+    precipitation_regression_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/isoscape_fullmodel_d18O_prec_REGRESSION.tif"), "precipitation_regression_isoscape_geotiff")
   return precipitation_regression_isoscape_geotiff_
 
 craig_gordon_isoscape_geotiff_ = None
 def craig_gordon_isoscape_geotiff() -> AmazonGeoTiff:
   global craig_gordon_isoscape_geotiff_
   if not craig_gordon_isoscape_geotiff_:
-    craig_gordon_isoscape_geotiff_ = load_named_raster(get_raster_path("Iso_Oxi_Stack_mean_TERZER.tif"), "craig_gordon_isoscape_geotiff")
+    craig_gordon_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/Iso_Oxi_Stack_mean_TERZER.tif"), "craig_gordon_isoscape_geotiff")
   return craig_gordon_isoscape_geotiff_
 
 brisoscape_geotiff_ = None
 def brisoscape_geotiff() -> AmazonGeoTiff:
   global brisoscape_geotiff_
   if not brisoscape_geotiff_:
-    brisoscape_geotiff_ = load_named_raster(get_raster_path("brisoscape_mean_ISORIX.tif"), "brisoscape_geotiff")
+    brisoscape_geotiff_ = load_named_raster(get_raster_path("wsg/brisoscape_mean_ISORIX.tif"), "brisoscape_geotiff")
   return brisoscape_geotiff_
 
 d13C_mean_geotiff_ = None
 def d13C_mean_geotiff() -> AmazonGeoTiff:
   global d13C_mean_geotiff_
   if not d13C_mean_geotiff_:
-    d13C_mean_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_mean", use_only_band_index=0)
+    d13C_mean_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_mean.tif"), "d13C_mean")
   return d13C_mean_geotiff_
 
 d13C_var_geotiff_ = None
 def d13C_var_geotiff() -> AmazonGeoTiff:
   global d13C_var_geotiff_
   if not d13C_var_geotiff_:
-    d13C_var_geotiff_ = load_named_raster(get_raster_path("d13C_cel_map_BRAZIL_stack.tiff"), "d13C_var", use_only_band_index=1)
+    d13C_var_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_var.tif"), "d13C_var")
   return d13C_var_geotiff_
 
 d13C_mean_amazon_only_geotiff_ = None
 def d13C_mean_amazon_only_geotiff() -> AmazonGeoTiff:
   global d13C_mean_amazon_only_geotiff_
   if not d13C_mean_amazon_only_geotiff_:
-    d13C_mean_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_mean_amazon", use_only_band_index=0)
+    d13C_mean_amazon_only_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_amazon_stack_terra_null.tiff"), "d13C_mean_amazon", use_only_band_index=0)
   return d13C_mean_amazon_only_geotiff_
 
 d13C_var_amazon_only_geotiff_ = None
 def d13C_var_amazon_only_geotiff() -> AmazonGeoTiff:
   global d13C_var_amazon_only_geotiff_
   if not d13C_var_amazon_only_geotiff_:
-    d13C_var_amazon_only_geotiff_ = load_named_raster(get_raster_path("d13C_cel_amazon_stack_terra_null.tiff"), "d13C_var_amazon", use_only_band_index=1)
+    d13C_var_amazon_only_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_amazon_stack_terra_null.tiff"), "d13C_var_amazon", use_only_band_index=1)
   return d13C_var_amazon_only_geotiff_
 
 # A collection of column names to functions that load the corresponding geotiffs.
