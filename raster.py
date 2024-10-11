@@ -349,7 +349,7 @@ temperature_geotiff_ = None
 def temperature_geotiff() -> AmazonGeoTiff:
   global temperature_geotiff_
   if not temperature_geotiff_:
-    temperature_geotiff_ = load_named_raster(get_raster_path("wsg/Temperatura_Stack.tif"), "temp")
+    temperature_geotiff_ = load_named_raster(get_raster_path("wsg/Temperatura_Stack_mean.tif"), "temp")
   return temperature_geotiff_
 
 vapor_pressure_deficit_geotiff_ = None
