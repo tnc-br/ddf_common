@@ -335,7 +335,7 @@ brazil_map_geotiff_ = None
 def brazil_map_geotiff() -> AmazonGeoTiff:
   global brazil_map_geotiff_
   if not brazil_map_geotiff_:
-    brazil_map_geotiff_ = load_raster(get_raster_path("wsg/Precipitation_Stack_mean.tiff"))
+    brazil_map_geotiff_ = load_raster(get_raster_path("wsg/Precipitation_Stack_mean.tif"))
   return brazil_map_geotiff_
 
 relative_humidity_geotiff_ = None
@@ -377,21 +377,21 @@ pet_geotiff_ = None
 def pet_geotiff() -> AmazonGeoTiff:
   global pet_geotiff_
   if not pet_geotiff_:
-    pet_geotiff_ = load_named_raster(get_raster_path("wsg/pet_Stack_mean.tiff"), "pet")
+    pet_geotiff_ = load_named_raster(get_raster_path("wsg/pet.tif"), "pet")
   return pet_geotiff_
 
 dem_geotiff_ = None
 def dem_geotiff() -> AmazonGeoTiff:
   global dem_geotiff_
   if not dem_geotiff_:
-    dem_geotiff_ = load_named_raster(get_raster_path("wsg/dem.tiff"), "dem",  use_only_band_index=0)
+    dem_geotiff_ = load_named_raster(get_raster_path("wsg/dem.tif"), "dem",  use_only_band_index=0)
   return dem_geotiff_
 
 pa_geotiff_ = None
 def pa_geotiff() -> AmazonGeoTiff:
   global pa_geotiff_
   if not pa_geotiff_:
-    pa_geotiff_ = load_named_raster(get_raster_path("wsg/pa.tiff"), "pa",  use_only_band_index=1)
+    pa_geotiff_ = load_named_raster(get_raster_path("wsg/pa.tif"), "pa",  use_only_band_index=1)
   return pa_geotiff_
 
 krig_means_isoscape_geotiff_ = None
@@ -412,7 +412,7 @@ precipitation_regression_isoscape_geotiff_ = None
 def precipitation_regression_isoscape_geotiff() -> AmazonGeoTiff:
   global precipitation_regression_isoscape_geotiff_
   if not precipitation_regression_isoscape_geotiff_:
-    precipitation_regression_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/isoscape_fullmodel_d18O_prec_REGRESSION.tiff"), "precipitation_regression_isoscape_geotiff")
+    precipitation_regression_isoscape_geotiff_ = load_named_raster(get_raster_path("wsg/isoscape_fullmodel_d18O_prec_REGRESSION.tif"), "precipitation_regression_isoscape_geotiff")
   return precipitation_regression_isoscape_geotiff_
 
 craig_gordon_isoscape_geotiff_ = None
@@ -433,14 +433,14 @@ d13C_mean_geotiff_ = None
 def d13C_mean_geotiff() -> AmazonGeoTiff:
   global d13C_mean_geotiff_
   if not d13C_mean_geotiff_:
-    d13C_mean_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_mean.tiff"), "d13C_mean")
+    d13C_mean_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_mean.tif"), "d13C_mean")
   return d13C_mean_geotiff_
 
 d13C_var_geotiff_ = None
 def d13C_var_geotiff() -> AmazonGeoTiff:
   global d13C_var_geotiff_
   if not d13C_var_geotiff_:
-    d13C_var_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_var.tiff"), "d13C_var")
+    d13C_var_geotiff_ = load_named_raster(get_raster_path("wsg/d13C_cel_var.tif"), "d13C_var")
   return d13C_var_geotiff_
 
 d13C_mean_amazon_only_geotiff_ = None
