@@ -1,6 +1,6 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, cross_val_score
 from abc import abstractmethod
 from functools import partial
 import tensorflow as tf
@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 from tensorflow.python.ops import math_ops
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.initializers import glorot_normal
+from keras.wrappers.scikit_learn import KerasClassifier
 import tensorflow_probability as tfp
 import keras
 import tensorflow_probability as tfp
@@ -181,66 +182,64 @@ def train_or_update_variational_model(
         n_cv_folds: int,
         model_file=None,
         use_checkpoint=False):
-  callbacks_list = [get_early_stopping_callback(patience),
-                    get_checkpoint_callback(model_file)]
-  if not use_checkpoint:
-    inputs = keras.Input(shape=(sp.train.X.shape[1],))
-    x = inputs
-    for layer_size in hidden_layers:
-      x = keras.layers.Dense(
-          layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
-      if dropout_rate > 0:
-        x = keras.layers.Dropout(rate=dropout_rate)(x)
 
-    mean_output = keras.layers.Dense(
-        1, name='mean_output', kernel_initializer=glorot_normal)(x)
+  def build_model():
+    callbacks_list = [get_early_stopping_callback(patience),
+                        get_checkpoint_callback(model_file)]
+    if not use_checkpoint:
+        inputs = keras.Input(shape=(sp.train.X.shape[1],))
+        x = inputs
+        for layer_size in hidden_layers:
+        x = keras.layers.Dense(
+            layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+        if dropout_rate > 0:
+            x = keras.layers.Dropout(rate=dropout_rate)(x)
 
-    # We can not have negative variance. Apply very little variance.
-    var_output = keras.layers.Dense(
-        1, name='var_output', kernel_initializer=glorot_normal)(x)
+        mean_output = keras.layers.Dense(
+            1, name='mean_output', kernel_initializer=glorot_normal)(x)
 
-    # Invert the normalization on our outputs
-    mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-    untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
+        # We can not have negative variance. Apply very little variance.
+        var_output = keras.layers.Dense(
+            1, name='var_output', kernel_initializer=glorot_normal)(x)
 
-    var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
-    unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-    untransformed_var = SoftplusLayer()(unscaled_var)
+        # Invert the normalization on our outputs
+        mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
+        untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
 
-    # Output mean, tuples.
-    outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
-    model = keras.Model(inputs=inputs, outputs=outputs)
+        var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
+        unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
+        untransformed_var = SoftplusLayer()(unscaled_var)
 
-    optimizer = keras.optimizers.Adam(learning_rate=lr)
-    double_sided_kl_tf = tf.constant(double_sided_kl)
-    num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
-    model.compile( 
-        optimizer=optimizer, 
-        loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
-    model.summary()
-  else:
-    model = keras.models.load_model(
-        model_file,
-        custom_objects={"KLCustomLoss": KLCustomLoss})
-  
+        # Output mean, tuples.
+        outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
+        model = keras.Model(inputs=inputs, outputs=outputs)
+
+        optimizer = keras.optimizers.Adam(learning_rate=lr)
+        double_sided_kl_tf = tf.constant(double_sided_kl)
+        num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
+        model.compile( 
+            optimizer=optimizer, 
+            loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
+        model.summary()
+    else:
+        model = keras.models.load_model(
+            model_file,
+            custom_objects={"KLCustomLoss": KLCustomLoss})
+    return model
+    
+  # No cross validation
   if sp.val: 
     assert not n_cv_folds, "Cross validation not possible if manually specifying a validation dataset."
+    model = build_model()
     history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
                         epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
+    return history, None, model
   else:
     assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
     kf = KFold(n_splits=n_cv_folds)
-    elapsed_epochs = 0
-    while elapsed_epochs < epochs:
-        for train_index, val_index in kf.Split(sp.train.X):
-            X_train, X_val = sp.train.X[train_index], sp.train.X[val_index]
-            Y_train, Y_val = sp.train.Y[train_index], sp.train.Y[val_index]
-            history = model.fit(    
-                X_train, Y_train, verbose=0, validation_data=(X_val, Y_val), shuffle=True,
-                epochs=10, batch_size=batch_size, callbacks=callbacks_list)
-            val_loss, val_acc = model.evaluate(X_val, Y_val, verbose=0)
-            elapsed_epochs += 10
-  return history, model
+    model = KerasClassifier(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=0)
+    cv_results = cross_val_score(model, sp.train.X, sp.train.Y, cv=kfold)
+  return None, cv_results, model
 
 def render_plot_loss(history, name):
   plt.plot(history.history['loss'])
@@ -271,18 +270,24 @@ def train(
     model_checkpoint: str):
   print("==================")
   print(run_id)
-  history, model = train_or_update_variational_model(
+  single_fold_results, cv_results, model = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
     n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
-  render_plot_loss(history, run_id+" kl_loss")
-
-  best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
-  print('Val loss:', history.history['val_loss'][best_epoch_index])
-  print('Train loss:', history.history['loss'][best_epoch_index])
-  print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
-
+  
+  # Results render differently if cross validation is enabled.
+  if single_fold_results:
+    render_plot_loss(single_fold_results, run_id+" kl_loss")
+    best_epoch_index = single_fold_results.history['val_loss'].index(min(single_fold_results.history['val_loss']))
+    print('Val loss:', single_fold_results.history['val_loss'][best_epoch_index])
+    print('Train loss:', single_fold_results.history['loss'][best_epoch_index])
+    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
+  else:
+    assert cv_results
+    print("Cross-validation scores:", results)
+    print("Average accuracy:", results.mean())
+  
   predictions = model.predict_on_batch(sp.test.X)
   predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
   rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
