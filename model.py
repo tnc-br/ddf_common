@@ -238,7 +238,7 @@ def train_or_update_variational_model(
     assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
     kf = KFold(n_splits=n_cv_folds)
     model = KerasClassifier(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=0)
-    cv_results = cross_val_score(model, sp.train.X, sp.train.Y, cv=kfold)
+    cv_results = cross_val_score(model, sp.train.X, sp.train.Y, cv=kf)
   return None, cv_results, model
 
 def render_plot_loss(history, name):
