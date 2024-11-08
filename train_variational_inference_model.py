@@ -71,6 +71,7 @@ class VIModelTrainingParams:
         self.kl_num_samples_from_pred_dist = kl_num_samples_from_pred_dist
         self.features_to_standardize = features_to_standardize
         self.features_to_passthrough = features_to_passthrough
+        self.n_cv_folds = n_cv_folds
         self.resolution_x = resolution_x
         self.resolution_y = resolution_y
         self.tags = tags
