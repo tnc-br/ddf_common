@@ -190,10 +190,10 @@ def train_or_update_variational_model(
         inputs = keras.Input(shape=(sp.train.X.shape[1],))
         x = inputs
         for layer_size in hidden_layers:
-        x = keras.layers.Dense(
-            layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
-        if dropout_rate > 0:
-            x = keras.layers.Dropout(rate=dropout_rate)(x)
+            x = keras.layers.Dense(
+                layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+            if dropout_rate > 0:
+                x = keras.layers.Dropout(rate=dropout_rate)(x)
 
         mean_output = keras.layers.Dense(
             1, name='mean_output', kernel_initializer=glorot_normal)(x)
