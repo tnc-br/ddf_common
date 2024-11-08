@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from tensorflow.python.ops import math_ops
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.initializers import glorot_normal
-from keras.wrappers.scikit_learn import KerasClassifier
+from scikeras.wrappers import import KerasClassifier
 import tensorflow_probability as tfp
 import keras
 import tensorflow_probability as tfp
