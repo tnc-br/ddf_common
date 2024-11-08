@@ -284,7 +284,7 @@ def train(
     print('Train loss:', single_fold_results.history['loss'][best_epoch_index])
     print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
   else:
-    assert cv_results
+    assert cv_results != None
     print("Cross-validation scores:", results)
     print("Average accuracy:", results.mean())
   
