@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from tensorflow.python.ops import math_ops
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.initializers import glorot_normal
-from scikeras.wrappers import KerasClassifier
+from scikeras.wrappers import KerasRegressor
 import tensorflow_probability as tfp
 import keras
 import tensorflow_probability as tfp
@@ -237,7 +237,7 @@ def train_or_update_variational_model(
   else:
     assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
     kf = KFold(n_splits=n_cv_folds)
-    model = KerasClassifier(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=0)
+    model = KerasRegressor(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=0)
     cv_results = cross_val_score(model, sp.train.X, sp.train.Y, cv=kf)
   return None, cv_results, model
 
