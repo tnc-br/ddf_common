@@ -206,8 +206,13 @@ def cross_val_with_best_model(
         )
 
         model = model_fn()
-        history = model.fit(X_train, y_train, validation_data=(X_val, y_val), 
-                  callbacks=callbacks_list+[model_checkpoint_callback])
+        history = model.fit(
+            X_train, y_train,
+            validation_data=(X_val, y_val), 
+            verbose=1,
+            epochs=epochs_per_fold, 
+            batch_size=batch_size,
+            callbacks=callbacks_list+[model_checkpoint_callback])
 
         # Evaluate the model on the validation set
         score = model.score(X_val, y_val) 
