@@ -237,7 +237,7 @@ def train_or_update_variational_model(
   else:
     assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
     kf = KFold(n_splits=n_cv_folds)
-    model = KerasRegressor(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=0)
+    model = KerasRegressor(build_fn=build_model, epochs=epochs, batch_size=batch_size, verbose=1)
     cv_results = cross_val_score(model, sp.train.X, sp.train.Y, cv=kf)
   return None, cv_results, model
 
@@ -284,9 +284,8 @@ def train(
     print('Train loss:', single_fold_results.history['loss'][best_epoch_index])
     print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
   else:
-    assert cv_results != None
-    print("Cross-validation scores:", results)
-    print("Average accuracy:", results.mean())
+    print("Cross-validation scores:", cv_results.all())
+    print("Average accuracy:", cv_results.mean())
   
   predictions = model.predict_on_batch(sp.test.X)
   predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])

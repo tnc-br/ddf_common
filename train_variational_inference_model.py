@@ -46,7 +46,8 @@ class VIModelTrainingParams:
         # Unscaled, unnormallized raw feature data.
         features_to_passthrough: List[str],
 
-        # Number of cross validation folds.
+        # Number of cross validation folds. If 0, no cross validation is disabled. If
+        # >0, epochs becomes epochs per fold. 
         n_cv_folds: int,
 
         resolution_x: int,
