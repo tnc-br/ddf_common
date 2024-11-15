@@ -191,11 +191,12 @@ def cross_val_with_best_model(
     best_score = -float('inf')  # Initialize with a very low score
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
+        print(sp.train.X.index)
         X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
         y_train, y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
         # Use ModelCheckpoint to save the best model of this fold
-        checkpoint_filepath = f'best_model_fold_{fold}.h5'
+        checkpoint_filepath = f'best_model_fold_{fold}.weights.h5'
         model_checkpoint_callback = ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
@@ -214,7 +215,7 @@ def cross_val_with_best_model(
             callbacks=callbacks_list+[model_checkpoint_callback])
 
         # Evaluate the model on the validation set
-        score = model.score(X_val, y_val) 
+        score = model.evaluate(X_val, y_val) 
 
         if score > best_score:
             best_score = score
@@ -281,6 +282,7 @@ def train_or_update_variational_model(
             model = keras.models.load_model(
                 model_file,
                 custom_objects={"KLCustomLoss": KLCustomLoss})
+        return model
     
     # No cross validation
     if sp.val: 
@@ -328,10 +330,10 @@ def train(
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
     n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
   
-  render_plot_loss(single_fold_results, run_id+" kl_loss")
-  best_epoch_index = single_fold_results.history['val_loss'].index(min(single_fold_results.history['val_loss']))
-  print('Val loss:', single_fold_results.history['val_loss'][best_epoch_index])
-  print('Train loss:', single_fold_results.history['loss'][best_epoch_index])
+  render_plot_loss(history, run_id+" kl_loss")
+  best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
+  print('Val loss:', history.history['val_loss'][best_epoch_index])
+  print('Train loss:', history.history['loss'][best_epoch_index])
   print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
   
   predictions = model.predict_on_batch(sp.test.X)

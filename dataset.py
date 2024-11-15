@@ -486,6 +486,7 @@ def load_dataset(path: str,
     side_raster_input):
   df = pd.read_csv(path, encoding="ISO-8859-1", sep=',')
   df = df[df[var_label].notna()]
+  df.reset_index(inplace=True)
 
   df = nudge_invalid_coords(
       df, list(side_raster_input.values()), max_degrees_deviation=2)
@@ -565,7 +566,6 @@ def load_and_scale(config: Dict,
   # Optionally load validation dataset. 
   X_val, Y_val = None, None if 'VALIDATION' not in config else load_dataset(config['VALIDATION'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
   
-
   # Fit the scaler:
   feature_scaler = create_feature_scaler(
       X_train,
