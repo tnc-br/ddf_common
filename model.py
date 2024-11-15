@@ -7,7 +7,7 @@ from tensorflow import keras
 from tensorflow.keras import layers, regularizers
 from matplotlib import pyplot as plt
 from tensorflow.python.ops import math_ops
-from keras.callbacks import MoxsdelCheckpoint, EarlyStopping
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.initializers import glorot_normal
 import tensorflow_probability as tfp
 import keras
