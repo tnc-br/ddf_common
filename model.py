@@ -191,8 +191,8 @@ def cross_val_with_best_model(
     best_score = -float('inf')  # Initialize with a very low score
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
-        X_train, X_val = sp.train.X[train_index], sp.train.X[val_index]
-        y_train, y_val = sp.train.Y[train_index], sp.train.Y[val_index]
+        X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
+        y_train, y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
         # Use ModelCheckpoint to save the best model of this fold
         checkpoint_filepath = f'best_model_fold_{fold}.h5'
