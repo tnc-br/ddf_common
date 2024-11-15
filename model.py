@@ -1,6 +1,5 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import KFold, cross_val_score
 from abc import abstractmethod
 from functools import partial
 import tensorflow as tf
@@ -8,9 +7,8 @@ from tensorflow import keras
 from tensorflow.keras import layers, regularizers
 from matplotlib import pyplot as plt
 from tensorflow.python.ops import math_ops
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.callbacks import MoxsdelCheckpoint, EarlyStopping
 from keras.initializers import glorot_normal
-from scikeras.wrappers import KerasRegressor
 import tensorflow_probability as tfp
 import keras
 import tensorflow_probability as tfp
