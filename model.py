@@ -190,7 +190,7 @@ class SoftplusLayer(tf.keras.layers.Layer):
         return tf.math.log(1 + tf.exp(inputs))
 
 def cross_val_with_best_model(
-    build_model_fn: Callable[Model],
+    build_model_fn: Callable[[], Model],
     sp: ScaledPartitions,
     n_cv_folds: int,
     cache_best_model=True,
@@ -237,7 +237,7 @@ def cross_val_with_best_model(
                 model.save_model(output_model_filename) 
 
     return training_artifacts, best_model
-    
+
 
 def train_or_update_variational_model(
         sp: ScaledPartitions,
