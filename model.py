@@ -20,6 +20,7 @@ import numpy as np
 from dataset import ScaledPartitions
 from typing import List
 from typing import Callable
+import copy
 
 tf.keras.utils.set_random_seed(18731)
 
@@ -45,6 +46,17 @@ class Model:
         List of named columns used to train this model, in order of training, if applicable.
         '''
         pass
+
+    @abstractmethod
+    def fit(self, X_train, Y_train, validation_data, **kwargs):
+        '''
+        Fit the model using the kwargs as configuration. 
+        '''
+    @abstractmethod
+    def save_model(self, filename, **kwargs):
+        '''
+        Save the model.
+        '''
 
 class TFModel(Model):
     '''
@@ -72,6 +84,15 @@ class TFModel(Model):
 
     def training_column_names(self) -> typing.List[str]:
         return self.transformer.feature_names_in_.tolist()
+
+    def fit(self, X_train, Y_train, validation_data, **kwargs):
+        return self.vi_model.fit(kwargs)
+
+    def save_model(self, filename, **kwargs):
+        assert '.keras' in filename 
+        self.vi_model.save(filename)
+        dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+
 
 def sample_normal_distribution(
     mean: tf.Tensor,
@@ -169,12 +190,12 @@ class SoftplusLayer(tf.keras.layers.Layer):
         return tf.math.log(1 + tf.exp(inputs))
 
 def cross_val_with_best_model(
-    model_fn: Callable,
+    build_model_fn: Callable[Model],
     sp: ScaledPartitions,
     n_cv_folds: int,
-    epochs_per_fold: int,
-    batch_size: int,
-    callbacks_list: List[Callable]):
+    cache_best_model=True,
+    output_model_filename: str=None,
+    **fit_kwargs):
     '''
         Runs cross validation on the model, returning the history and fitted best model. 
 
@@ -182,11 +203,14 @@ def cross_val_with_best_model(
         sp: Stands for "Scaled Partitions", representing your dataset. This function only looks at the "train" 
             partition and uses this to create validation sets.
         n_cv_folds: Number of cross validation folds. These folds are sources from the "train" partition.
-        epochs_per_fold: Number of epochs per fold.
-        batch_size: The batch size
-        callbacks_list: A list of function callbacks used during model fitting.
+        cache_best_model: Whether or not to retain a copy of the best model in memory. May be highly inefficient
+            depending on the model.
+
     '''
+    assert cache_best_model or output_model_filename 
+
     kf = KFold(n_splits=n_cv_folds)
+    best_model_filepath = None
     best_model = None
     best_score = -float('inf')  # Initialize with a very low score
 
@@ -195,36 +219,25 @@ def cross_val_with_best_model(
         X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
         y_train, y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
-        # Use ModelCheckpoint to save the best model of this fold
-        checkpoint_filepath = f'best_model_fold_{fold}.weights.h5'
-        model_checkpoint_callback = ModelCheckpoint(
-            filepath=checkpoint_filepath,
-            save_weights_only=True,
-            monitor='val_loss',
-            mode='min', 
-            save_best_only=True
-        )
-
-        model = model_fn()
-        history = model.fit(
-            X_train, y_train,
+        model = build_model_fn()
+        training_artifacts = model.fit(
+            X_train=X_train, Y_train=y_train,
             validation_data=(X_val, y_val), 
-            verbose=1,
-            epochs=epochs_per_fold, 
-            batch_size=batch_size,
-            callbacks=callbacks_list+[model_checkpoint_callback])
+            fit_kwargs=fit_kwargs)
 
         # Evaluate the model on the validation set
         score = model.evaluate(X_val, y_val) 
 
         if score > best_score:
             best_score = score
-            best_model = model  # Keep track of the best model
-            best_model_history = history 
-            best_model_filepath = checkpoint_filepath  # Store the filepath
+            best_model_artifacts = training_artifacts
+            if cache_best_model:
+                best_model = deepcopy(model)
+            if output_model_filename:
+                model.save_model(output_model_filename) 
 
-    best_model.load_weights(best_model_filepath)
-    return best_model_history, best_model
+    return training_artifacts, best_model
+    
 
 def train_or_update_variational_model(
         sp: ScaledPartitions,
@@ -282,7 +295,10 @@ def train_or_update_variational_model(
             model = keras.models.load_model(
                 model_file,
                 custom_objects={"KLCustomLoss": KLCustomLoss})
-        return model
+        model.save(model_save_location)
+        dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+        packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
+        return packaged_model
     
     # No cross validation
     if sp.val: 
@@ -293,7 +309,12 @@ def train_or_update_variational_model(
         return history, model
     else:
         assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
-        return cross_val_with_best_model(build_model, sp, n_cv_folds, epochs, batch_size, callbacks_list)
+        return cross_val_with_best_model(
+            build_model, 
+            sp, 
+            n_cv_folds, 
+            cache_best_model=True,
+            fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'callbacks': callbacks_list})
 
 def render_plot_loss(history, name):
   plt.plot(history.history['loss'])
