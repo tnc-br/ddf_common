@@ -20,7 +20,8 @@ import numpy as np
 from dataset import ScaledPartitions
 from typing import List
 from typing import Callable
-import copy
+from copy import deepcopy
+from joblib import dump
 
 tf.keras.utils.set_random_seed(18731)
 
@@ -86,12 +87,13 @@ class TFModel(Model):
         return self.transformer.feature_names_in_.tolist()
 
     def fit(self, X_train, Y_train, validation_data, **kwargs):
-        return self.vi_model.fit(kwargs)
+        return self.vi_model.fit(X_train, Y_train, validation_data=validation_data, **kwargs)
 
     def save_model(self, filename, **kwargs):
         assert '.keras' in filename 
         self.vi_model.save(filename)
-        dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
+        kwargs.pop('feature_scaler')
+        
 
 
 def sample_normal_distribution(
@@ -191,6 +193,7 @@ class SoftplusLayer(tf.keras.layers.Layer):
 
 def cross_val_with_best_model(
     build_model_fn: Callable[[], Model],
+    evaluate_fn: Callable[[Model, pd.DataFrame, pd.DataFrame], float],
     sp: ScaledPartitions,
     n_cv_folds: int,
     cache_best_model=True,
@@ -198,11 +201,12 @@ def cross_val_with_best_model(
     **fit_kwargs):
     '''
         Runs cross validation on the model, returning the history and fitted best model. 
-
-        real: Function that builds, compiles, and returns a model.
+        build_model_fn: Function that builds, compiles, and returns a model.
+        evaluate_fn: Function for scoring and comparing models across different folds.
         sp: Stands for "Scaled Partitions", representing your dataset. This function only looks at the "train" 
             partition and uses this to create validation sets.
         n_cv_folds: Number of cross validation folds. These folds are sources from the "train" partition.
+        evaluate_fn
         cache_best_model: Whether or not to retain a copy of the best model in memory. May be highly inefficient
             depending on the model.
 
@@ -217,16 +221,16 @@ def cross_val_with_best_model(
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
         print(sp.train.X.index)
         X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
-        y_train, y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
+        Y_train, Y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
         model = build_model_fn()
         training_artifacts = model.fit(
-            X_train=X_train, Y_train=y_train,
-            validation_data=(X_val, y_val), 
-            fit_kwargs=fit_kwargs)
+            X_train=X_train, Y_train=Y_train,
+            validation_data=(X_val, Y_val), 
+            **fit_kwargs)
 
         # Evaluate the model on the validation set
-        score = model.evaluate(X_val, y_val) 
+        score = evaluate_fn(model, X_val, Y_val)
 
         if score > best_score:
             best_score = score
@@ -295,26 +299,31 @@ def train_or_update_variational_model(
             model = keras.models.load_model(
                 model_file,
                 custom_objects={"KLCustomLoss": KLCustomLoss})
-        model.save(model_save_location)
-        dump(data.feature_scaler, f"{model_save_location.strip('.keras')}.pkl")
-        packaged_model = model.TFModel(model_save_location, f"{model_save_location.strip('.keras')}.pkl")
+        model.save(model_file)
+        dump(sp.feature_scaler, f"{model_file.strip('.keras')}.pkl")
+        packaged_model = TFModel(model_file, f"{model_file.strip('.keras')}.pkl")
         return packaged_model
     
-    # No cross validation
     if sp.val: 
+        # No cross validation
         assert not n_cv_folds, "Cross validation not possible if manually specifying a validation dataset."
         model = build_model()
         history = model.fit(sp.train.X, sp.train.Y, verbose=0, validation_data=sp.val.as_tuple(), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model
     else:
+        # Yes cross validation
         assert n_cv_folds, "If no validation dataset is specified, number of cross validation folds must be set."
-        return cross_val_with_best_model(
-            build_model, 
-            sp, 
-            n_cv_folds, 
-            cache_best_model=True,
-            fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'callbacks': callbacks_list})
+        
+        # Cross val function takes abstract model, so pass in fit params
+        # as kwargs and custom evaluation function.
+        fit_kwargs = {'epochs': epochs,
+                      'batch_size': batch_size,
+                      'callbacks': callbacks_list}
+        evaluate_fn = lambda tf_model, X, Y: tf_model.vi_model.evaluate(X, Y) 
+        history, packaged_model = cross_val_with_best_model(
+            build_model, evaluate_fn, sp, n_cv_folds, cache_best_model=True, **fit_kwargs)
+        return history, packaged_model.vi_model
 
 def render_plot_loss(history, name):
   plt.plot(history.history['loss'])
@@ -355,11 +364,13 @@ def train(
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
   print('Val loss:', history.history['val_loss'][best_epoch_index])
   print('Train loss:', history.history['loss'][best_epoch_index])
-  print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))
   
-  predictions = model.predict_on_batch(sp.test.X)
-  predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
-  rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
-  print("dO18 RMSE: "+ str(rmse))
+  rmse = None
+  if sp.test:
+    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
+    predictions = model.predict_on_batch(sp.test.X)
+    predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
+    rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
+    print("dO18 RMSE: "+ str(rmse))
   return model, rmse
 
