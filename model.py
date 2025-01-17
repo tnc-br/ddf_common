@@ -20,7 +20,6 @@ import numpy as np
 from dataset import ScaledPartitions
 from typing import List
 from typing import Callable
-from typing import Tuple
 from copy import deepcopy
 from joblib import dump
 import statistics
@@ -200,7 +199,7 @@ def cross_val_with_best_model(
     n_cv_folds: int,
     cache_best_model=True,
     output_model_filename: str=None,
-    **fit_kwargs) -> Tuple(typing.Any, Model):
+    **fit_kwargs) -> typing.Tuple(typing.Any, Model):
     '''
         Runs cross validation on the model, returning the history and fitted best model. 
         build_model_fn: Function that builds, compiles, and returns a model.
