@@ -563,10 +563,10 @@ def load_and_scale(config: Dict,
   X_train, Y_train = load_dataset(config['TRAIN'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
 
   # Optionally load test datasets if given. If not given, evaluation would not be performed on the final model.
-  X_test, Y_test = None, None if 'TEST' not in config else load_dataset(config['TEST'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
-  
+  (X_test, Y_test) = (None, None) if 'TEST' not in config else load_dataset(config['TEST'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
+
   # Optionally load validation dataset. 
-  X_val, Y_val = None, None if 'VALIDATION' not in config else load_dataset(config['VALIDATION'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
+  (X_val, Y_val) = (None, None) if 'VALIDATION' not in config else load_dataset(config['VALIDATION'], mean_label, var_label, columns_to_keep, extra_columns_from_geotiffs)
   
   # Fit the scaler:
   feature_scaler = create_feature_scaler(
@@ -578,6 +578,6 @@ def load_and_scale(config: Dict,
 
   # Apply the scaler:
   train = FeaturesToLabels(scale(X_train, feature_scaler), Y_train)
-  test = FeaturesToLabels(scale(X_test, feature_scaler), Y_test)
-  val = None if not X_val else FeaturesToLabels(scale(X_val, feature_scaler), Y_val)
+  test = None if X_test is None else FeaturesToLabels(scale(X_test, feature_scaler), Y_test)
+  val = None if X_val is None else FeaturesToLabels(scale(X_val, feature_scaler), Y_val)
   return ScaledPartitions(feature_scaler, label_scaler, train, val, test)
