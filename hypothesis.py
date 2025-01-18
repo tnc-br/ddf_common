@@ -65,8 +65,8 @@ def sample_ttest(longitude: float,
       if data_sample_size == 1:
         continue
       
-      means_isoscape = means_isoscapes
-      variances_isoscape = variances_isoscapes
+      means_isoscape = means_isoscapes[i]
+      variances_isoscape = variances_isoscapes[i]
 
       # Values from prediction.
       predicted_isotope_mean = raster.get_data_at_coords(
