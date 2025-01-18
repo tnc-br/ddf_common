@@ -216,8 +216,8 @@ def cross_val_with_best_model(
     '''
 
     kf = KFold(n_splits=n_cv_folds)
+    predictions_per_fold = {}
     loss_per_fold = {}
-    rmse_per_fold = {}
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
         print("""Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})""")
@@ -229,22 +229,30 @@ def cross_val_with_best_model(
             X_train=X_train, Y_train=Y_train,
             validation_data=(X_val, Y_val), 
             **fit_kwargs)
-
-        # Evaluate the model on the validation set
         loss_per_fold[fold] = evaluate_fn(model, X_val, Y_val)
 
         predictions = model.predict_on_batch(X_val)
-        predictions = pd.DataFrame(predictions)
-        rmse = np.sqrt(mean_squared_error(Y_val, predictions))
-        rmse_per_fold[fold] = rmse
+        predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
 
+    # Concatenate the predictions in the dictionary vertically, compare to whole
+    # dataset to get rmse.
+    all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
+    mean_rmse, var_rmse = np.sqrt(mean_squared_error(sp.train.Y, predictions))
+
+    cv_artifacts = {
+      'loss_per_fold': loss_per_fold,
+      'mean_rmse': mean_rmse, 
+      'var_rmse': var_rmse
+    }
+
+    # Return the model trained on all data.
     print("Training on all data")
     final_model = build_model_fn()
     training_artifacts = model.fit(
         X_train=X_train, Y_train=Y_train,
         validation_data=(X_train, Y_train),
          **fit_kwargs)
-    cv_artifacts = {'loss_per_fold': loss_per_fold, 'rmse_per_fold': rmse_per_fold}
+
     return training_artifacts, final_model, cv_artifacts
 
 

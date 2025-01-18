@@ -35,9 +35,9 @@ class FraudMetrics:
 
 def sample_ttest(longitude: float,
                  latitude: float,
-                 isotope_means: list[float],
-                 isotope_variances: list[float],
-                 isotope_counts: list[int],
+                 isotope_means: pd.Series,
+                 isotope_variances: pd.Series,
+                 isotope_counts: pd.Series,
                  means_isoscapes: list[raster.AmazonGeoTiff],
                  variances_isoscapes: list[raster.AmazonGeoTiff],
                  isoscape_sample_size_per_location: int,
@@ -59,14 +59,14 @@ def sample_ttest(longitude: float,
     '''
     p_values = []
     for i, isotope_mean in enumerate(isotope_means):
-      isotope_variance = isotope_variances[i]
-      data_sample_size = isotope_counts[i]
+      isotope_variance = isotope_variances.iloc[i]
+      data_sample_size = isotope_counts.iloc[i]
 
       if data_sample_size == 1:
         continue
       
-      means_isoscape = means_isoscapes[i]
-      variances_isoscape = variances_isoscapes[i]
+      means_isoscape = means_isoscapes
+      variances_isoscape = variances_isoscapes
 
       # Values from prediction.
       predicted_isotope_mean = raster.get_data_at_coords(
