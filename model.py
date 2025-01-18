@@ -237,7 +237,8 @@ def cross_val_with_best_model(
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
-    mean_rmse, var_rmse = np.sqrt(mean_squared_error(sp.train.Y, predictions))
+    mean_rmse, var_rmse = np.sqrt(
+      mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
       'loss_per_fold': loss_per_fold,
@@ -377,14 +378,15 @@ def train(
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
     n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
   
+  if maybe_cv_results:
+    print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
+    print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
+    print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
+
   render_plot_loss(history, run_id+" kl_loss")
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
   print('Val loss:', history.history['val_loss'][best_epoch_index])
   print('Train loss:', history.history['loss'][best_epoch_index])
-
-  if maybe_cv_results:
-    print('Avg mean RMSE across folds: ', statistics.mean(maybe_cv_results['rmse_per_fold'].values()))
-    print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
   
   rmse = None
   if sp.test:
