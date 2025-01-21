@@ -1,4 +1,4 @@
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import auc
 import raster
@@ -26,9 +26,9 @@ def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_n
   predictions = list(df.apply(lambda row: [row[mean_pred_name], row[var_pred_name]], axis=1).values)
   truths = list(df.apply(lambda row: [row[mean_true_name], row[var_true_name]], axis=1).values)
 
-  return (mean_squared_error(df[mean_true_name].values, df[mean_pred_name].values, squared=False),
-         mean_squared_error(df[var_true_name].values, df[var_pred_name].values, squared=False),
-         mean_squared_error(truths, predictions, squared=False))
+  return (root_mean_squared_error(df[mean_true_name].values, df[mean_pred_name].values),
+         root_mean_squared_error(df[var_true_name].values, df[var_pred_name].values),
+         root_mean_squared_error(truths, predictions))
 
 def isoscape_precision_recall_thresholds(
     test_dataset: pd.DataFrame,
