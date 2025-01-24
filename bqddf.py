@@ -2,6 +2,7 @@ import typing
 import google
 import json
 import eeddf
+import datetime
 from google.cloud import bigquery
 from google.api_core.exceptions import GoogleAPIError
 
@@ -56,6 +57,7 @@ def _insert_eval_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List
   # Set up reference to table we write to.
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+  metadata['completion_timestamp'] = datetime.datetime.now().isoformat()
 
   # Write and block until complete.
   load_job = client.load_table_from_json(
@@ -146,6 +148,8 @@ def _insert_training_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['TRAINING_METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
+  metadata['completion_timestamp'] = datetime.datetime.now().isoformat()
+
   # Write and block until complete.
   load_job = client.load_table_from_json(
     [metadata], table_ref, job_config=job_config)
@@ -209,6 +213,7 @@ def insert_harness_run(
 
   eval_results['eval_id'] = _generate_eval_id(eval_results)
   flattened = training_metadata | eval_results
+  flattened['completion_timestamp'] = datetime.datetime.now().isoformat()
 
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['FLATTENED_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
