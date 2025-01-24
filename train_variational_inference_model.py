@@ -239,7 +239,7 @@ def train_variational_inference_model(
     eval_metadata = eval_params.convert_to_bq_dict()
     eval_metadata |= eval_results.convert_to_bq_dict()
 
-    bqddf.insert_harness_run(training_run, eval_metadata)
+    bqddf.insert_harness_run(training_run, eval_metadata, eval_only)
         
     return eval_results
     

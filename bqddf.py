@@ -2,6 +2,7 @@ import typing
 import google
 import json
 import eeddf
+import datetime
 from google.cloud import bigquery
 from google.api_core.exceptions import GoogleAPIError
 
@@ -56,6 +57,7 @@ def _insert_eval_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.List
   # Set up reference to table we write to.
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
+  metadata['completion_timestamp'] = datetime.datetime.now().isoformat()
 
   # Write and block until complete.
   load_job = client.load_table_from_json(
@@ -146,6 +148,8 @@ def _insert_training_metadata(metadata: typing.Dict[str, typing.Any]) -> typing.
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['TRAINING_METADATA_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
 
+  metadata['completion_timestamp'] = datetime.datetime.now().isoformat()
+
   # Write and block until complete.
   load_job = client.load_table_from_json(
     [metadata], table_ref, job_config=job_config)
@@ -187,13 +191,12 @@ def get_training_result_from_flattened(training_id: str) -> bigquery.table.RowIt
 
   # Execute the query
   results = client.query_and_wait(query)
-  if results.total_rows > 1:
-    return ReferenceError(f"Two or more trainings found for training_id {training_id}")
   return results
 
 def insert_harness_run(
   training_metadata: typing.Dict[str, typing.Any],
-  eval_results: typing.Dict[str, typing.Any]):
+  eval_results: typing.Dict[str, typing.Any],
+  eval_only=False):
   """
   Writes training and eval results to flattened BQ table. 
   If the training_id already exists, don't overwrite it. 
@@ -203,12 +206,13 @@ def insert_harness_run(
 
   # Check if eval_id exists before writing it.
   exists = get_training_result_from_flattened(training_metadata['training_id']).total_rows
-  if exists:
+  if exists and not eval_only:
     raise GoogleAPIError(f"training_id {training_metadata['training_id']} already exists. " +
                           "A training with these params has already run.")
 
   eval_results['eval_id'] = _generate_eval_id(eval_results)
   flattened = training_metadata | eval_results
+  flattened['completion_timestamp'] = datetime.datetime.now().isoformat()
 
   table_ref = client.dataset(_CONFIG['DATASET']).table(_CONFIG['FLATTENED_TABLE'])
   job_config = bigquery.LoadJobConfig(write_disposition='WRITE_APPEND')
