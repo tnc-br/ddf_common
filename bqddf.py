@@ -197,7 +197,8 @@ def get_training_result_from_flattened(training_id: str) -> bigquery.table.RowIt
 
 def insert_harness_run(
   training_metadata: typing.Dict[str, typing.Any],
-  eval_results: typing.Dict[str, typing.Any]):
+  eval_results: typing.Dict[str, typing.Any],
+  eval_only=False):
   """
   Writes training and eval results to flattened BQ table. 
   If the training_id already exists, don't overwrite it. 
@@ -207,7 +208,7 @@ def insert_harness_run(
 
   # Check if eval_id exists before writing it.
   exists = get_training_result_from_flattened(training_metadata['training_id']).total_rows
-  if exists:
+  if exists and not eval_only:
     raise GoogleAPIError(f"training_id {training_metadata['training_id']} already exists. " +
                           "A training with these params has already run.")
 
