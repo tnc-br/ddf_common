@@ -191,8 +191,6 @@ def get_training_result_from_flattened(training_id: str) -> bigquery.table.RowIt
 
   # Execute the query
   results = client.query_and_wait(query)
-  if results.total_rows > 1:
-    return ReferenceError(f"Two or more trainings found for training_id {training_id}")
   return results
 
 def insert_harness_run(
