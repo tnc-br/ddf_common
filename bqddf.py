@@ -250,7 +250,7 @@ def _check_exists(id_value: str, id_type: str):
     raise GoogleAPIError(f"Unknown key type: {id_type}")
 
   if not exists:
-    raise GoogleAPIError(f"training_id {training_metadata['training_id']} does not exists. ")
+    raise GoogleAPIError(f"{id_type} {id_value} does not exist. ")
 
 def add_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
     """Adds a tag to the specified eval_id or training_id. If training_id is used, adds tag to 
