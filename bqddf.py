@@ -261,7 +261,7 @@ def add_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
         tag: The tag to add.
         id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
     """
-    _modify_tag(id_value, tag, add=True, id_type=id_type)  
+    return _modify_tag(id_value, tag, add=True, id_type=id_type)  
 
 
 def remove_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
@@ -273,7 +273,7 @@ def remove_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
         tag: The tag to remove.
         id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
     """
-    _modify_tag(id_value, tag, add=False, id_type=id_type)
+    return _modify_tag(id_value, tag, add=False, id_type=id_type)
 
 
 def _modify_tag(id_value: str, tag: str, add: bool, id_type: str = "eval_id") -> None:
