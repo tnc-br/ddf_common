@@ -222,3 +222,59 @@ def insert_harness_run(
     [flattened], table_ref, job_config=job_config)
   return load_job.result()
 
+def add_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
+    """Adds a tag to the specified eval_id or training_id. If training_id is used, adds tag to 
+    all rows with the specified training id.
+
+    Args:
+        id_value: The eval_id or training_id.
+        tag: The tag to add.
+        id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
+    """
+    _modify_tag(id_value, tag, add=True, id_type=id_type)  # Call the helper function
+
+
+def remove_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
+    """Removes a tag from the specified eval_id or training_id. If training_id is used, adds tag to 
+    all rows with the specified training id.
+
+    Args:
+        id_value: The eval_id or training_id.
+        tag: The tag to remove.
+        id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
+    """
+    _modify_tag(id_value, tag, add=False, id_type=id_type) # Call the helper function
+
+
+def _modify_tag(id_value: str, tag: str, add: bool, id_type: str = "eval_id") -> None:
+    """Internal function to add or remove tags.  Used by add_tag and remove_tag."""
+
+    client = _get_big_query_client()
+    table_name = f"{_CONFIG['DATASET']}.{_CONFIG['METADATA_TABLE']}"
+
+    if id_type not in ["eval_id", "training_id"]:
+        raise ValueError("id_type must be 'eval_id' or 'training_id'")
+
+    where_clause = f"{id_type} = '{id_value}'"
+
+    if add:
+        query = f"""
+            UPDATE `{table_name}`
+            SET tags = ARRAY_CONCAT(IFNULL(tags, []), ['{tag}'])
+            WHERE {where_clause}
+        """
+        action = "added"
+    else:  # Remove tag
+        query = f"""
+            UPDATE `{table_name}`
+            SET tags = ARRAY(SELECT t FROM UNNEST(IFNULL(tags, [])) AS t WHERE t != '{tag}')
+            WHERE {where_clause}
+        """
+        action = "removed"
+
+    try:
+        query_job = client.query(query)
+        query_job.result()
+        print(f"Tag '{tag}' {action} for {id_type} '{id_value}' successfully.")
+    except Exception as e:
+        print(f"Error modifying tag: {e}")
