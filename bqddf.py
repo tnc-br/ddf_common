@@ -250,7 +250,7 @@ def _modify_tag(id_value: str, tag: str, add: bool, id_type: str = "eval_id") ->
     """Internal function to add or remove tags.  Used by add_tag and remove_tag."""
 
     client = _get_big_query_client()
-    table_name = f"{_CONFIG['DATASET']}.{_CONFIG['METADATA_TABLE']}"
+    table_name = f"{_CONFIG['DATASET']}.{_CONFIG['FLATTENED_TABLE']}"
 
     if id_type not in ["eval_id", "training_id"]:
         raise ValueError("id_type must be 'eval_id' or 'training_id'")
