@@ -193,6 +193,25 @@ def get_training_result_from_flattened(training_id: str) -> bigquery.table.RowIt
   results = client.query_and_wait(query)
   return results
 
+def get_eval_result_from_flattened(eval_id: str) -> bigquery.table.RowIterator:
+  """
+  Queries the flattened table for eval information on the given eval_id.
+
+  Args:
+      eval_id: The eval_id to search for.
+
+  Returns:
+      A RowIterator containing the results, or None if an error occurs.
+      It's expected that the iterator will yield at most one row.
+  """
+  client = _get_big_query_client()
+  table_name = f"{_CONFIG['DATASET']}.{_CONFIG['FLATTENED_TABLE']}"
+  query = f"SELECT * FROM `{table_name}` WHERE eval_id = '{eval_id}'"
+
+  results = client.query_and_wait(query)
+  return results  
+
+
 def insert_harness_run(
   training_metadata: typing.Dict[str, typing.Any],
   eval_results: typing.Dict[str, typing.Any],
@@ -222,6 +241,17 @@ def insert_harness_run(
     [flattened], table_ref, job_config=job_config)
   return load_job.result()
 
+def _check_exists(id_value: str, id_type: str):
+  if id_type == 'training_id':
+    exists = get_training_result_from_flattened(id_value).total_rows
+  elif id_type == "eval_id":
+    exists = get_eval_result_from_flattened(id_value)
+  else: 
+    raise GoogleAPIError(f"Unknown key type: {id_type}")
+
+  if not exists:
+    raise GoogleAPIError(f"training_id {training_metadata['training_id']} does not exists. ")
+
 def add_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
     """Adds a tag to the specified eval_id or training_id. If training_id is used, adds tag to 
     all rows with the specified training id.
@@ -231,7 +261,7 @@ def add_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
         tag: The tag to add.
         id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
     """
-    _modify_tag(id_value, tag, add=True, id_type=id_type)  # Call the helper function
+    _modify_tag(id_value, tag, add=True, id_type=id_type)  
 
 
 def remove_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
@@ -243,12 +273,13 @@ def remove_tag(id_value: str, tag: str, id_type: str = "training_id") -> None:
         tag: The tag to remove.
         id_type: "eval_id" or "training_id" to specify the ID type. Defaults to "eval_id".
     """
-    _modify_tag(id_value, tag, add=False, id_type=id_type) # Call the helper function
+    _modify_tag(id_value, tag, add=False, id_type=id_type)
 
 
 def _modify_tag(id_value: str, tag: str, add: bool, id_type: str = "eval_id") -> None:
     """Internal function to add or remove tags.  Used by add_tag and remove_tag."""
 
+    _check_exists(id_value=id_value, id_type=id_type)
     client = _get_big_query_client()
     table_name = f"{_CONFIG['DATASET']}.{_CONFIG['FLATTENED_TABLE']}"
 
@@ -278,3 +309,9 @@ def _modify_tag(id_value: str, tag: str, add: bool, id_type: str = "eval_id") ->
         print(f"Tag '{tag}' {action} for {id_type} '{id_value}' successfully.")
     except Exception as e:
         print(f"Error modifying tag: {e}")
+    
+    # Query for the updated tags *after* the update
+    get_tags_query = f"SELECT tags FROM `{table_name}` WHERE {where_clause}"
+    get_tags_job = client.query(get_tags_query)
+    get_tags_result = get_tags_job.result()
+    return list(get_tags_result)
