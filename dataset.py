@@ -394,7 +394,7 @@ def create_fraudulent_samples(
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
-    for i_fake_sample in fake_samples_per_sample:
+    for i_fake_sample in range(fake_samples_per_sample):
       lat, lon, attempts = 0, 0, 0
       while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
             _is_nearby_real_point(lat, lon, real_samples, trusted_buffer_radius)) and
