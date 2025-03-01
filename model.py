@@ -15,6 +15,7 @@ import keras
 import tensorflow_probability as tfp
 import joblib
 import typing
+import logging
 import pandas as pd
 import numpy as np
 from dataset import ScaledPartitions
@@ -220,7 +221,7 @@ def cross_val_with_best_model(
     loss_per_fold = {}
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
-        print(f"Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})")
+        logging.debug(f"Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})")
         X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
         Y_train, Y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
