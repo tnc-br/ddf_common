@@ -220,7 +220,7 @@ def cross_val_with_best_model(
     loss_per_fold = {}
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
-        print("""Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})""")
+        print(f"Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})")
         X_train, X_val = sp.train.X.loc[train_index], sp.train.X.loc[val_index]
         Y_train, Y_val = sp.train.Y.loc[train_index], sp.train.Y.loc[val_index]
 
@@ -249,7 +249,7 @@ def cross_val_with_best_model(
     # Return the model trained on all data.
     print("Training on all data")
     final_model = build_model_fn()
-    training_artifacts = model.fit(
+    training_artifacts = final_model.fit(
         X_train=X_train, Y_train=Y_train,
         validation_data=(X_train, Y_train),
          **fit_kwargs)
