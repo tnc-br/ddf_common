@@ -368,6 +368,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame,
   - mean_isoscapes: Isoscapes of mean values of isotope values from elements
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
   - trusted_buffer_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  - sample_drop_rate: How often, randomly, should we drop some real samples in fraud sample generation.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
