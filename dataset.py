@@ -354,7 +354,12 @@ def _is_nearby_real_point(lat: float, lon: float, real_points, threshold_km: flo
   return False
 
 #This function creates a dataset based on real samples adding a Fraud column
-def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: list[raster.AmazonGeoTiff],elements: list[str], max_fraud_radius:float, trusted_buffer_radius:float) -> pd.DataFrame:
+def create_fraudulent_samples(real_samples_data: pd.DataFrame,
+  mean_isoscapes: list[raster.AmazonGeoTiff],
+  elements: list[str],
+  max_fraud_radius:float,
+  trusted_buffer_radius:float,
+  sample_drop_rate:float) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
   Input:
@@ -387,6 +392,8 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame, mean_isoscapes: l
 
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
+      continue
+    if random.random() < sample_drop_rate:
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
