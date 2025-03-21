@@ -404,6 +404,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame,
       attempts += 1
     if attempts == max_random_sample_attempts:
       continue
+    print(lab_samp.shape[0])
     for i in range(lab_samp.shape[0]):
         new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,'fraud': True }
         for element in elements:
