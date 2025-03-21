@@ -394,7 +394,9 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame,
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
-    if sample_drop_rate > 0 and random.random() < sample_drop_rate:
+    r = random.random()
+    print(r)
+    if sample_drop_rate > 0 and r < sample_drop_rate:
       continue
     lat, lon, attempts = 0, 0, 0
     while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
