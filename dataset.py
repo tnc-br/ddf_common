@@ -360,6 +360,7 @@ def create_fraudulent_samples(
   elements: list[str],
   max_fraud_radius:float,
   trusted_buffer_radius:float,
+  sample_drop_rate:float=0.0,
   fake_samples_per_sample:int = 1) -> pd.DataFrame:
   '''
   This function creates a dataset based on real samples adding a Fraud column, where True represents a real lat/lon and False represents a fraudulent lat/lon
@@ -369,6 +370,7 @@ def create_fraudulent_samples(
   - mean_isoscapes: Isoscapes of mean values of isotope values from elements
   - max_fraud_radius: In km, the maximum distance from a real point to randomly sample a fraudalent coordinate.
   - trusted_buffer_radius: In km, the minimum distance from a real point to randomly sample a fraudalent coordinate.
+  - sample_drop_rate: How often, randomly, should we drop some real samples in fraud sample generation.
   Output: 
   - fake_data: pd.DataFrame with lat, long, isotope_value and fraudulent columns
   '''
@@ -394,6 +396,8 @@ def create_fraudulent_samples(
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
+    if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
+      break
     for i_fake_sample in range(fake_samples_per_sample):
       lat, lon, attempts = 0, 0, 0
       while((not all([_is_valid_point(lat, lon, mean_iso) for mean_iso in mean_isoscapes]) or
