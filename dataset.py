@@ -394,7 +394,7 @@ def create_fraudulent_samples(real_samples_data: pd.DataFrame,
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
-    print(real_samples.size())
+    print(real_samples.size().shape[0])
     if sample_drop_rate > 0 and count > real_samples.size():
       break
     lat, lon, attempts = 0, 0, 0
