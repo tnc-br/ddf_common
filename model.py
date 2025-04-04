@@ -231,14 +231,12 @@ def cross_val_with_best_model(
 
         predictions = model.predict_on_batch(X_val) 
         mean_rmse, var_rmse = np.sqrt(
-            mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
+            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
         rmse_per_fold[fold] = (mean_rmse, var_rmse)
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     mean_rmse_of_all_folds = np.average([fold[0] for fold in rmse_per_fold])
-    mean_rmse, var_rmse = np.sqrt(
-      mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
     var_rmse_of_all_folds = np.average([fold[1] for fold in rmse_per_fold])
 
     cv_artifacts = {
