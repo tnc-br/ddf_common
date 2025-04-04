@@ -242,7 +242,6 @@ def cross_val_with_best_model(
     var_rmse_of_all_folds = np.average([fold[1] for fold in rmse_per_fold])
 
     cv_artifacts = {
-      'loss_per_fold': loss_per_fold,
       'mean_rmse': mean_rmse_of_all_folds, 
       'var_rmse': var_rmse_of_all_folds
     }    
@@ -377,6 +376,7 @@ def train(
     model_checkpoint: str):
   print("==================")
   print(run_id)
+  rmse = None
   history, model, maybe_cv_results = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
@@ -387,18 +387,23 @@ def train(
     print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
     print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
     print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
+    rmse = maybe_cv_results
 
   render_plot_loss(history, run_id+" kl_loss")
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
   print('Val loss:', history.history['val_loss'][best_epoch_index])
   print('Train loss:', history.history['loss'][best_epoch_index])
   
-  rmse = None
+  # If test set is specified, use that to calculate RMSE stats instead. 
   if sp.test:
-    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
+    loss = model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0)
+    print('Test loss:', loss)  
     predictions = model.predict_on_batch(sp.test.X)
     predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
-    rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
+    rmse = {
+        'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
+        'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
+    }
     print("dO18 RMSE: "+ str(rmse))
   return model, rmse
 
