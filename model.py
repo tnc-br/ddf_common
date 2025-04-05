@@ -380,7 +380,6 @@ def train(
     if maybe_cv_results:
         print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
         print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
-        print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
         rmse = maybe_cv_results
 
     render_plot_loss(history, run_id+" kl_loss")
