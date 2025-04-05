@@ -198,7 +198,7 @@ def train_variational_inference_model(
           patience=training_params.early_stopping_patience,
           n_cv_folds=training_params.n_cv_folds,
           model_checkpoint=model_save_location)
-      eval_results = evaluation.EvalResults(rmse=rmse_dict)
+      eval_results = evaluation.EvalResults(rmse=rmse)
 
       # Package the scaling info and model weights together.
       vi_model.save(model_save_location)
