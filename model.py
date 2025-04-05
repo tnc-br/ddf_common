@@ -371,30 +371,35 @@ def train(
     patience: int,
     n_cv_folds: int, 
     model_checkpoint: str):
-  print("==================")
-  print(run_id)
-  history, model, maybe_cv_results = train_or_update_variational_model(
-    sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
-    lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
-    kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
-    n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
-  
-  if maybe_cv_results:
-    print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
-    print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
-    print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
+    print("==================")
+    print(run_id)
+    rmse = None
+    history, model, maybe_cv_results = train_or_update_variational_model(
+        sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
+        lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
+        kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
+        min_steps=min_steps, n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
+    
+    if maybe_cv_results:
+        print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
+        print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
+        print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
+        rmse = maybe_cv_results
 
-  render_plot_loss(history, run_id+" kl_loss")
-  best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
-  print('Val loss:', history.history['val_loss'][best_epoch_index])
-  print('Train loss:', history.history['loss'][best_epoch_index])
-  
-  rmse = None
-  if sp.test:
-    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
-    predictions = model.predict_on_batch(sp.test.X)
-    predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
-    rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
-    print("dO18 RMSE: "+ str(rmse))
-  return model, rmse
-
+    render_plot_loss(history, run_id+" kl_loss")
+    best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
+    print('Val loss:', history.history['val_loss'][best_epoch_index])
+    print('Train loss:', history.history['loss'][best_epoch_index])
+    
+    # If test set is specified, use that to calculate RMSE stats instead. 
+    if sp.test:
+        loss = model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0)
+        print('Test loss:', loss)  
+        predictions = model.predict_on_batch(sp.test.X)
+        predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
+        rmse = {
+            'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
+            'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
+        }
+        print("dO18 RMSE: "+ str(rmse))
+    return model, rmse
