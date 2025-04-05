@@ -218,7 +218,6 @@ def cross_val_with_best_model(
 
     kf = KFold(n_splits=n_cv_folds)
     predictions_per_fold = {}
-    loss_per_fold = {}
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
         logging.debug(f"Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})")
@@ -230,7 +229,6 @@ def cross_val_with_best_model(
             X_train=X_train, Y_train=Y_train,
             validation_data=(X_val, Y_val), 
             **fit_kwargs)
-        loss_per_fold[fold] = evaluate_fn(model, X_val, Y_val)
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
@@ -242,7 +240,6 @@ def cross_val_with_best_model(
       mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
-      'loss_per_fold': loss_per_fold,
       'mean_rmse': mean_rmse, 
       'var_rmse': var_rmse
     }
