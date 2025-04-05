@@ -153,6 +153,7 @@ def train_variational_inference_model(
     eval_only: bool,
     enable_fraud_detection_eval: bool):
 
+    eval_results = None
     if not eval_only:
       # Crash if a run with this training_id already happened.
       check_training_run_exists(training_params.training_id)

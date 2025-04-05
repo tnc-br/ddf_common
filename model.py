@@ -387,7 +387,6 @@ def train(
   print('Val loss:', history.history['val_loss'][best_epoch_index])
   print('Train loss:', history.history['loss'][best_epoch_index])
 
-  rmse = None
   if sp.test:
     print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
     predictions = model.predict_on_batch(sp.test.X)
