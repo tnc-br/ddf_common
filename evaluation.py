@@ -4,7 +4,7 @@ from sklearn.metrics import auc
 import raster
 import pandas as pd
 import dataset
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hypothesis
 import numpy as np
 from typing import Dict, Any, List
@@ -149,11 +149,11 @@ class EvalResults:
   Container for results from `evaluate`
   '''
   rmse: Dict[str, float]
-  auc_scores: Dict[int, float]
-  p_values_found: Dict[int, float]
-  precision_targets_found: Dict[int, float]
-  recall_targets_found: Dict[int, float] 
-  pr_curves: Dict[int, Dict[str, List[float]]]
+  auc_scores: Dict[int, float] = field(default_factory=dict)
+  p_values_found: Dict[int, float] = field(default_factory=dict)
+  precision_targets_found: Dict[int, float] = field(default_factory=dict)
+  recall_targets_found: Dict[int, float] = field(default_factory=dict)
+  pr_curves: Dict[int, Dict[str, List[float]]] = field(default_factory=dict)
 
   def convert_to_bq_dict(self):
     bq_dict = self.rmse

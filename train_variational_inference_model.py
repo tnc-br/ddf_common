@@ -150,8 +150,10 @@ def train_variational_inference_model(
     files: Dict,
     isoscape_save_location: str,
     model_save_location: str,
-    eval_only: bool):
+    eval_only: bool,
+    enable_fraud_detection_eval: bool):
 
+    eval_results = None
     if not eval_only:
       # Crash if a run with this training_id already happened.
       check_training_run_exists(training_params.training_id)
@@ -197,6 +199,7 @@ def train_variational_inference_model(
           patience=training_params.early_stopping_patience,
           n_cv_folds=training_params.n_cv_folds,
           model_checkpoint=model_save_location)
+      eval_results = evaluation.EvalResults(rmse=rmse)
 
       # Package the scaling info and model weights together.
       vi_model.save(model_save_location)
@@ -214,24 +217,25 @@ def train_variational_inference_model(
     means_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=0)
     vars_isoscape = raster.load_raster(isoscape_save_location, use_only_band_index=1)
 
-    eval_dataset = pd.read_csv(files['EVAL'], index_col=0)
-    original_dataset = pd.read_csv(files['ORIGINAL'], index_col=0)
-    
-    eval_results = evaluation.evaluate(
-        means_isoscape,
-        vars_isoscape,
-        original_dataset,
-        eval_params.elements_to_eval,
-        eval_dataset,
-        training_params.mean_label,
-        training_params.var_label,
-        eval_params.samples_per_location,
-        eval_params.precision_target,
-        eval_params.recall_target,
-        eval_params.start_max_fraud_radius,
-        eval_params.end_max_fraud_radius,
-        eval_params.radius_pace,
-        eval_params.trusted_buffer_radius)
+    if enable_fraud_detection_eval:
+      eval_dataset = pd.read_csv(files['EVAL'], index_col=0)
+      original_dataset = pd.read_csv(files['ORIGINAL'], index_col=0)
+      
+      eval_results = evaluation.evaluate(
+          means_isoscape,
+          vars_isoscape,
+          original_dataset,
+          eval_params.elements_to_eval,
+          eval_dataset,
+          training_params.mean_label,
+          training_params.var_label,
+          eval_params.samples_per_location,
+          eval_params.precision_target,
+          eval_params.recall_target,
+          eval_params.start_max_fraud_radius,
+          eval_params.end_max_fraud_radius,
+          eval_params.radius_pace,
+          eval_params.trusted_buffer_radius)
 
     training_run = training_params.convert_to_bq_dict()
     training_run['dataset_id'] = files['TRAIN']
