@@ -50,6 +50,9 @@ class VIModelTrainingParams:
         # >0, epochs becomes epochs per fold. 
         n_cv_folds: int,
 
+        # Minimum number of steps before early exit is possible via patience.
+        min_steps: int,
+
         resolution_x: int,
         resolution_y: int,
 
@@ -73,6 +76,7 @@ class VIModelTrainingParams:
         self.features_to_standardize = features_to_standardize
         self.features_to_passthrough = features_to_passthrough
         self.n_cv_folds = n_cv_folds
+        self.min_steps = min_steps
         self.resolution_x = resolution_x
         self.resolution_y = resolution_y
         self.tags = tags
@@ -198,6 +202,7 @@ def train_variational_inference_model(
           activation_func=training_params.activation_func,
           patience=training_params.early_stopping_patience,
           n_cv_folds=training_params.n_cv_folds,
+          min_steps=training_params.min_steps,
           model_checkpoint=model_save_location)
       eval_results = evaluation.EvalResults(rmse=rmse)
 
