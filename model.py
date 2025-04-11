@@ -175,9 +175,9 @@ class KLCustomLoss:
 
 
 
-def get_early_stopping_callback(patience: int):
+def get_early_stopping_callback(patience: int, min_steps: int):
   return EarlyStopping(monitor='val_loss', patience=patience, min_delta=0.001,
-                       verbose=1, restore_best_weights=True, start_from_epoch=0)
+                       verbose=1, restore_best_weights=True, start_from_epoch=min_steps)
 
 # I was experimenting with models that took longer to train, and used this
 # checkpointing callback to periodically save the model. It's optional.
