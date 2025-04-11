@@ -507,6 +507,9 @@ def load_dataset(path: str,
   for name, geotiff in side_raster_input.items():
     df = df[df[name].notnull()]
 
+  # Shuffle the dataset
+  df = df.sample(frac=1).reset_index(drop=True)
+  
   X = df.drop(df.columns.difference(columns_to_keep), axis=1)
   Y = df[[mean_label, var_label]]
 

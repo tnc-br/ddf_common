@@ -242,7 +242,7 @@ def cross_val_with_best_model(
       'loss_per_fold': loss_per_fold,
       'mean_rmse': mean_rmse, 
       'var_rmse': var_rmse
-    }   
+    }
 
     # Return the model trained on all data.
     print("Training on all data")
