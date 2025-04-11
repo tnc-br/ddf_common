@@ -215,7 +215,6 @@ def cross_val_with_best_model(
     kf = KFold(n_splits=n_cv_folds)
     predictions_per_fold = {}
     loss_per_fold = {}
-    rmse_per_fold = {}
 
     for fold, (train_index, val_index) in enumerate(kf.split(sp.train.X)):
         print(f"Training fold #{fold} ||| (train_index_start: {train_index}, val_index_start: {val_index})")
@@ -227,7 +226,6 @@ def cross_val_with_best_model(
             X_train=X_train, Y_train=Y_train,
             validation_data=(X_val, Y_val), 
             **fit_kwargs)
-        loss_per_fold[fold] = evaluate_fn(model, X_val, Y_val)
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
@@ -239,7 +237,6 @@ def cross_val_with_best_model(
         mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
-      'loss_per_fold': loss_per_fold,
       'mean_rmse': mean_rmse, 
       'var_rmse': var_rmse
     }
@@ -374,6 +371,7 @@ def train(
     model_checkpoint: str):
   print("==================")
   print(run_id)
+  rmse = None
   history, model, maybe_cv_results = train_or_update_variational_model(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
@@ -383,19 +381,20 @@ def train(
   if maybe_cv_results:
     print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
     print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
-    print('Avg KL loss across folds: ', statistics.mean(maybe_cv_results['loss_per_fold'].values()))
+    rmse = maybe_cv_results
 
   render_plot_loss(history, run_id+" kl_loss")
   best_epoch_index = history.history['val_loss'].index(min(history.history['val_loss']))
   print('Val loss:', history.history['val_loss'][best_epoch_index])
   print('Train loss:', history.history['loss'][best_epoch_index])
-  
-  rmse = None
+
   if sp.test:
     print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
     predictions = model.predict_on_batch(sp.test.X)
     predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
-    rmse = np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label]))
+    rmse = {
+      'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
+      'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
+    }
     print("dO18 RMSE: "+ str(rmse))
   return model, rmse
-
