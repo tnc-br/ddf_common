@@ -229,21 +229,20 @@ def cross_val_with_best_model(
             **fit_kwargs)
         loss_per_fold[fold] = evaluate_fn(model, X_val, Y_val)
 
-        predictions = model.predict_on_batch(X_val) 
-        mean_rmse, var_rmse = np.sqrt(
-            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
-        rmse_per_fold[fold] = (mean_rmse, var_rmse)
+        predictions = model.predict_on_batch(X_val)
+        predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
-    mean_rmse_of_all_folds = np.average([fold[0] for fold in rmse_per_fold])
-    var_rmse_of_all_folds = np.average([fold[1] for fold in rmse_per_fold])
+    all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
+    mean_rmse, var_rmse = np.sqrt(
+        mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
       'loss_per_fold': loss_per_fold,
-      'mean_rmse': mean_rmse_of_all_folds, 
-      'var_rmse': var_rmse_of_all_folds
-    }    
+      'mean_rmse': mean_rmse, 
+      'var_rmse': var_rmse
+    }   
 
     # Return the model trained on all data.
     print("Training on all data")
