@@ -94,6 +94,10 @@ def get_predictions_at_each_pixel(
 
     if (len(rows) > 0):
       X = pd.DataFrame.from_dict(rows)
+      if feature_transformer:
+        X = pd.DataFrame(
+          feature_transformer.transform(X),
+          index=X.index, columns=X.columns)
       predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
@@ -194,8 +198,13 @@ def generate_isoscapes_from_variational_model(
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
+  feature_transformer = None
+  if hasattr(vi_model, "transformer"):
+    feature_transformer = vi_model.transformer
+
   preds = get_predictions_at_each_pixel(
     vi_model, input_geotiffs, output_resolution, 
-    geometry_mask=arbitrary_geotiff)
+    geometry_mask=arbitrary_geotiff,
+    feature_transformer=feature_transformer)
   save_numpy_to_geotiff(
       output_resolution, preds, output_geotiff_save_location)
