@@ -81,7 +81,9 @@ class TFModel(Model):
     def _load_tf_model(self, tf_model_path: str) -> tf.keras.Model:
         return tf.keras.models.load_model(tf_model_path)
     
-    def predict_on_batch(self, X: pd.DataFrame):
+    def predict_on_batch(self, X: pd.DataFrame, is_normalized=False):
+        if not is_normalized:
+            X = self._apply_transformer(X)
         return self.vi_model.predict_on_batch(X)
 
     def training_column_names(self) -> typing.List[str]:
@@ -227,8 +229,12 @@ def cross_val_with_best_model(
             validation_data=(X_val, Y_val), 
             **fit_kwargs)
 
-        predictions = model.predict_on_batch(X_val)
+        predictions = model.predict_on_batch(X_val, is_normalized=True)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
+        fold_mean_rmse, fold_var_rmse = np.sqrt(
+            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
+        print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
+        print(f'''var_rmse for fold #{fold}: {fold_var_rmse}''')
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
