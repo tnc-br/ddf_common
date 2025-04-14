@@ -6,6 +6,7 @@ import typing
 import numpy as np
 import pandas as pd
 from osgeo import gdal, gdal_array, osr
+from sklearn.compose import ColumnTransformer
 from tqdm import tqdm
 
 _WARNING_COLOR = '\033[91m'
@@ -46,7 +47,8 @@ def get_predictions_at_each_pixel(
     model: model.Model,
     geotiffs: dict[str, raster.AmazonGeoTiff],
     bounds: raster.Bounds,
-    geometry_mask: raster.AmazonGeoTiff=None):
+    geometry_mask: raster.AmazonGeoTiff=None,
+    feature_transformer: ColumnTransformer=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
   at that pixel and passing the parameters to the model. 
