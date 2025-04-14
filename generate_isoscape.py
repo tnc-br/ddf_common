@@ -6,6 +6,7 @@ import typing
 import numpy as np
 import pandas as pd
 from osgeo import gdal, gdal_array, osr
+from sklearn.compose import ColumnTransformer
 from tqdm import tqdm
 
 _WARNING_COLOR = '\033[91m'
@@ -46,7 +47,8 @@ def get_predictions_at_each_pixel(
     model: model.Model,
     geotiffs: dict[str, raster.AmazonGeoTiff],
     bounds: raster.Bounds,
-    geometry_mask: raster.AmazonGeoTiff=None):
+    geometry_mask: raster.AmazonGeoTiff=None,
+    feature_transformer: ColumnTransformer=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
   at that pixel and passing the parameters to the model. 
@@ -55,11 +57,11 @@ def get_predictions_at_each_pixel(
   to fit training data.
   
   `model`: Tensorflow model used to make predictions
-  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
-                         Input must be transformed prior to predictions
   `geotiffs`: The set of geotiffs required to make the prediction
   `bounds`: Every pixel within these bounds will have a prediction made on it
-  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
+  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`
+  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
+                         Input must be transformed prior to predictions."""
 
   check_same_order(list(geotiffs.keys()), model.training_column_names())
 
@@ -94,6 +96,10 @@ def get_predictions_at_each_pixel(
 
     if (len(rows) > 0):
       X = pd.DataFrame.from_dict(rows)
+      if feature_transformer:
+        X = pd.DataFrame(
+          feature_transformer.transform(X),
+          index=X.index, columns=X.columns)
       predictions = model.predict_on_batch(X)
 
       means_np = predictions[:, 0]
@@ -194,8 +200,13 @@ def generate_isoscapes_from_variational_model(
   base_bounds = raster.get_extent(arbitrary_geotiff.gdal_dataset)
   output_resolution = raster.create_bounds_from_res(res_x, res_y, base_bounds) 
 
+  feature_transformer = None
+  if hasattr(vi_model, "transformer"):
+    feature_transformer = vi_model.transformer
+
   preds = get_predictions_at_each_pixel(
     vi_model, input_geotiffs, output_resolution, 
-    geometry_mask=arbitrary_geotiff)
+    geometry_mask=arbitrary_geotiff,
+    feature_transformer=feature_transformer)
   save_numpy_to_geotiff(
       output_resolution, preds, output_geotiff_save_location)

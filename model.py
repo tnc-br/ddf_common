@@ -229,6 +229,10 @@ def cross_val_with_best_model(
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
+        fold_mean_rmse, fold_var_rmse = np.sqrt(
+            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
+        print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
+        print(f'''var_rmse for fold #{fold}: {fold_var_rmse}''')
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
