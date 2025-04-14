@@ -57,11 +57,11 @@ def get_predictions_at_each_pixel(
   to fit training data.
   
   `model`: Tensorflow model used to make predictions
-  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
-                         Input must be transformed prior to predictions
   `geotiffs`: The set of geotiffs required to make the prediction
   `bounds`: Every pixel within these bounds will have a prediction made on it
-  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`."""
+  `geometry_mask`: If specified, only make predictions within this mask and within `bounds`
+  `feature_transformer`: ScikitLearn ColumnTransformer storing transformations of columns
+                         Input must be transformed prior to predictions."""
 
   check_same_order(list(geotiffs.keys()), model.training_column_names())
 
