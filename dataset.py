@@ -393,6 +393,7 @@ def create_fraudulent_samples(
   max_random_sample_attempts = 1000
   count = 0
 
+  print("real_samples_code", real_samples_code)
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
