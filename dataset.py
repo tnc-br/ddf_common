@@ -396,6 +396,8 @@ def create_fraudulent_samples(
   for coord, lab_samp in real_samples_code:
     if lab_samp.size <= 1:
       continue
+    print("count: ", count)
+    print("limit: ", (real_samples.size().shape[0] * sample_drop_rate))
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
       break
     for i_fake_sample in range(fake_samples_per_sample):
