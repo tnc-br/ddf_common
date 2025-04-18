@@ -393,14 +393,9 @@ def create_fraudulent_samples(
   max_random_sample_attempts = 1000
   count = 0
 
-  print("real_samples_code", real_samples_code)
   for coord, lab_samp in real_samples:
     if lab_samp.size <= 1:
       continue
-    print("count: ", count)
-    print("real_samples.size()", real_samples.size())
-    print(fake_sample.shape)
-    print("limit: ", (real_samples.size().shape[0] * sample_drop_rate))
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
       break
     for i_fake_sample in range(fake_samples_per_sample):
@@ -412,7 +407,6 @@ def create_fraudulent_samples(
         attempts += 1
       if attempts == max_random_sample_attempts:
         continue
-      print(lab_samp.shape[0])
       for i in range(lab_samp.shape[0]):
           new_row = {'Code': f"fake_mad{count}", 'lat': lat, 'long': lon,'fraud': True }
           for element in elements:
