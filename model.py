@@ -121,6 +121,7 @@ def sample_normal_distribution(
 
     return sample_mean, sample_stdev
 
+@keras.saving.register_keras_serializable()
 def sum_of_mse_loss(y_true, y_pred):
     """
     Custom loss function that calculates the sum of MSE for two concatenated outputs.
