@@ -121,6 +121,43 @@ def sample_normal_distribution(
 
     return sample_mean, sample_stdev
 
+@keras.saving.register_keras_serializable(package="Custom", name="KLCustomLoss")
+class KLCustomMse:
+    def __init__(self):
+        pass
+
+    def mse(self, real, predicted):
+        '''
+        real: tf.Tensor of the real mean and standard deviation of sample to compare
+        predicted: tf.Tensor of the predicted mean and standard deviation to compare
+        sample: Whether or not to sample the predicted distribution to get a new
+                mean and standard deviation.
+        '''
+        y_true_mean = y_true[:, 0:1]  # Shape: (batch_size, 1)
+        y_pred_mean = y_pred[:, 0:1]  # Shape: (batch_size, 1)
+
+        # Slice to get the variance component (e.g., the second element/column)
+        y_true_var = y_true[:, 1:2]   # Shape: (batch_size, 1)
+        y_pred_var = y_pred[:, 1:2]   # Shape: (batch_size, 1)
+
+        # Calculate MSE for each component
+        # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
+        loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
+        loss_var = tf.keras.losses.mean_squared_error(y_true_var, y_pred_var)
+
+        # Sum the losses. Keras will handle averaging over the batch.
+        total_loss = loss_mean + loss_var
+        return total_loss
+    
+    def __call__(self, real, predicted):
+        return self.mse(real, predicted)
+
+    def get_config(self):
+        return {}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)  # Create an instance using the config
 
 # log(σ2/σ1) + ( σ1^2+(μ1−μ2)^2 ) / 2* σ^2   − 1/2
 @keras.saving.register_keras_serializable(package="Custom", name="KLCustomLoss")
@@ -275,7 +312,6 @@ def train_or_update_variational_model(
                       get_checkpoint_callback(model_file)]
     def build_model():
         tf.keras.utils.set_random_seed(18731)
-        tf.keras.config.enable_unsafe_deserialization()
         if not use_checkpoint:
             inputs = keras.Input(shape=(sp.train.X.shape[1],))
             x = inputs
@@ -294,38 +330,25 @@ def train_or_update_variational_model(
 
             # Invert the normalization on our outputs
             mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-            extracted_mean = np.float32(mean_scaler.mean_)
-            extracted_var_for_scaling_mean = np.float32(mean_scaler.var_)
-            final_mean_output = keras.layers.Lambda(
-                lambda x: x * extracted_var_for_scaling_mean + extracted_mean,
-                name='final_mean_output',
-                output_shape=(1,) 
-            )(mean_output)
+            untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
 
             var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
             unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-            final_variance_output = SoftplusLayer(name='final_variance_output')(unscaled_var)
+            untransformed_var = SoftplusLayer()(unscaled_var)
 
             # Output mean, tuples.
-            model = keras.Model(inputs=inputs, outputs=[final_mean_output, final_variance_output])
+            outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
+            model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             model.compile( 
                 optimizer=optimizer, 
-                loss={
-                    'final_mean_output': 'mean_squared_error',  
-                    'final_variance_output': 'mean_squared_error' 
-                },
-                metrics={
-                    'final_mean_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_mean'),
-                    'final_variance_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_var')
-                }
-            )
+                loss=KLCustomMse)
             model.summary()
         else:
             model = keras.models.load_model(
                 model_file,
-                custom_objects={"KLCustomLoss": KLCustomLoss})
+                custom_objects={"KLCustomMse": KLCustomMse})
         model.save(model_file)
         dump(sp.feature_scaler, f"{model_file.strip('.keras')}.pkl")
         packaged_model = TFModel(model_file, f"{model_file.strip('.keras')}.pkl")
