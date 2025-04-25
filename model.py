@@ -296,7 +296,7 @@ def train_or_update_variational_model(
             extracted_mean = np.float32(mean_scaler.mean_)
             extracted_var_for_scaling_mean = np.float32(mean_scaler.var_)
             final_mean_output = keras.layers.Lambda(
-                lambda x: x *extracted_var_for_scaling_mean + extracted_mean
+                lambda x: x * extracted_var_for_scaling_mean + extracted_mean,
                 name='final_mean_output' 
             )(mean_output)
 
