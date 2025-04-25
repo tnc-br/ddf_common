@@ -141,8 +141,11 @@ def sum_of_mse_loss(y_true, y_pred):
 
     # Calculate MSE for each component
     # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
-    loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
-    loss_var = tf.keras.losses.mean_squared_error(y_true_var, y_pred_var)
+    mse_calculator = tf.keras.losses.MeanSquaredError()
+
+    # Calculate MSE for each component using the instantiated class
+    loss_mean = mse_calculator(y_true_mean, y_pred_mean)
+    loss_var = mse_calculator(y_true_var, y_pred_var)
 
     # Sum the losses. Keras will handle averaging over the batch.
     total_loss = loss_mean + loss_var
