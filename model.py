@@ -275,6 +275,7 @@ def train_or_update_variational_model(
                       get_checkpoint_callback(model_file)]
     def build_model():
         tf.keras.utils.set_random_seed(18731)
+        tf.keras.config.enable_unsafe_deserialization()
         if not use_checkpoint:
             inputs = keras.Input(shape=(sp.train.X.shape[1],))
             x = inputs
