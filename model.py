@@ -298,7 +298,8 @@ def train_or_update_variational_model(
             extracted_var_for_scaling_mean = np.float32(mean_scaler.var_)
             final_mean_output = keras.layers.Lambda(
                 lambda x: x * extracted_var_for_scaling_mean + extracted_mean,
-                name='final_mean_output' 
+                name='final_mean_output',
+                output_shape=(1,) 
             )(mean_output)
 
             var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
