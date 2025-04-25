@@ -303,8 +303,7 @@ def train_or_update_variational_model(
             final_variance_output = SoftplusLayer(name='final_variance_output')(unscaled_var)
 
             # Output mean, tuples.
-            outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
-            model = keras.Model(inputs=inputs, outputs=outputs)
+            model = keras.Model(inputs=inputs, outputs=[final_mean_output, final_variance_output])
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             model.compile( 
