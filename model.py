@@ -293,22 +293,31 @@ def train_or_update_variational_model(
 
             # Invert the normalization on our outputs
             mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-            untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
+            final_mean_output = keras.layers.Lambda(
+                lambda x: x * mean_scaler.var_ + mean_scaler.mean_,
+                name='final_mean_output' 
+            )(mean_output)
 
             var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
             unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-            untransformed_var = SoftplusLayer()(unscaled_var)
+            final_variance_output = SoftplusLayer(name='final_variance_output')(unscaled_var)
 
             # Output mean, tuples.
             outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
-            double_sided_kl_tf = tf.constant(double_sided_kl)
-            num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
             model.compile( 
                 optimizer=optimizer, 
-                loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
+                loss={
+                    'final_mean_output': 'mean_squared_error',  
+                    'final_variance_output': 'mean_squared_error' 
+                },
+                metrics={
+                    'final_mean_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_mean'),
+                    'final_variance_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_var')
+                }
+            )
             model.summary()
         else:
             model = keras.models.load_model(
