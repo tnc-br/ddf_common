@@ -292,11 +292,11 @@ def train_or_update_variational_model(
                 1, name='var_output', kernel_initializer=glorot_normal)(x)
 
             # Invert the normalization on our outputs
+            mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
             extracted_mean = np.float32(mean_scaler.mean_)
             extracted_var_for_scaling_mean = np.float32(mean_scaler.var_)
-            mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
             final_mean_output = keras.layers.Lambda(
-                lambda x: x * extracted_var_for_scaling_mean + extracted_mean,
+                lambda x: x * mean_scaler.var_ + mean_scaler.mean_,
                 name='final_mean_output' 
             )(mean_output)
 
