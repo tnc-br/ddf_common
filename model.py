@@ -280,35 +280,56 @@ def train_or_update_variational_model(
             x = inputs
             for layer_size in hidden_layers:
                 x = keras.layers.Dense(
-                    layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+                    layer_size, activation=activation_func, kernel_initializer=glorot_normal,
+                    kernel_regularizer=regularizers.l2(0))(x)
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
 
-            mean_output = keras.layers.Dense(
-                1, name='mean_output', kernel_initializer=glorot_normal)(x)
+            # Raw outputs from dense layers before unscaling
+            mean_dense_output = keras.layers.Dense(
+                1, name='mean_dense_output', kernel_initializer=glorot_normal)(x)
 
-            # We can not have negative variance. Apply very little variance.
-            var_output = keras.layers.Dense(
-                1, name='var_output', kernel_initializer=glorot_normal)(x)
+            var_dense_output = keras.layers.Dense(
+                1, name='var_dense_output',
+                kernel_initializer=glorot_normal,
+                kernel_regularizer=regularizers.l2(0))(x) # Original regularizer for var_output was l2(0)
 
-            # Invert the normalization on our outputs
+            # Invert the normalization on our outputs and create named output layers
             mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-            untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
+            # Use a Lambda layer to make the unscaling operation part of the Keras graph and assign a name
+            final_mean_output = keras.layers.Lambda(
+                lambda t: t * mean_scaler.var_ + mean_scaler.mean_,
+                name='final_mean_output' # This name is used to assign the loss
+            )(mean_dense_output)
 
             var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
-            unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-            untransformed_var = SoftplusLayer()(unscaled_var)
+            # Use a Lambda layer for the initial unscaling of variance
+            unscaled_var = keras.layers.Lambda(
+                lambda t: t * var_scaler.scale_ + var_scaler.min_,
+                name='unscaled_variance_output'
+            )(var_dense_output)
+            # Apply Softplus and name the final variance output
+            final_var_output = SoftplusLayer(name='final_variance_output')(unscaled_var) # This name is used to assign the loss
 
-            # Output mean, tuples.
-            outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
-            model = keras.Model(inputs=inputs, outputs=outputs)
+            # Define the model with two distinct outputs
+            model = keras.Model(inputs=inputs, outputs=[final_mean_output, final_var_output])
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
-            double_sided_kl_tf = tf.constant(double_sided_kl)
-            num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
-            model.compile( 
-                optimizer=optimizer, 
-                loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
+
+            # Compile the model with RMSE loss for each output head.
+            # Keras will sum the losses from each output to get the total loss.
+            model.compile(
+                optimizer=optimizer,
+                loss={
+                    'final_mean_output': 'mean_squared_error',  # or tf.keras.losses.MeanSquaredError()
+                    'final_variance_output': 'mean_squared_error' # or tf.keras.losses.MeanSquaredError()
+                },
+                metrics={
+                    'final_mean_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_mean'),
+                    'final_variance_output': tf.keras.metrics.RootMeanSquaredError(name='rmse_var')
+                }
+            )
+            
             model.summary()
         else:
             model = keras.models.load_model(
