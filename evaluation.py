@@ -80,7 +80,9 @@ def generate_fake_samples(
   trusted_buffer_radius: int,
   real_samples_data: pd.DataFrame,
   elements: List[str],
-  reference_isoscapes: List[raster.AmazonGeoTiff]):
+  reference_isoscapes: List[raster.AmazonGeoTiff],
+  fake_sample_drop_rate:float=0.0,
+  fake_samples_per_sample:int=1):
   fake_samples = {}
   for max_radius in range(start_max_fraud_radius, end_max_fraud_radius+1, radius_pace):
     fake_samples[max_radius] = dataset.create_fraudulent_samples(
@@ -88,7 +90,9 @@ def generate_fake_samples(
       reference_isoscapes,
       elements,
       max_radius,
-      trusted_buffer_radius)
+      trusted_buffer_radius,
+      fake_sample_drop_rate,
+      fake_samples_per_sample)
   return fake_samples
 
 def find_p_value(
@@ -218,7 +222,9 @@ def evaluate(
   start_max_fraud_radius: int,
   end_max_fraud_radius: int,
   radius_pace: int,
-  trusted_buffer_radius: int) -> Dict[str, Any]:
+  trusted_buffer_radius: int,
+  fake_sample_drop_rate:float=0.0,
+  fake_samples_per_sample:int=1) -> Dict[str, Any]:
   '''
   Runs a minimal one-sided evaluation pipeline. 
   '''
@@ -257,7 +263,9 @@ def evaluate(
     trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
     elements=isotope_column_names,
-    reference_isoscapes=[means_isoscape, vars_isoscape])
+    reference_isoscapes=[means_isoscape, vars_isoscape],
+    fake_sample_drop_rate=fake_sample_drop_rate,
+    fake_samples_per_sample=fake_samples_per_sample)
   
   # Test the isoscape against the mixture of real and fake samples. 
   auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
