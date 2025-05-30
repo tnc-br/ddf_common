@@ -1,6 +1,7 @@
 from sklearn.metrics import root_mean_squared_error
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import auc
+from sklearn.metrics import roc_auc_score
 import raster
 import pandas as pd
 import dataset
