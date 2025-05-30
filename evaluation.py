@@ -51,6 +51,27 @@ def isoscape_precision_recall_thresholds(
 
   return precision_recall_curve(y_true, y_pred)
 
+def isoscape_roc_auc_score(
+    test_dataset: pd.DataFrame,
+    isotope_column_names: list[str],
+    means_isoscapes: list[raster.AmazonGeoTiff],
+    vars_isoscapes: list[raster.AmazonGeoTiff]) -> list[list[float]]:
+  predictions = hypothesis.get_predictions(
+    sample_data=test_dataset,
+    isotope_column_names=isotope_column_names,
+    means_isoscapes=means_isoscapes,
+    variances_isoscapes=vars_isoscapes,
+    sample_size_per_location=5)
+
+  predictions.dropna(subset=['fraud', 'fraud_p_value'], inplace=True)
+
+  y_true = predictions['fraud']
+  # Fraud p value is lower the more positive a prediction/label is.
+  # Inverting it gives us the probability of positive label class (fraud).
+  y_pred = 1 - predictions['fraud_p_value']
+
+  return roc_auc_score(y_true, y_pred)
+
 def generate_fake_samples(
   start_max_fraud_radius: int, 
   end_max_fraud_radius: int,
@@ -107,6 +128,7 @@ def evaluate_fake_true_mixture(
   precision_targets_found = {}
   recall_targets_found = {}
   pr_curves = {}
+  auc_roc_scores = {}
 
   for radius, fake_sample in dist_to_fake_samples.items():
     test_dataset = pd.concat([real, pd.DataFrame(fake_sample)], ignore_index=True)
@@ -141,7 +163,17 @@ def evaluate_fake_true_mixture(
     p_values_found[radius] = p_value_found[0]
     precision_targets_found[radius] = precision_target_found[0]
     recall_targets_found[radius] = recall_target_found[0]
-  return auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves
+
+    radius_roc_auc_score = isoscape_roc_auc_score(
+        test_dataset=test_dataset,
+        isotope_column_names=isotope_column_names,
+        means_isoscapes=mean_isoscapes,
+        vars_isoscapes=var_isoscapes
+    )
+    auc_roc_scores[radius] = radius_roc_auc_score
+
+
+  return auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores
 
 @dataclass
 class EvalResults:
@@ -154,6 +186,7 @@ class EvalResults:
   precision_targets_found: Dict[int, float] = field(default_factory=dict)
   recall_targets_found: Dict[int, float] = field(default_factory=dict)
   pr_curves: Dict[int, Dict[str, List[float]]] = field(default_factory=dict)
+  auc_roc_scores: Dict[int, float] = field(default_factory=dict)
 
   def convert_to_bq_dict(self):
     bq_dict = self.rmse
@@ -166,6 +199,7 @@ class EvalResults:
       radius_result['precision_target'] = self.precision_targets_found[radius]
       radius_result['recall_target'] = self.recall_targets_found[radius]
       radius_result['pr_curve'] = self.pr_curves[radius]
+      radius_result['auc_roc_score'] = self.auc_roc_scores[radius]
       bq_dict['per_radius_eval'].append(radius_result)
     return bq_dict
 
@@ -225,7 +259,7 @@ def evaluate(
     reference_isoscapes=[means_isoscape, vars_isoscape])
   
   # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=[means_isoscape],
@@ -234,4 +268,4 @@ def evaluate(
     precision_target=precision_target,
     recall_target=recall_target)
 
-  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves)
+  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores)
