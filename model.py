@@ -395,7 +395,7 @@ def train_or_update_variational_model(
         
         # Pass in validation set and build model in a single run.
         model = build_model()
-        history = model.fit(sp.train.X, sp.train.Y['d18O_mean'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+        history = model.fit(sp.train.X, sp.train.Y['d18O_var'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model.vi_model, None
     else:
