@@ -144,11 +144,12 @@ def sum_of_mse_loss(y_true, y_pred):
     mse_calculator = tf.keras.losses.MeanSquaredError()
 
     # Calculate MSE for each component using the instantiated class
-    loss_mean = mse_calculator(y_true_mean, y_pred_mean)
+    # loss_mean = mse_calculator(y_true_mean, y_pred_mean)
     loss_var = mse_calculator(y_true_var, y_pred_var)
 
     # Sum the losses. Keras will handle averaging over the batch.
-    total_loss = loss_mean + loss_var
+    # total_loss = loss_mean + loss_var
+    total_loss = loss_var
     return total_loss
 
 @keras.saving.register_keras_serializable(package="Custom", name="KLCustomMse")
@@ -172,12 +173,13 @@ class KLCustomMse:
 
         # Calculate MSE for each component
         # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
-        loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
+        # loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
         loss_var = tf.keras.losses.mean_squared_error(y_true_var, y_pred_var)
 
         # Sum the losses. Keras will handle averaging over the batch.
-        total_loss = loss_mean + loss_var
-        return total_loss
+        # total_loss = loss_mean + loss_var
+        # return total_loss
+        return loss_var
     
     def __call__(self, real, predicted):
         return self.mse(real, predicted)
@@ -338,7 +340,8 @@ def train_or_update_variational_model(
         n_cv_folds: int,
         min_steps: int,
         model_file=None,
-        use_checkpoint=False) -> Model:
+        use_checkpoint=False,
+        mean_label="") -> Model:
     callbacks_list = [get_early_stopping_callback(patience, min_steps),
                       get_checkpoint_callback(model_file)]
     def build_model():
@@ -360,21 +363,21 @@ def train_or_update_variational_model(
                 1, name='var_output', kernel_initializer=glorot_normal)(x)
 
             # Invert the normalization on our outputs
-            mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-            untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
+            # mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
+            # untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
 
             var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
             unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
             untransformed_var = SoftplusLayer()(unscaled_var)
 
             # Output mean, tuples.
-            outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
+            outputs = untransformed_var
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             model.compile( 
                 optimizer=optimizer, 
-                loss=sum_of_mse_loss)
+                loss='mean_squared_error')
             model.summary()
         else:
             model = keras.models.load_model(
@@ -392,7 +395,7 @@ def train_or_update_variational_model(
         
         # Pass in validation set and build model in a single run.
         model = build_model()
-        history = model.fit(sp.train.X, sp.train.Y, verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+        history = model.fit(sp.train.X, sp.train.Y['d18O_mean'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model.vi_model, None
     else:
@@ -446,7 +449,8 @@ def train(
     sp, hidden_layers=hidden_layers, epochs=epochs, batch_size=training_batch_size,
     lr=learning_rate, dropout_rate=dropout_rate, patience=patience, double_sided_kl=double_sided_kl,
     kl_num_samples_from_pred_dist=kl_num_samples_from_pred_dist, activation_func=activation_func,
-    min_steps=min_steps, n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False)
+    min_steps=min_steps, n_cv_folds=n_cv_folds, model_file=model_checkpoint, use_checkpoint=False,
+    mean_label=mean_label)
   
   if maybe_cv_results:
     print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
