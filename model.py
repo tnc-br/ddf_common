@@ -299,19 +299,19 @@ def cross_val_with_best_model(
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
-        fold_mean_rmse, fold_var_rmse = np.sqrt(
-            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
-        print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
+        fold_var_rmse = np.sqrt(
+            mean_squared_error(Y_val['d18O_cel_variance'], predictions, multioutput='raw_values'))
+        # print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
         print(f'''var_rmse for fold #{fold}: {fold_var_rmse}''')
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
     mean_rmse, var_rmse = np.sqrt(
-        mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
+        mean_squared_error(sp.train.Y['d18O_cel_variance'], all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
-      'mean_rmse': mean_rmse, 
+      # 'mean_rmse': mean_rmse, 
       'var_rmse': var_rmse
     }
 
@@ -355,8 +355,8 @@ def train_or_update_variational_model(
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
 
-            mean_output = keras.layers.Dense(
-                1, name='mean_output', kernel_initializer=glorot_normal)(x)
+            # mean_output = keras.layers.Dense(
+            #     1, name='mean_output', kernel_initializer=glorot_normal)(x)
 
             # We can not have negative variance. Apply very little variance.
             var_output = keras.layers.Dense(
@@ -395,7 +395,8 @@ def train_or_update_variational_model(
         
         # Pass in validation set and build model in a single run.
         model = build_model()
-        history = model.fit(sp.train.X, sp.train.Y['d18O_variance'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+        print(sp.train.Y.columns)
+        history = model.fit(sp.train.X, sp.train.Y['d18O_cel_variance'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model.vi_model, None
     else:
@@ -453,7 +454,7 @@ def train(
     mean_label=mean_label)
   
   if maybe_cv_results:
-    print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
+    # print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
     print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
     rmse = maybe_cv_results
 
@@ -465,9 +466,9 @@ def train(
   if sp.test:
     print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
     predictions = model.predict_on_batch(sp.test.X)
-    predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
+    predictions = pd.DataFrame(predictions, columns=[var_label])
     rmse = {
-      'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
+      # 'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
       'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
     }
     print("dO18 RMSE: "+ str(rmse))
