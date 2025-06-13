@@ -254,7 +254,7 @@ def get_early_stopping_callback(patience: int, min_steps: int):
 def get_checkpoint_callback(model_file):
   return ModelCheckpoint(
       model_file,
-      monitor='val_loss', verbose=0, save_best_only=True, mode='min')
+      monitor='loss', verbose=0, save_best_only=True, mode='min')
 
 # You could use:
 @tf.keras.utils.register_keras_serializable()
