@@ -377,7 +377,7 @@ def train_or_update_variational_model(
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             model.compile( 
                 optimizer=optimizer, 
-                loss='mean_squared_error')
+                loss='root_mean_squared_error')
             model.summary()
         else:
             model = keras.models.load_model(
@@ -396,7 +396,7 @@ def train_or_update_variational_model(
         # Pass in validation set and build model in a single run.
         model = build_model()
         print(sp.train.Y.columns)
-        history = model.fit(sp.train.X, sp.train.Y['d18O_cel_variance'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+        history = model.fit(sp.train.X, sp.train.Y['d18O_cel_variance'], verbose=1, validation_data=(sp.val.X, sp.val.Y['d18O_cel_variance']), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model.vi_model, None
     else:
@@ -464,7 +464,7 @@ def train(
   print('Train loss:', history.history['loss'][best_epoch_index])
 
   if sp.test:
-    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
+    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y[var_label], verbose=0))  
     predictions = model.predict_on_batch(sp.test.X)
     predictions = pd.DataFrame(predictions, columns=[var_label])
     rmse = {
