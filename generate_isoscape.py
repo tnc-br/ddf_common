@@ -48,6 +48,7 @@ def get_predictions_at_each_pixel(
     geotiffs: dict[str, raster.AmazonGeoTiff],
     bounds: raster.Bounds,
     geometry_mask: raster.AmazonGeoTiff=None,
+    joint_pred: bool=False,
     feature_transformer: ColumnTransformer=None):
   """Uses `model` to make mean/variance predictions for every pixel in `bounds`.
   Queries are constructed by querying every geotiff in `geotiffs` for information 
@@ -101,14 +102,18 @@ def get_predictions_at_each_pixel(
           feature_transformer.transform(X),
           index=X.index, columns=X.columns)
       predictions = model.predict_on_batch(X)
-
-      means_np = predictions[:, 0]
-      vars_np = predictions[:, 1]
-      for mean, var, (y_idx, month_idx) in zip(means_np, vars_np, row_indexes):
+      
+      y1 = predictions[:, 0]
+      y2 = [0]*len(predictions)
+      if joint_pred:
+        y2 = predictions[:, 1]
+      for a, b, (y_idx, month_idx) in zip(y1, y2, row_indexes):
         predicted_np.mask[x_idx, y_idx, 0] = False # unmask since we have data
-        predicted_np.mask[x_idx, y_idx, 1] = False # unmask since we have data 
-        predicted_np.data[x_idx, y_idx, 0] = mean
-        predicted_np.data[x_idx, y_idx, 1] = var     
+        if joint_pred:
+          predicted_np.mask[x_idx, y_idx, 1] = False # unmask since we have data 
+        predicted_np.data[x_idx, y_idx, 0] = a
+        if joint_pred:
+          predicted_np.data[x_idx, y_idx, 1] = b     
 
   return predicted_np
 
