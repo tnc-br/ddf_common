@@ -144,11 +144,12 @@ def sum_of_mse_loss(y_true, y_pred):
     mse_calculator = tf.keras.losses.MeanSquaredError()
 
     # Calculate MSE for each component using the instantiated class
-    loss_mean = mse_calculator(y_true_mean, y_pred_mean)
+    # loss_mean = mse_calculator(y_true_mean, y_pred_mean)
     loss_var = mse_calculator(y_true_var, y_pred_var)
 
     # Sum the losses. Keras will handle averaging over the batch.
-    total_loss = loss_mean + loss_var
+    # total_loss = loss_mean + loss_var
+    total_loss = loss_var
     return total_loss
 
 @keras.saving.register_keras_serializable(package="Custom", name="KLCustomMse")
@@ -172,12 +173,13 @@ class KLCustomMse:
 
         # Calculate MSE for each component
         # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
-        loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
+        # loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
         loss_var = tf.keras.losses.mean_squared_error(y_true_var, y_pred_var)
 
         # Sum the losses. Keras will handle averaging over the batch.
-        total_loss = loss_mean + loss_var
-        return total_loss
+        # total_loss = loss_mean + loss_var
+        # return total_loss
+        return loss_var
     
     def __call__(self, real, predicted):
         return self.mse(real, predicted)
@@ -297,19 +299,19 @@ def cross_val_with_best_model(
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
-        fold_mean_rmse, fold_var_rmse = np.sqrt(
-            mean_squared_error(Y_val, predictions, multioutput='raw_values'))
-        print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
+        fold_var_rmse = np.sqrt(
+            mean_squared_error(Y_val['d18O_cel_variance'], predictions, multioutput='raw_values'))
+        # print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
         print(f'''var_rmse for fold #{fold}: {fold_var_rmse}''')
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
     mean_rmse, var_rmse = np.sqrt(
-        mean_squared_error(sp.train.Y, all_predictions, multioutput='raw_values'))
+        mean_squared_error(sp.train.Y['d18O_cel_variance'], all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
-      'mean_rmse': mean_rmse, 
+      # 'mean_rmse': mean_rmse, 
       'var_rmse': var_rmse
     }
 
@@ -349,19 +351,27 @@ def train_or_update_variational_model(
             x = inputs
             for layer_size in hidden_layers:
                 x = keras.layers.Dense(
-                    layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+                    layer_size, activation=activation_func, kernel_initializer=glorot_normal, kernel_regularizer=regularizers.l2(0.01))(x)
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
 
             mean_output = keras.layers.Dense(
                 1, name='mean_output', kernel_initializer=glorot_normal)(x)
 
+            # We can not have negative variance. Apply very little variance.
+            # var_output = keras.layers.Dense(
+            #     1, name='var_output', kernel_initializer=glorot_normal)(x)
+
             # Invert the normalization on our outputs
             mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
             untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
 
+            # var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
+            # unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
+            # untransformed_var = SoftplusLayer()(unscaled_var)
+
             # Output mean, tuples.
-            outputs = keras.layers.concatenate([untransformed_mean])
+            outputs = untransformed_mean
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
@@ -385,7 +395,8 @@ def train_or_update_variational_model(
         
         # Pass in validation set and build model in a single run.
         model = build_model()
-        history = model.fit(sp.train.X, sp.train.Y['d18O_mean'], verbose=1, validation_data=sp.val.as_tuple(), shuffle=True,
+        print(sp.train.Y.columns)
+        history = model.fit(sp.train.X, sp.train.Y['d18O_cel_mean'], verbose=1, validation_data=(sp.val.X, sp.val.Y['d18O_cel_mean']), shuffle=True,
                             epochs=epochs, batch_size=batch_size, callbacks=callbacks_list)
         return history, model.vi_model, None
     else:
@@ -443,7 +454,7 @@ def train(
     mean_label=mean_label)
   
   if maybe_cv_results:
-    print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
+    # print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
     print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
     rmse = maybe_cv_results
 
@@ -453,12 +464,12 @@ def train(
   print('Train loss:', history.history['loss'][best_epoch_index])
 
   if sp.test:
-    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y, verbose=0))  
+    print('Test loss:', model.evaluate(x=sp.test.X, y=sp.test.Y[mean_label], verbose=0))  
     predictions = model.predict_on_batch(sp.test.X)
-    predictions = pd.DataFrame(predictions, columns=[mean_label, var_label])
+    predictions = pd.DataFrame(predictions, columns=[mean_label])
     rmse = {
       'mean_rmse': np.sqrt(mean_squared_error(sp.test.Y[mean_label], predictions[mean_label])),
-      'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
+    #   'var_rmse': np.sqrt(mean_squared_error(sp.test.Y[var_label], predictions[var_label])),
     }
     print("dO18 RMSE: "+ str(rmse))
   return model, rmse
