@@ -351,7 +351,7 @@ def train_or_update_variational_model(
             x = inputs
             for layer_size in hidden_layers:
                 x = keras.layers.Dense(
-                    layer_size, activation=activation_func, kernel_initializer=glorot_normal, kernel_regularizer=regularizers.l2(0.2))(x)
+                    layer_size, activation=activation_func, kernel_initializer=glorot_normal, kernel_regularizer=regularizers.l2(0.01))(x)
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
 
