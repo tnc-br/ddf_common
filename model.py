@@ -351,7 +351,7 @@ def train_or_update_variational_model(
             x = inputs
             for layer_size in hidden_layers:
                 x = keras.layers.Dense(
-                    layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+                    layer_size, activation=activation_func, kernel_initializer=glorot_normal, kernel_regularizer=regularizers.l2(0.2))(x)
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
 
@@ -377,7 +377,7 @@ def train_or_update_variational_model(
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             model.compile( 
                 optimizer=optimizer, 
-                loss='root_mean_squared_error')
+                loss='mean_squared_error')
             model.summary()
         else:
             model = keras.models.load_model(
