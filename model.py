@@ -211,6 +211,13 @@ class NLL_from_params():
     
     def __call__(self, real, predicted):
         return self.nll(real, predicted)
+        
+    def get_config(self):
+        """Returns the serializable config dictionary."""
+        # Get the base class's config
+        base_config = super().get_config()
+        # No extra parameters to add, so we just return the base config
+        return base_config
 
 
 def cross_val_with_best_model(
