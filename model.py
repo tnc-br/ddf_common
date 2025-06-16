@@ -192,6 +192,15 @@ class SoftplusLayer(tf.keras.layers.Layer):
     def call(self, inputs):
         return tf.math.log(1 + tf.exp(inputs))
 
+# The loss function is the negative log-likelihood
+def negative_log_likelihood(y_true, y_predicted_dist):
+    # We need to handle both mean and variance from the true labels
+    y_true_mean = y_true[:, 0]
+    # Your variance can be used if you trust it as the ground truth distribution
+    # For now, let's just fit the model to the mean, which is more common.
+    # The predicted distribution from the model will have its own variance.
+    return -tf.reduce_mean(y_predicted_dist.log_prob(y_true_mean))
+
 def cross_val_with_best_model(
     build_model_fn: Callable[[], Model],
     evaluate_fn: Callable[[Model, pd.DataFrame, pd.DataFrame], float],
@@ -276,40 +285,36 @@ def train_or_update_variational_model(
     def build_model():
         tf.keras.utils.set_random_seed(18731)
         if not use_checkpoint:
+            
             inputs = keras.Input(shape=(sp.train.X.shape[1],))
             x = inputs
             for layer_size in hidden_layers:
                 x = keras.layers.Dense(
-                    layer_size, activation=activation_func, kernel_initializer=glorot_normal)(x)
+                    layer_size, activation=activation_func, kernel_initializer='glorot_normal')(x)
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
+                    
+            # The network outputs two values for each prediction: mean and standard deviation
+            params = keras.layers.Dense(2)(x)
+            
+            # Use DistributionLambda to define the output as a Normal distribution
+            # The scale parameter (std dev) must be positive, so we pass it through a softplus function.
+            outputs = tfp.layers.DistributionLambda(
+                lambda t: tfp.distributions.Normal(
+                    loc=t[..., :1],  # First column is the mean
+                    scale=1e-6 + tf.math.softplus(t[..., 1:])  # Second column is for std dev, ensure positivity
+                )
+            )(params)
 
-            mean_output = keras.layers.Dense(
-                1, name='mean_output', kernel_initializer=glorot_normal)(x)
-
-            # We can not have negative variance. Apply very little variance.
-            var_output = keras.layers.Dense(
-                1, name='var_output', kernel_initializer=glorot_normal)(x)
-
-            # Invert the normalization on our outputs
-            mean_scaler = sp.label_scaler.named_transformers_['mean_std_scaler']
-            untransformed_mean = mean_output * mean_scaler.var_ + mean_scaler.mean_
-
-            var_scaler = sp.label_scaler.named_transformers_['var_minmax_scaler']
-            unscaled_var = var_output * var_scaler.scale_ + var_scaler.min_
-            untransformed_var = SoftplusLayer()(unscaled_var)
-
-            # Output mean, tuples.
-            outputs = keras.layers.concatenate([untransformed_mean, untransformed_var])
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
-            double_sided_kl_tf = tf.constant(double_sided_kl)
-            num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
-            model.compile( 
-                optimizer=optimizer, 
-                loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
+            
+            # When compiling, you provide the NLL as the loss function
+            model.compile(optimizer=optimizer, loss=negative_log_likelihood)
             model.summary()
+            
+            return model
         else:
             model = keras.models.load_model(
                 model_file,
