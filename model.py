@@ -190,7 +190,11 @@ def get_checkpoint_callback(model_file):
 import tensorflow_probability as tfp
 
 @keras.saving.register_keras_serializable(package="Custom", name="NLL_from_params")
-class NLL_from_params():
+class NLL_from_params(keras.losses.Loss):
+
+    def __init__(self, name="NLL_from_params", **kwargs):
+        super().__init__(name=name, **kwargs)
+
     def nll(y_true, y_pred_params):
         """
         Negative Log-Likelihood loss function that reconstructs a distribution
@@ -211,7 +215,7 @@ class NLL_from_params():
     
     def __call__(self, real, predicted):
         return self.nll(real, predicted)
-        
+
     def get_config(self):
         """Returns the serializable config dictionary."""
         # Get the base class's config
