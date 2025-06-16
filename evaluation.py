@@ -341,7 +341,7 @@ def evaluate_multiple_elements(
     reference_isoscapes=means_isoscapes + vars_isoscapes)
   
   # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=means_isoscapes,
