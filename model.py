@@ -186,20 +186,6 @@ def get_checkpoint_callback(model_file):
       model_file,
       monitor='val_loss', verbose=0, save_best_only=True, mode='min')
 
-@tf.keras.utils.register_keras_serializable()
-class SoftplusLayer(tf.keras.layers.Layer):
-    def call(self, inputs):
-        return tf.math.log(1 + tf.exp(inputs))
-
-class TFPIndependentNormalWrapper(layers.Layer):
-    def __init__(self, event_shape, name="normal_dist_wrapper", **kwargs):
-        super().__init__(name=name, **kwargs)
-        # We create the TFP layer instance *inside* our custom layer's constructor.
-        self.distribution_layer = tfp.layers.IndependentNormal(event_shape=event_shape)
-
-    def call(self, inputs):
-        # The forward pass of our wrapper simply calls the TFP layer.
-        return self.distribution_layer(inputs)
 
 import tensorflow_probability as tfp
 
@@ -221,14 +207,6 @@ def NLL_from_params(y_true, y_pred_params):
     # Calculate and return the negative log probability
     return -predicted_dist.log_prob(y_true_mean)
 
-# The loss function is the negative log-likelihood
-def negative_log_likelihood(y_true, y_predicted_dist):
-    # We need to handle both mean and variance from the true labels
-    y_true_mean = y_true[:, 0]
-    # Your variance can be used if you trust it as the ground truth distribution
-    # For now, let's just fit the model to the mean, which is more common.
-    # The predicted distribution from the model will have its own variance.
-    return -tf.reduce_mean(y_predicted_dist.log_prob(y_true_mean))
 
 def cross_val_with_best_model(
     build_model_fn: Callable[[], Model],
@@ -352,7 +330,7 @@ def train_or_update_variational_model(
         else:
             model = keras.models.load_model(
                 model_file,
-                custom_objects={"KLCustomLoss": KLCustomLoss})
+                custom_objects={"NLL_from_params": NLL_from_params})
         model.save(model_file)
         dump(sp.feature_scaler, f"{model_file.strip('.keras')}.pkl")
         packaged_model = TFModel(model_file, f"{model_file.strip('.keras')}.pkl")
