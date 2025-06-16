@@ -201,6 +201,26 @@ class TFPIndependentNormalWrapper(layers.Layer):
         # The forward pass of our wrapper simply calls the TFP layer.
         return self.distribution_layer(inputs)
 
+import tensorflow_probability as tfp
+
+def NLL_from_params(y_true, y_pred_params):
+    """
+    Negative Log-Likelihood loss function that reconstructs a distribution
+    from a tensor of predicted parameters.
+    """
+    # Slice the predicted parameters tensor to get loc and scale
+    loc = y_pred_params[:, 0]
+    scale = y_pred_params[:, 1]
+    
+    # Get the ground truth mean value
+    y_true_mean = tf.cast(y_true[:, 0], dtype=tf.float32)
+
+    # Create the predicted distribution inside the loss function
+    predicted_dist = tfp.distributions.Normal(loc=loc, scale=scale)
+
+    # Calculate and return the negative log probability
+    return -predicted_dist.log_prob(y_true_mean)
+
 # The loss function is the negative log-likelihood
 def negative_log_likelihood(y_true, y_predicted_dist):
     # We need to handle both mean and variance from the true labels
@@ -303,26 +323,29 @@ def train_or_update_variational_model(
                 if dropout_rate > 0:
                     x = keras.layers.Dropout(rate=dropout_rate)(x)
                     
-            # The network outputs two values for each prediction: mean and standard deviation
-            params = keras.layers.Dense(2)(x)
 
-            # loc_output = layers.Lambda(lambda t: t[..., :1], name='loc_output')(params)
-            # unscaled_scale_output = layers.Lambda(lambda t: t[..., 1:], name='unscaled_scale_output')(params)
+            # A dense layer to output the raw parameters for loc and scale
+            raw_params = layers.Dense(2, name='raw_params')(x)
 
-            # scale_output = layers.Activation('softplus', name='softplus_activation')(unscaled_scale_output)
-            # scale_output = layers.Lambda(lambda s: s + 1e-6, name='stable_scale')(scale_output)
+            # Explicitly separate loc and scale to apply activation only to scale
+            loc = layers.Lambda(lambda p: p[..., :1], name='loc')(raw_params)
+            unactivated_scale = layers.Lambda(lambda p: p[..., 1:], name='unactivated_scale')(raw_params)
 
-            # # Concatenate the final loc and scale parameters back together.
-            # params = layers.Concatenate(name='final_params')([loc_output, scale_output])
+            # Apply softplus activation AS A LAYER to ensure scale is positive
+            scale = layers.Activation('softplus', name='softplus_scale')(unactivated_scale)
+            # Add a small constant for numerical stability
+            scale = layers.Lambda(lambda s: s + 1e-6, name='stable_scale')(scale)
 
-            outputs = TFPIndependentNormalWrapper(event_shape=1, name='wrapped_normal_distribution')(params)
+            # Concatenate the final parameters back into a single tensor output
+            # The model now correctly outputs a tf.Tensor of shape (None, 2)
+            output_params = layers.Concatenate(name='output_params')([loc, scale])
 
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             
             # When compiling, you provide the NLL as the loss function
-            model.compile(optimizer=optimizer, loss=negative_log_likelihood)
+            model.compile(optimizer=optimizer, loss=NLL_from_params)
             model.summary()
             
             return model
