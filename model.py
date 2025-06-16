@@ -318,7 +318,7 @@ def train_or_update_variational_model(
             # The model now correctly outputs a tf.Tensor of shape (None, 2)
             output_params = layers.Concatenate(name='output_params')([loc, scale])
 
-            model = keras.Model(inputs=inputs, outputs=outputs)
+            model = keras.Model(inputs=inputs, outputs=output_params)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             
