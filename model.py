@@ -246,7 +246,7 @@ class KLCustomLoss:
 
 
 def get_early_stopping_callback(patience: int, min_steps: int):
-  return EarlyStopping(monitor='loss', patience=patience, min_delta=0.001,
+  return EarlyStopping(monitor='val_loss', patience=patience, min_delta=0.001,
                        verbose=1, restore_best_weights=True, start_from_epoch=min_steps)
 
 # I was experimenting with models that took longer to train, and used this
@@ -254,7 +254,7 @@ def get_early_stopping_callback(patience: int, min_steps: int):
 def get_checkpoint_callback(model_file):
   return ModelCheckpoint(
       model_file,
-      monitor='loss', verbose=0, save_best_only=True, mode='min')
+      monitor='val_loss', verbose=0, save_best_only=True, mode='min')
 
 # You could use:
 @tf.keras.utils.register_keras_serializable()
