@@ -173,7 +173,7 @@ def evaluate(
   means_isoscape: raster.AmazonGeoTiff,
   vars_isoscape: raster.AmazonGeoTiff,
   original_dataset: pd.DataFrame,
-  isotope_column_names: List[str],
+  isotope_column_name: str,
   eval_dataset: pd.DataFrame,
   mean_label: str,
   var_label: str,
@@ -212,6 +212,78 @@ def evaluate(
     eval_dataset[['Code','lat','long', mean_label, var_label]],
     original_dataset, how="inner", 
     left_on=['Code', 'lat', 'long'], right_on=['Code', 'lat', 'long'])
+  real = real_samples_data[['Code','lat','long'] + [isotope_column_name]]
+  real = real.assign(fraud=False)
+
+  dist_to_fake_samples = generate_fake_samples(
+    start_max_fraud_radius=start_max_fraud_radius,
+    end_max_fraud_radius=end_max_fraud_radius,
+    radius_pace=radius_pace,
+    trusted_buffer_radius=trusted_buffer_radius, 
+    real_samples_data=real_samples_data,
+    elements=[isotope_column_name],
+    reference_isoscapes=[means_isoscape, vars_isoscape])
+  
+  # Test the isoscape against the mixture of real and fake samples. 
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
+    dist_to_fake_samples=dist_to_fake_samples, 
+    real=real,
+    mean_isoscapes=[means_isoscape],
+    var_isoscapes=[vars_isoscape],
+    isotope_column_names=[isotope_column_name],
+    precision_target=precision_target,
+    recall_target=recall_target)
+
+  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves)
+
+def evaluate_multiple_elements(
+  means_isoscapes: List[raster.AmazonGeoTiff],
+  vars_isoscapes: List[raster.AmazonGeoTiff],
+  original_dataset: pd.DataFrame,
+  isotope_column_names: List[str],
+  eval_dataset: pd.DataFrame,
+  mean_labels: List[str],
+  var_labels: List[str],
+  sample_size_per_location: int,
+  precision_target: float,
+  recall_target: float,
+  start_max_fraud_radius: int,
+  end_max_fraud_radius: int,
+  radius_pace: int,
+  trusted_buffer_radius: int) -> Dict[str, Any]:
+  '''
+  Runs a one-sided evaluation pipeline with multiple elements. 
+  '''
+  assert len(mean_isoscapes) == len(vars_isoscapes) == len(isotope_column_names) == len(mean_labels) == len(var_labels)
+  rmse = {}
+  eval_dataset = eval_dataset.dropna(subset=var_labels)
+  var_predicted_labels = []
+  for i in range(len(isotope_column_names)):
+    # Sanitize
+    mean_predicted_label = mean_labels[i] + "_predicted"
+    var_predicted_label = var_labels[i] + "_predicted"
+    var_predicted_labels.append(var_predicted_label)
+
+    # RMSE
+    isotope_rmse = {}
+    isotope_rmse['mean_rmse'], isotope_rmse['var_rmse'], isotope_rmse['overall_rmse'] = calculate_rmse(
+        eval_dataset, means_isoscapes[i], vars_isoscapes[i], mean_labels[i], var_labels[i],
+        mean_predicted_label, var_predicted_label)
+    rmse[isotope_column_names[i]] = isotope_rmse
+
+  # Group and set up fake data
+  eval_dataset['fraud'] = False
+  eval_dataset['cel_count'] = sample_size_per_location
+  inferences_df = hypothesis.get_predictions_grouped(
+      eval_dataset, mean_labels,var_labels, ['cel_count'],
+      means_isoscapes, vars_isoscapes, sample_size_per_location)
+
+  inferences_df.dropna(subset=var_labels + var_predicted_labels, inplace=True)
+
+  real_samples_data = pd.merge(
+    eval_dataset[['Code','lat','long'] + mean_labels + var_labels],
+    original_dataset, how="inner", 
+    left_on=['Code', 'lat', 'long'], right_on=['Code', 'lat', 'long'])
   real = real_samples_data[['Code','lat','long'] + isotope_column_names]
   real = real.assign(fraud=False)
 
@@ -221,7 +293,7 @@ def evaluate(
     radius_pace=radius_pace,
     trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
-    elements=isotope_column_names,
+    elements=[isotope_column_name],
     reference_isoscapes=[means_isoscape, vars_isoscape])
   
   # Test the isoscape against the mixture of real and fake samples. 
@@ -230,7 +302,7 @@ def evaluate(
     real=real,
     mean_isoscapes=[means_isoscape],
     var_isoscapes=[vars_isoscape],
-    isotope_column_names=isotope_column_names,
+    isotope_column_names=[isotope_column_name],
     precision_target=precision_target,
     recall_target=recall_target)
 
