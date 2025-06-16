@@ -244,6 +244,7 @@ def evaluate_multiple_elements(
   eval_dataset: pd.DataFrame,
   mean_labels: List[str],
   var_labels: List[str],
+  count_labels: List[str],
   sample_size_per_location: int,
   precision_target: float,
   recall_target: float,
@@ -274,17 +275,14 @@ def evaluate_multiple_elements(
   # Group and set up fake data
   eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
-  inferences_df = hypothesis.get_predictions(
-    sample_data=eval_dataset,
-    isotope_column_names=isotope_column_names,
-    means_isoscapes=means_isoscapes,
-    variances_isoscapes=vars_isoscapes,
-    sample_size_per_location=sample_size_per_location)
+  inferences_df = hypothesis.get_predictions_grouped(
+      eval_dataset, mean_labels, var_labels, count_labels,
+      means_isoscapes, vars_isoscapes, sample_size_per_location)
 
   inferences_df.dropna(subset=var_labels + var_predicted_labels, inplace=True)
 
   real_samples_data = pd.merge(
-    eval_dataset[['Code','lat','long'] + mean_labels + var_labels],
+    eval_dataset[['Code','lat','long'] + mean_labels + var_labels + count_labels],
     original_dataset, how="inner", 
     left_on=['Code', 'lat', 'long'], right_on=['Code', 'lat', 'long'])
   real = real_samples_data[['Code','lat','long'] + isotope_column_names]
