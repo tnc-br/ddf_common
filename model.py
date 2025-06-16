@@ -296,15 +296,24 @@ def train_or_update_variational_model(
                     
             # The network outputs two values for each prediction: mean and standard deviation
             params = keras.layers.Dense(2)(x)
-            
-            # Use DistributionLambda to define the output as a Normal distribution
-            # The scale parameter (std dev) must be positive, so we pass it through a softplus function.
+
+            loc_output = layers.Lambda(lambda t: t[..., :1], name='loc_output')(params)
+            unscaled_scale_output = layers.Lambda(lambda t: t[..., 1:], name='unscaled_scale_output')(params)
+
+            scale_output = layers.Activation('softplus', name='softplus_activation')(unscaled_scale_output)
+            scale_output = layers.Lambda(lambda s: s + 1e-6, name='stable_scale')(scale_output)
+
+            # Concatenate the final loc and scale parameters back together.
+            final_params = layers.Concatenate(name='final_params')([loc_output, scale_output])
+
             outputs = tfp.layers.DistributionLambda(
                 lambda t: tfp.distributions.Normal(
-                    loc=t[..., :1],  # First column is the mean
-                    scale=1e-6 + tf.math.softplus(t[..., 1:])  # Second column is for std dev, ensure positivity
-                )
-            )(params)
+                    loc=t[..., :1],
+                    scale=t[..., 1:]
+                ),
+                name='normal_distribution'
+            )(final_params)
+
 
             model = keras.Model(inputs=inputs, outputs=outputs)
 
