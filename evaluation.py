@@ -254,7 +254,7 @@ def evaluate_multiple_elements(
   '''
   Runs a one-sided evaluation pipeline with multiple elements. 
   '''
-  assert len(mean_isoscapes) == len(vars_isoscapes) == len(isotope_column_names) == len(mean_labels) == len(var_labels)
+  assert len(means_isoscapes) == len(vars_isoscapes) == len(isotope_column_names)
   rmse = {}
   eval_dataset = eval_dataset.dropna(subset=var_labels)
   var_predicted_labels = []
@@ -274,9 +274,12 @@ def evaluate_multiple_elements(
   # Group and set up fake data
   eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
-  inferences_df = hypothesis.get_predictions_grouped(
-      eval_dataset, mean_labels,var_labels, ['cel_count'],
-      means_isoscapes, vars_isoscapes, sample_size_per_location)
+  inferences_df = hypothesis.get_predictions(
+    sample_data=eval_dataset,
+    isotope_column_names=isotope_column_names,
+    means_isoscapes=means_isoscapes,
+    variances_isoscapes=vars_isoscapes,
+    sample_size_per_location=sample_size_per_location)
 
   inferences_df.dropna(subset=var_labels + var_predicted_labels, inplace=True)
 
@@ -293,16 +296,16 @@ def evaluate_multiple_elements(
     radius_pace=radius_pace,
     trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
-    elements=[isotope_column_name],
-    reference_isoscapes=[means_isoscape, vars_isoscape])
+    elements=isotope_column_names,
+    reference_isoscapes=means_isoscapes + vars_isoscapes)
   
   # Test the isoscape against the mixture of real and fake samples. 
   auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
-    mean_isoscapes=[means_isoscape],
-    var_isoscapes=[vars_isoscape],
-    isotope_column_names=[isotope_column_name],
+    mean_isoscapes=means_isoscapes,
+    var_isoscapes=vars_isoscapes,
+    isotope_column_names=isotope_column_names,
     precision_target=precision_target,
     recall_target=recall_target)
 
