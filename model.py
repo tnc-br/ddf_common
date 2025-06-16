@@ -297,23 +297,16 @@ def train_or_update_variational_model(
             # The network outputs two values for each prediction: mean and standard deviation
             params = keras.layers.Dense(2)(x)
 
-            loc_output = layers.Lambda(lambda t: t[..., :1], name='loc_output')(params)
-            unscaled_scale_output = layers.Lambda(lambda t: t[..., 1:], name='unscaled_scale_output')(params)
+            # loc_output = layers.Lambda(lambda t: t[..., :1], name='loc_output')(params)
+            # unscaled_scale_output = layers.Lambda(lambda t: t[..., 1:], name='unscaled_scale_output')(params)
 
-            scale_output = layers.Activation('softplus', name='softplus_activation')(unscaled_scale_output)
-            scale_output = layers.Lambda(lambda s: s + 1e-6, name='stable_scale')(scale_output)
+            # scale_output = layers.Activation('softplus', name='softplus_activation')(unscaled_scale_output)
+            # scale_output = layers.Lambda(lambda s: s + 1e-6, name='stable_scale')(scale_output)
 
-            # Concatenate the final loc and scale parameters back together.
-            final_params = layers.Concatenate(name='final_params')([loc_output, scale_output])
+            # # Concatenate the final loc and scale parameters back together.
+            # params = layers.Concatenate(name='final_params')([loc_output, scale_output])
 
-            outputs = tfp.layers.DistributionLambda(
-                lambda t: tfp.distributions.Normal(
-                    loc=t[..., :1],
-                    scale=t[..., 1:]
-                ),
-                name='normal_distribution'
-            )(final_params)
-
+            outputs = tfp.layers.IndependentNormal(event_shape=1, name='normal_distribution')(params)
 
             model = keras.Model(inputs=inputs, outputs=outputs)
 
