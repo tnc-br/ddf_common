@@ -195,26 +195,29 @@ class NLL_from_params(keras.losses.Loss):
     def __init__(self, name="NLL_from_params", **kwargs):
         super().__init__(name=name, **kwargs)
 
-    def nll(y_true, y_pred_params):
+    def call(self, y_true, y_pred_params):
         """
-        Negative Log-Likelihood loss function that reconstructs a distribution
-        from a tensor of predicted parameters.
+        Calculates the loss.
+
+        Args:
+            y_true: Ground truth values. Shape: (batch_size, ...).
+                    The first column is assumed to be the true mean.
+            y_pred_params: Predicted parameters from the model.
+                           Shape: (batch_size, 2).
         """
         # Slice the predicted parameters tensor to get loc and scale
         loc = y_pred_params[:, 0]
         scale = y_pred_params[:, 1]
-        
-        # Get the ground truth mean value
+
+        # Get the ground truth mean value from the labels
         y_true_mean = tf.cast(y_true[:, 0], dtype=tf.float32)
 
-        # Create the predicted distribution inside the loss function
+        # Create the predicted Normal distribution from the parameters
         predicted_dist = tfp.distributions.Normal(loc=loc, scale=scale)
 
-        # Calculate and return the negative log probability
+        # Calculate and return the negative log probability.
+        # Keras automatically handles the reduction (averaging) over the batch.
         return -predicted_dist.log_prob(y_true_mean)
-    
-    def __call__(self, real, predicted):
-        return self.nll(real, predicted)
 
     def get_config(self):
         """Returns the serializable config dictionary."""
