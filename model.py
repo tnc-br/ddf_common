@@ -189,24 +189,28 @@ def get_checkpoint_callback(model_file):
 
 import tensorflow_probability as tfp
 
-@keras.saving.register_keras_serializable()
-def NLL_from_params(y_true, y_pred_params):
-    """
-    Negative Log-Likelihood loss function that reconstructs a distribution
-    from a tensor of predicted parameters.
-    """
-    # Slice the predicted parameters tensor to get loc and scale
-    loc = y_pred_params[:, 0]
-    scale = y_pred_params[:, 1]
+@keras.saving.register_keras_serializable(package="Custom", name="NLL_from_params")
+class NLL_from_params():
+    def nll(y_true, y_pred_params):
+        """
+        Negative Log-Likelihood loss function that reconstructs a distribution
+        from a tensor of predicted parameters.
+        """
+        # Slice the predicted parameters tensor to get loc and scale
+        loc = y_pred_params[:, 0]
+        scale = y_pred_params[:, 1]
+        
+        # Get the ground truth mean value
+        y_true_mean = tf.cast(y_true[:, 0], dtype=tf.float32)
+
+        # Create the predicted distribution inside the loss function
+        predicted_dist = tfp.distributions.Normal(loc=loc, scale=scale)
+
+        # Calculate and return the negative log probability
+        return -predicted_dist.log_prob(y_true_mean)
     
-    # Get the ground truth mean value
-    y_true_mean = tf.cast(y_true[:, 0], dtype=tf.float32)
-
-    # Create the predicted distribution inside the loss function
-    predicted_dist = tfp.distributions.Normal(loc=loc, scale=scale)
-
-    # Calculate and return the negative log probability
-    return -predicted_dist.log_prob(y_true_mean)
+    def __call__(self, real, predicted):
+        return self.nll(real, predicted)
 
 
 def cross_val_with_best_model(
@@ -324,7 +328,7 @@ def train_or_update_variational_model(
             optimizer = keras.optimizers.Adam(learning_rate=lr)
             
             # When compiling, you provide the NLL as the loss function
-            model.compile(optimizer=optimizer, loss=NLL_from_params)
+            model.compile(optimizer=optimizer, loss=NLL_from_params())
             model.summary()
         else:
             model = keras.models.load_model(
