@@ -189,6 +189,7 @@ def get_checkpoint_callback(model_file):
 
 import tensorflow_probability as tfp
 
+@keras.saving.register_keras_serializable()
 def NLL_from_params(y_true, y_pred_params):
     """
     Negative Log-Likelihood loss function that reconstructs a distribution
