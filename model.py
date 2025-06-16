@@ -325,8 +325,6 @@ def train_or_update_variational_model(
             # When compiling, you provide the NLL as the loss function
             model.compile(optimizer=optimizer, loss=NLL_from_params)
             model.summary()
-            
-            return model
         else:
             model = keras.models.load_model(
                 model_file,
