@@ -293,8 +293,8 @@ def cross_val_with_best_model(
 
         model = build_model_fn()
         model.fit(
-            X_train=X_train, Y_train=Y_train,
-            validation_data=(X_val, Y_val), 
+            X_train=X_train, Y_train=Y_train['d18O_cel_variance'],
+            validation_data=(X_val, Y_val['d18O_cel_variance']), 
             **fit_kwargs)
 
         predictions = model.predict_on_batch(X_val)
@@ -307,7 +307,7 @@ def cross_val_with_best_model(
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
-    mean_rmse, var_rmse = np.sqrt(
+    var_rmse = np.sqrt(
         mean_squared_error(sp.train.Y['d18O_cel_variance'], all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
@@ -319,8 +319,8 @@ def cross_val_with_best_model(
     print("Training on all data")
     final_model = build_model_fn()
     training_artifacts = final_model.fit(
-        X_train=X_train, Y_train=Y_train,
-        validation_data=(X_train, Y_train),
+        X_train=X_train, Y_train=Y_train['d18O_cel_variance'],
+        validation_data=(X_train, Y_train['d18O_cel_variance']),
          **fit_kwargs)
 
     return training_artifacts, final_model, cv_artifacts
