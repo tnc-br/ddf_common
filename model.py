@@ -293,34 +293,34 @@ def cross_val_with_best_model(
 
         model = build_model_fn()
         model.fit(
-            X_train=X_train, Y_train=Y_train,
-            validation_data=(X_val, Y_val), 
+            X_train=X_train, Y_train=Y_train['d18O_cel_mean'],
+            validation_data=(X_val, Y_val['d18O_cel_mean']), 
             **fit_kwargs)
 
         predictions = model.predict_on_batch(X_val)
         predictions_per_fold[fold] = pd.DataFrame(predictions, index=X_val.index)
         fold_var_rmse = np.sqrt(
-            mean_squared_error(Y_val['d18O_cel_variance'], predictions, multioutput='raw_values'))
+            mean_squared_error(Y_val['d18O_cel_mean'], predictions, multioutput='raw_values'))
         # print(f'''mean_rmse for fold #{fold}: {fold_mean_rmse}''')
         print(f'''var_rmse for fold #{fold}: {fold_var_rmse}''')
 
     # Concatenate the predictions in the dictionary vertically, compare to whole
     # dataset to get rmse.
     all_predictions = pd.concat(predictions_per_fold.values(), axis=0)
-    mean_rmse, var_rmse = np.sqrt(
-        mean_squared_error(sp.train.Y['d18O_cel_variance'], all_predictions, multioutput='raw_values'))
+    mean_rmse = np.sqrt(
+        mean_squared_error(sp.train.Y['d18O_cel_mean'], all_predictions, multioutput='raw_values'))
 
     cv_artifacts = {
-      # 'mean_rmse': mean_rmse, 
-      'var_rmse': var_rmse
+      'mean_rmse': mean_rmse, 
+    #   'var_rmse': var_rmse
     }
 
     # Return the model trained on all data.
     print("Training on all data")
     final_model = build_model_fn()
     training_artifacts = final_model.fit(
-        X_train=X_train, Y_train=Y_train,
-        validation_data=(X_train, Y_train),
+        X_train=X_train, Y_train=Y_train['d18O_cel_mean'],
+        validation_data=(X_train, Y_train['d18O_cel_mean']),
          **fit_kwargs)
 
     return training_artifacts, final_model, cv_artifacts
@@ -454,8 +454,8 @@ def train(
     mean_label=mean_label)
   
   if maybe_cv_results:
-    # print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
-    print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
+    print('Avg mean RMSE across folds: ', maybe_cv_results['mean_rmse'])
+    # print('Avg var RMSE across folds:', maybe_cv_results['var_rmse'])
     rmse = maybe_cv_results
 
   render_plot_loss(history, run_id+" kl_loss")
