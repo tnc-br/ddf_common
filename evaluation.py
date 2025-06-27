@@ -127,7 +127,7 @@ def evaluate_fake_true_mixture(
   isotope_column_names: List[str],
   precision_target: float,
   recall_target: float
-):
+) -> EvalResults:
   auc_scores = {}
   p_values_found = {}
   precision_targets_found = {}
@@ -178,7 +178,7 @@ def evaluate_fake_true_mixture(
     auc_roc_scores[radius] = radius_roc_auc_score
 
 
-  return auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores
+  return EvalResults(auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores)
 
 @dataclass
 class EvalResults:
@@ -268,7 +268,7 @@ def evaluate(
     fake_samples_per_sample=fake_samples_per_sample)
   
   # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
+  return evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=[means_isoscape],
@@ -276,8 +276,6 @@ def evaluate(
     isotope_column_names=[isotope_column_name],
     precision_target=precision_target,
     recall_target=recall_target)
-
-  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves)
 
 def evaluate_multiple_elements(
   means_isoscapes: List[raster.AmazonGeoTiff],
@@ -345,7 +343,7 @@ def evaluate_multiple_elements(
     fake_samples_per_sample=fake_samples_per_sample)
   
   # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
+  return evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=means_isoscapes,
@@ -353,5 +351,3 @@ def evaluate_multiple_elements(
     isotope_column_names=isotope_column_names,
     precision_target=precision_target,
     recall_target=recall_target)
-
-  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores)
