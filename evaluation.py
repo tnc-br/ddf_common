@@ -294,7 +294,9 @@ def evaluate_multiple_elements(
   start_max_fraud_radius: int,
   end_max_fraud_radius: int,
   radius_pace: int,
-  trusted_buffer_radius: int) -> Dict[str, Any]:
+  trusted_buffer_radius: int,
+  fake_sample_drop_rate:float=0.0,
+  fake_samples_per_sample:int=1) -> Dict[str, Any]:
   '''
   Runs a one-sided evaluation pipeline with multiple elements. 
   '''
