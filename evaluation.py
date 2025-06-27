@@ -263,7 +263,7 @@ def evaluate(
     trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
-    reference_isoscapes=[means_isoscape, vars_isoscape])
+    reference_isoscapes=[means_isoscape, vars_isoscape],
     fake_sample_drop_rate=fake_sample_drop_rate,
     fake_samples_per_sample=fake_samples_per_sample)
   
