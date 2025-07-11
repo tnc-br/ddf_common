@@ -169,7 +169,6 @@ def evaluate_fake_true_mixture(
     precision_targets_found[radius] = precision_target_found[0]
     recall_targets_found[radius] = recall_target_found[0]
 
-    print("Get ROC AUC score")
     radius_roc_auc_score = isoscape_roc_auc_score(
         test_dataset=test_dataset,
         isotope_column_names=isotope_column_names,
@@ -177,7 +176,6 @@ def evaluate_fake_true_mixture(
         vars_isoscapes=var_isoscapes
     )
     auc_roc_scores[radius] = radius_roc_auc_score
-    print(radius_roc_auc_score)
 
 
   return auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores
