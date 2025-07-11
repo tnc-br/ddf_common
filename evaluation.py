@@ -127,7 +127,7 @@ def evaluate_fake_true_mixture(
   isotope_column_names: List[str],
   precision_target: float,
   recall_target: float
-) -> EvalResults:
+):
   auc_scores = {}
   p_values_found = {}
   precision_targets_found = {}
