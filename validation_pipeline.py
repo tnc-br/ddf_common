@@ -1,6 +1,9 @@
 from evaluation import evaluate_multiple_elements
 from dataclasses import dataclass
 
+import raster
+import pandas as pd
+
 _OXYGEN_ISOTOPE_LABEL = "d18O_cel"
 _NITROGEN_ISOTOPE_LABEL = 'd15N_wood'
 _CARBON_ISOTOPE_LABEL = 'd13C_wood'
