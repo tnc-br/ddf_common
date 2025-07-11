@@ -67,7 +67,7 @@ def validation_pipeline(
   if carbon_isoscape_filename:
     means_isoscapes.append(raster.load_raster(raster.get_raster_path(carbon_isoscape_filename), use_only_band_index=0))
     vars_isoscapes.append(raster.load_raster(raster.get_raster_path(carbon_isoscape_filename), use_only_band_index=1))
-    column_names.apppend(_CARBON_ISOTOPE_LABEL)
+    column_names.append(_CARBON_ISOTOPE_LABEL)
 
   # Load Original Dataset
   original_dataset = pd.read_csv(raster.get_sample_db_path(source_dataset_filename), index_col=0)
