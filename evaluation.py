@@ -176,6 +176,7 @@ def evaluate_fake_true_mixture(
         vars_isoscapes=var_isoscapes
     )
     auc_roc_scores[radius] = radius_roc_auc_score
+    print(radius_roc_auc_score)
 
 
   return EvalResults(auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores)
