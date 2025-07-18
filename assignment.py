@@ -9,7 +9,7 @@ def compute_pdf(sample, means_raster, var_raster):
   pdf /= np.nansum(pdf)
   return pdf
 
-def compute_pdf(
+def compute_pdf_isoscapes(
   reported_latitude: float,
   reported_longitude: float,
   oxygen_means_isoscape_filename: str = None,
