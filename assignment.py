@@ -9,6 +9,29 @@ def compute_pdf(sample, means_raster, var_raster):
   pdf /= np.nansum(pdf)
   return pdf
 
+def compute_pdf(
+  reported_latitude: float,
+  reported_longitude: float,
+  oxygen_means_isoscape_filename: str = None,
+  oxygen_vars_isoscape_filename:str = None,
+):
+  if oxygen_means_isoscape_filename and oxygen_vars_isoscape_filename:
+    if oxygen_means_isoscape_filename == oxygen_vars_isoscape_filename:
+      oxygen_means_isoscape = raster.load_raster(
+          raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=0)
+      oxygen_vars_isoscape = raster.load_raster(
+          raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=1)
+    else:
+      oxygen_means_isoscape = raster.load_raster(
+        raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=0)
+      oxygen_vars_isoscape = raster.load_raster(
+        raster.get_raster_path(oxygen_vars_isoscape_filename), use_only_band_index=0)
+  else:
+    raise ValueError("No isoscape(s) provided")
+  sample = oxygen_means_isoscape.value_at(lat=reported_latitude, lon=reported_longitude)
+  return compute_pdf(sample, oxygen_means_isoscape, oxygen_vars_isoscape)
+
+
 def compute_fraud_probability(
     reported_latitude: float,
     reported_longitude: float,
