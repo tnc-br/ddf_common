@@ -94,8 +94,6 @@ def validation_pipeline(
     fake_samples_per_sample=fraud_generation_params.fake_samples_per_sample
   )
 
-  return results
-
 def stamp(filename:str, auc_scores, p_values_found, precisions_target_found, recalls_target_found):
   """
     Adds precision, recall, and p-value thresholds to isoscape metadata for every radius tested in the validation pipeline.
