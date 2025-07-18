@@ -6,7 +6,6 @@ import numpy as np
 # Computes a PDF given a 2D geospatial mean and variance raster, and a sample
 def compute_pdf(sample, means_raster, vars_raster):
   pdf = scipy.stats.norm.pdf(x=sample, loc=means_raster.yearly_masked_image.data, scale=np.sqrt(vars_raster.yearly_masked_image.data))
-  pdf /= np.nansum(pdf)
   return pdf
 
 def compute_pdf_isoscapes(
