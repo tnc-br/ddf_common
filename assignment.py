@@ -33,7 +33,7 @@ def compute_pdf_isoscapes(
   pdf = compute_pdf(sample, oxygen_means_isoscape, oxygen_vars_isoscape)
 
   bounds = raster.get_extent(oxygen_means_isoscape.gdal_dataset)
-  output_resolution = raster.create_bounds_from_res(pdf.shape[0], pdf.shape[1], base_bounds) 
+  output_resolution = raster.create_bounds_from_res(pdf.shape[0], pdf.shape[1], bounds) 
 
   return output_resolution, pdf
 
