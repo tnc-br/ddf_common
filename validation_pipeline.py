@@ -2,6 +2,7 @@ from evaluation import evaluate_multiple_elements
 from dataclasses import dataclass
 from datetime import datetime
 
+import os
 import raster
 import pandas as pd
 
