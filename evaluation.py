@@ -263,7 +263,7 @@ def evaluate(
     trusted_buffer_radius=trusted_buffer_radius, 
     real_samples_data=real_samples_data,
     elements=[isotope_column_name],
-    reference_isoscapes=[means_isoscape, vars_isoscape])
+    reference_isoscapes=[means_isoscape, vars_isoscape],
     fake_sample_drop_rate=fake_sample_drop_rate,
     fake_samples_per_sample=fake_samples_per_sample)
   
@@ -276,8 +276,8 @@ def evaluate(
     isotope_column_names=[isotope_column_name],
     precision_target=precision_target,
     recall_target=recall_target)
-
-  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves)
+  
+  return EvalResults(rmse, auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores)
 
 def evaluate_multiple_elements(
   means_isoscapes: List[raster.AmazonGeoTiff],
@@ -294,7 +294,9 @@ def evaluate_multiple_elements(
   start_max_fraud_radius: int,
   end_max_fraud_radius: int,
   radius_pace: int,
-  trusted_buffer_radius: int) -> Dict[str, Any]:
+  trusted_buffer_radius: int,
+  fake_sample_drop_rate:float=0.0,
+  fake_samples_per_sample:int=1) -> Dict[str, Any]:
   '''
   Runs a one-sided evaluation pipeline with multiple elements. 
   '''
@@ -342,8 +344,7 @@ def evaluate_multiple_elements(
     fake_sample_drop_rate=fake_sample_drop_rate,
     fake_samples_per_sample=fake_samples_per_sample)
   
-  # Test the isoscape against the mixture of real and fake samples. 
-  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves = evaluate_fake_true_mixture(
+  auc_scores, p_values_found, precision_targets_found, recall_targets_found, pr_curves, auc_roc_scores = evaluate_fake_true_mixture(
     dist_to_fake_samples=dist_to_fake_samples, 
     real=real,
     mean_isoscapes=means_isoscapes,
