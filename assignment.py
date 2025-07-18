@@ -28,7 +28,7 @@ def compute_pdf(
         raster.get_raster_path(oxygen_vars_isoscape_filename), use_only_band_index=0)
   else:
     raise ValueError("No isoscape(s) provided")
-  sample = oxygen_means_isoscape.value_at(lat=reported_latitude, lon=reported_longitude)
+  sample = oxygen_means_isoscape.value_at(reported_longitude, reported_latitude)
   return compute_pdf(sample, oxygen_means_isoscape, oxygen_vars_isoscape)
 
 
