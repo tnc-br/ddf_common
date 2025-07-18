@@ -96,7 +96,7 @@ def validation_pipeline(
 
   return results
 
-def stamp(filename:str, auc_scores, p_values_found, precisions_target_found, recalls_target_found):
+def stamp(filename:str, auc_scores, p_values_found, precisions_target_found, recalls_target_found, end_max_fraud_radius):
   """
     Adds precision, recall, and p-value thresholds to isoscape metadata for every radius tested in the validation pipeline.
     Stamping isoscapes:
@@ -118,7 +118,7 @@ def stamp(filename:str, auc_scores, p_values_found, precisions_target_found, rec
     raster.stamp_isoscape(filename, "RECALL_"+str(radius), recalls_target_found[radius])
     raster.stamp_isoscape(filename, "AUC_"+str(radius), auc_scores[radius])
 
-    if radius == END_MAX_FRAUD_RADIUS:
+    if radius == end_max_fraud_radius:
       raster.stamp_isoscape(filename, "P_VALUE_THRESHOLD",  p_values_found[radius])
       raster.stamp_isoscape(filename, "PRECISION", precisions_target_found[radius])
       raster.stamp_isoscape(filename, "RECALL", recalls_target_found[radius])
