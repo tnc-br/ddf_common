@@ -95,3 +95,41 @@ def validation_pipeline(
   )
 
   return results
+
+def stamp(filename:str, auc_scores, p_values_found, precisions_target_found, recalls_target_found):
+  """
+    Adds precision, recall, and p-value thresholds to isoscape metadata for every radius tested in the validation pipeline.
+    Stamping isoscapes:
+    1. p-value threshold where precision = 95% (considered the last radius in the loop to stamp)
+    2. the recall at that level
+    3. the AUC
+    4. the parameters used for validation (% fraud and radius)
+    5. the date.time of validation
+    Input:
+      filename : str
+      GeoTIFF filename (with the full path) of the isoscape to be stamped
+      e.g: /content/gdrive/Shared drives/TNC Fellowship 🌳/4. Isotope Research & Signals/code/amazon_rainforest_files/amazon_rasters/variational/ensemble_with_carbon_brisoisorix/fixed_isorix_carbon_ensemble.tiff
+  """
+
+  for radius in auc_scores.keys():
+    #p-value threshold where precision = precision_target_found
+    raster.stamp_isoscape(filename, "P_VALUE_THRESHOLD_"+str(radius),  p_values_found[radius])
+    raster.stamp_isoscape(filename, "PRECISION_"+str(radius), precisions_target_found[radius])
+    raster.stamp_isoscape(filename, "RECALL_"+str(radius), recalls_target_found[radius])
+    raster.stamp_isoscape(filename, "AUC_"+str(radius), auc_scores[radius])
+
+    if radius == END_MAX_FRAUD_RADIUS:
+      raster.stamp_isoscape(filename, "P_VALUE_THRESHOLD",  p_values_found[radius])
+      raster.stamp_isoscape(filename, "PRECISION", precisions_target_found[radius])
+      raster.stamp_isoscape(filename, "RECALL", recalls_target_found[radius])
+      raster.stamp_isoscape(filename, "AUC", auc_scores[radius])
+
+  #The date/time of validation
+  now = datetime.now()
+  dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+  metadata_name = "DATE_TIME"
+  metadata_value = dt_string
+  raster.stamp_isoscape(filename, metadata_name, metadata_value)
+
+  isoscape_filename =  os.path.basename(filename).strip(".tiff")
+  raster.stamp_isoscape(filename, "REFERENCE_ISOSCAPE_NAME", isoscape_filename)
