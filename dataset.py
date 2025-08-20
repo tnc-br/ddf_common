@@ -393,7 +393,7 @@ def create_fraudulent_samples(
   max_random_sample_attempts = 1000
   count = 0
 
-  for coord, lab_samp in real_samples_code:
+  for coord, lab_samp in real_samples:
     if lab_samp.size <= 1:
       continue
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
