@@ -57,36 +57,27 @@ class PartitionStrategy(Enum):
 
 
 @dataclass
-class FixedPartitionStrategy:
-  '''
-  Defines the parameters for the FIXED partition strategy
-  '''
-  train_fixed_bounds: DatasetGeographicPartitions
-  validation_fixed_bounds: DatasetGeographicPartitions
-  test_fixed_bounds: DatasetGeographicPartitions
-
-
 _FIXED_PARTITION_STRATEGY = FixedPartitionStrategy(
   # Train
   DatasetGeographicPartitions(
-    min_longitude=-62.5,
-    max_longitude=float('inf'),
-    min_latitude=-5,
+    min_longitude=float('-inf'),
+    max_longitude=-58,
+    min_latitude=float('-inf'),
     max_latitude=float('inf'),
   ),
   # Validation
   DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
-    max_longitude=-62.5,
-    min_latitude=-5,
-    max_latitude=float('inf')
+    min_longitude=-58,
+    max_longitude=float('inf'),
+    min_latitude=float('-inf'),
+    max_latitude=-3.9923
   ),
   # Test
   DatasetGeographicPartitions(
-    min_longitude=float('-inf'),
+    min_longitude=-58,
     max_longitude=float('inf'),
-    min_latitude=float('-inf'),
-    max_latitude=-5
+    min_latitude=-3.9923,
+    max_latitude=float('inf')
   )
 )
 
