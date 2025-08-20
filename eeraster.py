@@ -28,6 +28,10 @@ _BUCKET_NAME = "unprocessed-isoscapes"
 # Isoscapes saved here need to be manually copied to prod environments.
 STAGING_OXYGEN_EE_ASSET = "projects/river-sky-386919/assets/isoscapes/d18O_isocape"
 
+_CACHE_FOLDER_PREFIX = "/content/gdrive/MyDrive/ddf_raster_cache"
+_CACHE_RASTER_FOLDER_NAME="ddf_raster_cache"
+_MAX_RASTER_CACHE_POLLING_ATTEMPTS = 10
+
 #global pool for all rasters in cases of simultaneous parallelization
 _pool = None
 def _getPool():
@@ -120,6 +124,9 @@ class eeRaster(raster.AmazonGeoTiffBase):
     """
     def __init__(self, imageCollection: ee.ImageCollection):
       self._imageCollection = imageCollection
+    
+    def get_image(self, index: int) -> ee.Image:
+      return self.imageCollection_.get(index)
 
     def values_at_df(self, coordinates:pd.DataFrame, column_name: str = "value") -> pd.DataFrame:
       """
@@ -134,7 +141,8 @@ class eeRaster(raster.AmazonGeoTiffBase):
       """
       if len(coordinates) == 0:
         return coordinates
-      
+      print("values_at")
+
       #We round the input to EE and the output from EE to 5 decimals because
       #earth engine very often sends back lat/lon that are off from what was
       #sent by what looks like could be epsilon, meaning a bit representation
@@ -149,11 +157,13 @@ class eeRaster(raster.AmazonGeoTiffBase):
       start = 0
       image = self._imageCollection.mosaic()
       while (start < len(coordinates)):
+        print(start, "<", len(coordinates))
         end = start + _CHUNK_SIZE
         query_list.append([image, coordinates.iloc[start:end, :], column_name,
          _CRS, _LONGITUDE_COLUMN_NAME, _LATITUDE_COLUMN_NAME])
         start = end
 
+      print("starmap")
       all_dfs = _getPool().starmap(_query_mp, query_list)
       return pd.concat(all_dfs, ignore_index=True)
 
@@ -283,12 +293,30 @@ def dem():
       'projects/sat-io/open-datasets/GLO-30').select("b1"))
   return _dem
 
+def _download_raster(raster_name: str):
+  image = ee.Image(
+            os.path.join(
+              eeddf.ee_reference_rasters_path() +
+              f"{raster_name}"))
+  image.reproject('EPSG:4326')
+  task = ee.batch.Export.image.toDrive(
+    image=image,
+    description=raster_name,
+    folder=_CACHE_RASTER_FOLDER_NAME,
+    dimensions="1000x1000",
+    scale=4400,
+  )
+  task.start()
 
-# A collection of column names to functions that load the corresponding 
-# earth engine asset.
-column_name_to_ee_asset_fn = {
-  "DEM": dem,
-}
+  # Wait for 1 min which is the ceiling of time it takes the API to upload
+  print("Wait 1 minute")
+  time.sleep(60)
+  attempts = 0
+  while not os.path.exists(os.path.join(_CACHE_FOLDER_PREFIX, f"{raster_name}.tif")) or attempts < _MAX_RASTER_CACHE_POLLING_ATTEMPTS:
+    # Wait for 1 min which is the ceiling of time it takes the API to upload
+    print("Wait 1 minute")
+    time.sleep(10)
+    attempts += 1
 
 def ordinary_kriging_means():
   """
@@ -297,10 +325,13 @@ def ordinary_kriging_means():
   """
   eeddf.initialize_ddf()
   global _ordinary_kriging_means
-  if (_ordinary_kriging_means is None):
-    _ordinary_kriging_means = eeRaster(ee.ImageCollection(
-      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
-      'uc_davis_d18O_cel_ordinary_random_grouped_means').select("b1"))
+  cached_raster_path = os.path.join(_CACHE_FOLDER_PREFIX, 
+    "uc_davis_d18O_cel_ordinary_random_grouped_means.tif")
+  if (_ordinary_kriging_vars is None):
+    if not os.path.exists(cached_raster_path):
+      _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_means")
+
+    _ordinary_kriging_means = raster.load_raster(cached_raster_path)
   return _ordinary_kriging_means
 
 def ordinary_kriging_vars():
@@ -310,8 +341,11 @@ def ordinary_kriging_vars():
   """
   eeddf.initialize_ddf()
   global _ordinary_kriging_vars
+  cached_raster_path = os.path.join(_CACHE_FOLDER_PREFIX, 
+    "uc_davis_d18O_cel_ordinary_random_grouped_vars.tif")
   if (_ordinary_kriging_vars is None):
-    _ordinary_kriging_vars = eeRaster(ee.ImageCollection(
-      'projects/' + eeddf.ee_project_name() + '/assets/reference_rasters/' +
-      'uc_davis_d18O_cel_ordinary_random_grouped_vars').select("b1"))
+    if not os.path.exists(cached_raster_path):
+      _download_raster("uc_davis_d18O_cel_ordinary_random_grouped_vars")
+      
+    _ordinary_kriging_vars = raster.load_raster(cached_raster_path)
   return _ordinary_kriging_vars
