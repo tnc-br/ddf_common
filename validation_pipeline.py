@@ -13,15 +13,15 @@ _CARBON_ISOTOPE_LABEL = 'd13C_wood'
 def get_oxygen_isoscapes(oxygen_means_isoscape_filename: str,
                          oxygen_vars_isoscape_filename: str):
   if oxygen_means_isoscape_filename == oxygen_vars_isoscape_filename:
-      oxygen_means_isoscape = raster.load_raster(
-          raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=0)
-      oxygen_vars_isoscape = raster.load_raster(
-          raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=1)
-    else:
-      oxygen_means_isoscape = raster.load_raster(
+    oxygen_means_isoscape = raster.load_raster(
         raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=0)
-      oxygen_vars_isoscape = raster.load_raster(
-        raster.get_raster_path(oxygen_vars_isoscape_filename), use_only_band_index=0)
+    oxygen_vars_isoscape = raster.load_raster(
+        raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=1)
+  else:
+    oxygen_means_isoscape = raster.load_raster(
+      raster.get_raster_path(oxygen_means_isoscape_filename), use_only_band_index=0)
+    oxygen_vars_isoscape = raster.load_raster(
+      raster.get_raster_path(oxygen_vars_isoscape_filename), use_only_band_index=0)
   return oxygen_means_isoscape, oxygen_vars_isoscape
 
 def get_nitrogen_isoscapes(
