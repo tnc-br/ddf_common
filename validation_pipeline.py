@@ -35,8 +35,7 @@ def get_nitrogen_isoscapes(
   return nitrogen_means_isoscape, nitrogen_vars_isoscape
 
 def get_carbon_isoscapes(
-  carbon_means_isoscape_filename: str,
-  carbon_vars_isoscape_filename: str
+  carbon_isoscape_filename: str,
 ):
   carbon_means_isoscape = raster.load_raster(raster.get_raster_path(carbon_isoscape_filename), use_only_band_index=0)
   carbon_vars_isoscape = raster.load_raster(raster.get_raster_path(carbon_isoscape_filename), use_only_band_index=1)
@@ -90,8 +89,7 @@ def validation_pipeline(
     column_names.append(_NITROGEN_ISOTOPE_LABEL)
   # Carbon
   if carbon_isoscape_filename:
-    carbon_means_isoscape, carbon_vars_isoscape = get_carbon_isoscapes(carbon_isoscape_filename,
-      carbon_isoscape_filename)
+    carbon_means_isoscape, carbon_vars_isoscape = get_carbon_isoscapes(carbon_isoscape_filename)
     means_isoscapes.append(carbon_means_isoscape)
     vars_isoscapes.append(carbon_vars_isoscape)
     column_names.append(_CARBON_ISOTOPE_LABEL)
