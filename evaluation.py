@@ -43,9 +43,8 @@ def _get_predictions(test_dataset,
   return predictions
 
 def _get_predictions_grouped(
-  eval_dataset,
-  mean_column_names,
-  var_column_names):
+  eval_dataset, mean_labels, var_labels, count_labels,
+  means_isoscapes, vars_isoscapes, sample_size_per_location, prediction_type):
   '''
   Assumes dataset is grouped by aggregate columns.
   '''
@@ -169,6 +168,7 @@ def evaluate_fake_true_mixture(
   isotope_column_names: List[str],
   precision_target: float,
   recall_target: float
+  prediction_type: PredictionType
 ):
   auc_scores = {}
   p_values_found = {}
@@ -188,7 +188,8 @@ def evaluate_fake_true_mixture(
         test_dataset=test_dataset,
         isotope_column_names=isotope_column_names,
         means_isoscapes=mean_isoscapes,
-        vars_isoscapes=var_isoscapes
+        vars_isoscapes=var_isoscapes,
+        prediction_type=prediction_type,
     )
 
     pr_curves[radius] = {
@@ -266,7 +267,8 @@ def evaluate(
   radius_pace: int,
   trusted_buffer_radius: int,
   fake_sample_drop_rate:float=0.0,
-  fake_samples_per_sample:int=1) -> Dict[str, Any]:
+  fake_samples_per_sample:int=1,
+  prediction_type: PredictionType=PredictionType.T_STUDENT) -> Dict[str, Any]:
   '''
   Runs a minimal one-sided evaluation pipeline. 
   '''
@@ -337,7 +339,8 @@ def evaluate_multiple_elements(
   radius_pace: int,
   trusted_buffer_radius: int,
   fake_sample_drop_rate:float=0.0,
-  fake_samples_per_sample:int=1) -> Dict[str, Any]:
+  fake_samples_per_sample:int=1,
+  prediction_type: PredictionType=PredictionType.T_STUDENT) -> Dict[str, Any]:
   '''
   Runs a one-sided evaluation pipeline with multiple elements. 
   '''
@@ -361,9 +364,9 @@ def evaluate_multiple_elements(
   # Group and set up fake data
   eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
-  inferences_df = hypothesis.get_predictions_grouped(
+  inferences_df = _get_predictions_grouped(
       eval_dataset, mean_labels, var_labels, count_labels,
-      means_isoscapes, vars_isoscapes, sample_size_per_location)
+      means_isoscapes, vars_isoscapes, sample_size_per_location, prediction_type)
 
   inferences_df.dropna(subset=var_labels + var_predicted_labels, inplace=True)
 
