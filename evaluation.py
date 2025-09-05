@@ -12,8 +12,9 @@ import numpy as np
 from typing import Dict, Any, List
 
 class PredictionType(Enum):
-  T_STUDENT: 1
-  GEO_ASSIGNMENT: 2
+  T_STUDENT = 1
+  GEO_ASSIGNMENT = 2
+
 
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
   '''
