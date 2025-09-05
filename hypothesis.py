@@ -7,12 +7,6 @@ import pandas as pd
 import numpy as np
 import dataset
 
-_TREE_CODE_COLUMN_NAME = 'Code'
-_LONGITUDE_COLUMN_NAME = 'long'
-_LATITUDE_COLUMN_NAME = 'lat'
-_FRAUD_LABEL_COLUMN_NAME = 'fraud'
-_FRAUD_P_VALUE_COLUMN_NAME = 'fraud_p_value'
-
 @dataclass
 class HypothesisTest:
     '''
@@ -162,26 +156,10 @@ def get_predictions(sample_data: pd.DataFrame,
   sample_size_per_location: Number of samples per geographic location used to calculate
                             mean and variance in isoscapes.
   '''
-  assert(
-    len(isotope_column_names) == len(means_isoscapes) and
-    len(isotope_column_names) == len(variances_isoscapes))
-  aggregate_columns = [
-      _TREE_CODE_COLUMN_NAME,
-      _LONGITUDE_COLUMN_NAME,
-      _LATITUDE_COLUMN_NAME,
-      _FRAUD_LABEL_COLUMN_NAME]
-
-  feature_columns = list(sample_data.columns.values)
-  for col in isotope_column_names:
-    feature_columns.remove(col)
-
-  sample_data = dataset.preprocess_sample_data(
-    df=sample_data,
-    feature_columns=feature_columns,
-    label_columns=isotope_column_names,
-    aggregate_columns=aggregate_columns,
-    keep_grouping=True
-  )
+  grouped_sample_data = dataset.group_dataset(sample_data,
+                  isotope_column_names,
+                  means_isoscapes,
+                  variances_isoscapes)
 
   return get_predictions_grouped(
     sample_data=sample_data,

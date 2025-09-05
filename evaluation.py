@@ -16,6 +16,50 @@ class PredictionType(Enum):
   GEO_ASSIGNMENT = 2
 
 
+def _get_predictions(test_dataset,
+                     means_isoscapes,
+                     variances_isoscapes,
+                     isotope_column_names,
+                     prediction_type):
+  '''
+  Assumes dataset is NOT grouped by aggregate columns yet.
+  '''
+  if prediction_type == PredictionType.T_STUDENT:
+    predictions = hypothesis.get_predictions(
+      sample_data=test_dataset,
+      isotope_column_names=isotope_column_names,
+      means_isoscapes=means_isoscapes,
+      variances_isoscapes=vars_isoscapes,
+      sample_size_per_location=5)
+  elif prediction_type == PredictionType.GEO_ASSIGNMENT:
+    grouped_test_dataset = dataset.group_dataset(test_dataset,
+                                                 isotope_column_names,
+                                                 means_isoscapes,
+                                                 variances_isoscapes)
+    predictions = assignment.pd_raster(
+      [i.path for i in means_isoscapes],
+      grouped_test_dataset
+    )
+  return predictions
+
+def _get_predictions_grouped(
+  eval_dataset,
+  mean_column_names,
+  var_column_names):
+  '''
+  Assumes dataset is grouped by aggregate columns.
+  '''
+  if prediction_type == PredictionType.T_STUDENT:
+    hypothesis.get_predictions_grouped(
+        eval_dataset, mean_column_names, var_column_names, count_column_names,
+        means_isoscapes, vars_isoscapes, sample_size_per_location)
+  elif prediction_type == PredictionType.GEO_ASSIGNMENT:
+    predictions = assignment.pd_raster(
+      [i.path for i in means_isoscapes],
+      grouped_test_dataset
+    )
+
+
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
   '''
   Calculates the mean, variance and overall (mean and variance) RMSE of df using
@@ -43,19 +87,7 @@ def isoscape_precision_recall_thresholds(
     means_isoscapes: list[raster.AmazonGeoTiff],
     vars_isoscapes: list[raster.AmazonGeoTiff],
     prediction_type: PredictionType) -> list[list[float]]:
-  if prediction_type == PredictionType.T_STUDENT:
-    predictions = hypothesis.get_predictions(
-      sample_data=test_dataset,
-      isotope_column_names=isotope_column_names,
-      means_isoscapes=means_isoscapes,
-      variances_isoscapes=vars_isoscapes,
-      sample_size_per_location=5)
-  elif prediction_type == PredictionType.GEO_ASSIGNMENT:
-    predictions = assignment.pd_raster(
-      [i.path for i in means_isoscapes],
-      test_dataset
-    )
-
+  predictions = _get_predictions(means_isoscapes, test_dataset, prediction_type)
 
   predictions.dropna(subset=['fraud', 'fraud_p_value'], inplace=True)
 
@@ -71,13 +103,8 @@ def isoscape_roc_auc_score(
     isotope_column_names: list[str],
     means_isoscapes: list[raster.AmazonGeoTiff],
     vars_isoscapes: list[raster.AmazonGeoTiff],
-    prediction_type: ) -> list[list[float]]:
-  predictions = hypothesis.get_predictions(
-    sample_data=test_dataset,
-    isotope_column_names=isotope_column_names,
-    means_isoscapes=means_isoscapes,
-    variances_isoscapes=vars_isoscapes,
-    sample_size_per_location=5)
+    prediction_type: PredictionType) -> list[list[float]]:
+  predictions = _get_predictions(means_isoscapes, test_dataset, prediction_type)
 
   predictions.dropna(subset=['fraud', 'fraud_p_value'], inplace=True)
 
@@ -258,9 +285,8 @@ def evaluate(
   # Group and set up fake data
   eval_dataset['fraud'] = False
   eval_dataset['cel_count'] = sample_size_per_location
-  inferences_df = hypothesis.get_predictions_grouped(
-      eval_dataset, [mean_label], [var_label], ['cel_count'],
-      [means_isoscape], [vars_isoscape], sample_size_per_location)
+  inferences_df = _get_predictions_grouped(eval_dataset, [mean_label],
+    [var_label], ['cel_count'], [means_isoscape], [vars_isoscape], sample_size_per_location, prediction_type)
 
   inferences_df.dropna(subset=[var_label, var_predicted_label], inplace=True)
 
