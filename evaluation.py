@@ -11,6 +11,10 @@ import hypothesis
 import numpy as np
 from typing import Dict, Any, List
 
+class PredictionType(Enum):
+  T_STUDENT: 1
+  GEO_ASSIGNMENT: 2
+
 def calculate_rmse(df, means_isoscape, vars_isoscape, mean_true_name, var_true_name, mean_pred_name, var_pred_name):
   '''
   Calculates the mean, variance and overall (mean and variance) RMSE of df using
@@ -45,7 +49,7 @@ def isoscape_precision_recall_thresholds(
       means_isoscapes=means_isoscapes,
       variances_isoscapes=vars_isoscapes,
       sample_size_per_location=5)
-  elif prediction_type == PredictionType.GEO_ASSIGNMENT
+  elif prediction_type == PredictionType.GEO_ASSIGNMENT:
     predictions = assignment.pd_raster(
       [i.path for i in means_isoscapes],
       test_dataset
