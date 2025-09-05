@@ -78,6 +78,7 @@ class AmazonGeoTiff(AmazonGeoTiffBase):
   image_mask_array: np.ndarray # ndarray of uint8
   masked_image: np.ma.masked_array
   yearly_masked_image: np.ma.masked_array
+  path: str = ""
   name: str = "" # The name of the raster and column for dataframe.
 
   def value_at(self, x: float, y: float) -> float:
@@ -215,7 +216,13 @@ def load_raster(path: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
   masked_image = np.ma.masked_where(mask == 0, image)
   yearly_masked_image = masked_image.mean(axis=2)
 
-  return AmazonGeoTiff(dataset, image, mask, masked_image, yearly_masked_image)
+  return AmazonGeoTiff(
+    gdal_dataset=dataset,
+    image_value_array=image,
+    image_mask_array=mask,
+    makes_image=masked_image, 
+    yearly_masked_image=yearly_masked_image,
+    path=path)
 
 def get_extent(dataset):
   geoTransform = dataset.GetGeoTransform()

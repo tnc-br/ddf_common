@@ -6,6 +6,7 @@ import raster
 import pandas as pd
 import dataset
 from dataclasses import dataclass, field
+from enum import Enum
 import hypothesis
 import numpy as np
 from typing import Dict, Any, List
@@ -35,13 +36,21 @@ def isoscape_precision_recall_thresholds(
     test_dataset: pd.DataFrame,
     isotope_column_names: list[str],
     means_isoscapes: list[raster.AmazonGeoTiff],
-    vars_isoscapes: list[raster.AmazonGeoTiff]) -> list[list[float]]:
-  predictions = hypothesis.get_predictions(
-    sample_data=test_dataset,
-    isotope_column_names=isotope_column_names,
-    means_isoscapes=means_isoscapes,
-    variances_isoscapes=vars_isoscapes,
-    sample_size_per_location=5)
+    vars_isoscapes: list[raster.AmazonGeoTiff],
+    prediction_type: PredictionType) -> list[list[float]]:
+  if prediction_type == PredictionType.T_STUDENT:
+    predictions = hypothesis.get_predictions(
+      sample_data=test_dataset,
+      isotope_column_names=isotope_column_names,
+      means_isoscapes=means_isoscapes,
+      variances_isoscapes=vars_isoscapes,
+      sample_size_per_location=5)
+  elif prediction_type == PredictionType.GEO_ASSIGNMENT
+    predictions = assignment.pd_raster(
+      [i.path for i in means_isoscapes],
+      test_dataset
+    )
+
 
   predictions.dropna(subset=['fraud', 'fraud_p_value'], inplace=True)
 
@@ -56,7 +65,8 @@ def isoscape_roc_auc_score(
     test_dataset: pd.DataFrame,
     isotope_column_names: list[str],
     means_isoscapes: list[raster.AmazonGeoTiff],
-    vars_isoscapes: list[raster.AmazonGeoTiff]) -> list[list[float]]:
+    vars_isoscapes: list[raster.AmazonGeoTiff],
+    prediction_type: ) -> list[list[float]]:
   predictions = hypothesis.get_predictions(
     sample_data=test_dataset,
     isotope_column_names=isotope_column_names,
