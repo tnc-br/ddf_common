@@ -167,7 +167,7 @@ def evaluate_fake_true_mixture(
   var_isoscapes: List[raster.AmazonGeoTiff],
   isotope_column_names: List[str],
   precision_target: float,
-  recall_target: float
+  recall_target: float,
   prediction_type: PredictionType
 ):
   auc_scores = {}
