@@ -196,8 +196,8 @@ def write_out(out_dir, genplot, result_stack, data, base_profile):
 def _pd_raster_default(r_path, unknown, prior=None, mask=None, genplot=True, out_dir=None):
     """Handles single isoscape (2-band raster) assignment."""
     with rasterio.open(r_path) as src:
-        if not src.crs:
-            raise ValueError("r must have a valid coordinate reference system.")
+        # if not src.crs:
+        #     raise ValueError("r must have a valid coordinate reference system.")
         if src.count != 2:
             raise ValueError("r should be a raster with two layers (mean and standard deviation).")
         
