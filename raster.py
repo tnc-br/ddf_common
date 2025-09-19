@@ -220,7 +220,7 @@ def load_raster(path: str, use_only_band_index: int = -1) -> AmazonGeoTiff:
     gdal_dataset=dataset,
     image_value_array=image,
     image_mask_array=mask,
-    makes_image=masked_image, 
+    masked_image=masked_image, 
     yearly_masked_image=yearly_masked_image,
     path=path)
 
