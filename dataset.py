@@ -424,7 +424,7 @@ def create_fraudulent_samples(
   count = 0
 
   for coord, lab_samp in real_samples_code:
-    print("lab_samp", lab_samp)
+    print("lab_samp.size", lab_samp.size)
     if lab_samp.size <= 1:
       continue
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
