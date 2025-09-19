@@ -405,6 +405,7 @@ def create_fraudulent_samples(
   '''
   real_samples = real_samples_data.groupby(['lat','long'])[elements]
   real_samples_code = real_samples_data.groupby(['lat','long','Code'])[elements]
+  print(real_samples_code)
 
   count = 0
   lab_samp = real_samples
@@ -423,6 +424,7 @@ def create_fraudulent_samples(
   count = 0
 
   for coord, lab_samp in real_samples_code:
+    print("lab_samp", lab_samp)
     if lab_samp.size <= 1:
       continue
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
