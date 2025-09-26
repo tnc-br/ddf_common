@@ -108,35 +108,6 @@ _RANDOM_PARTITION_STRATEGY = RandomPartitionStrategy(
 # Standard column names in reference samples.
 _LONGITUDE_COLUMN_NAME = "long"
 _LATITUDE_COLUMN_NAME = "lat"
-_TREE_CODE_COLUMN_NAME = 'Code'
-_FRAUD_LABEL_COLUMN_NAME = 'fraud'
-_FRAUD_P_VALUE_COLUMN_NAME = 'fraud_p_value'
-
-def group_dataset(sample_data: pd.DataFrame,
-                  isotope_column_names: list[str],
-                  means_isoscapes: list[raster.AmazonGeoTiff],
-                  variances_isoscapes: list[raster.AmazonGeoTiff]):
-  assert(
-    len(isotope_column_names) == len(means_isoscapes) and
-    len(isotope_column_names) == len(variances_isoscapes))
-  aggregate_columns = [
-      _TREE_CODE_COLUMN_NAME,
-      _LONGITUDE_COLUMN_NAME,
-      _LATITUDE_COLUMN_NAME,
-      _FRAUD_LABEL_COLUMN_NAME]
-
-  feature_columns = list(sample_data.columns.values)
-  for col in isotope_column_names:
-    feature_columns.remove(col)
-
-  return preprocess_sample_data(
-    df=sample_data,
-    feature_columns=feature_columns,
-    label_columns=isotope_column_names,
-    aggregate_columns=aggregate_columns,
-    keep_grouping=True
-  )
-
 
 def gen_tabular_dataset(monthly: bool, samples_per_site: int) -> pd.DataFrame:
   return gen_tabular_dataset_with_coords(monthly, samples_per_site,
@@ -405,7 +376,6 @@ def create_fraudulent_samples(
   '''
   real_samples = real_samples_data.groupby(['lat','long'])[elements]
   real_samples_code = real_samples_data.groupby(['lat','long','Code'])[elements]
-  print(real_samples_code)
 
   count = 0
   lab_samp = real_samples
@@ -424,7 +394,6 @@ def create_fraudulent_samples(
   count = 0
 
   for coord, lab_samp in real_samples_code:
-    print("lab_samp.size", lab_samp.size)
     if lab_samp.size <= 1:
       continue
     if sample_drop_rate > 0 and count > (real_samples.size().shape[0] * sample_drop_rate):
