@@ -221,6 +221,9 @@ def _pd_raster_default(r_path, unknown, prior=None, mask=None, genplot=True, out
 
     mean_v = mean_data.flatten()
     error_v = sd_data.flatten()
+
+    print("mean_v:", mean_v)
+    print("error_v:", error_v)
     
     # Exclude NoData cells from calculation
     valid_mask = (mean_v != profile['nodata']) & (error_v != profile['nodata'])
@@ -249,6 +252,7 @@ def _pd_raster_default(r_path, unknown, prior=None, mask=None, genplot=True, out
             assign_norm = assign / assign_sum
         else:
             assign_norm = assign # Avoid division by zero
+        assign_norm = np.reshape(assign_norm, (profile['width'], profile['height']))
         
         # Create a full raster array with NoData values
         full_assign_norm = np.full(profile['height'] * profile['width'], profile['nodata'], dtype=np.float32)
