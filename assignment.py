@@ -376,7 +376,11 @@ def _pd_raster_iso_stack(r_paths, unknown, prior=None, mask=None, genplot=True, 
                 
     write_out(out_dir, genplot, result_stack, unknown, base_profile)
     
-    return result_stack
+    reshaped_stack = []
+    for r in result_stack:
+        reshaped_stack.append(r.reshape(profile['height'], profile['width']))
+
+    return reshaped_stack
 
 # -----------------------------------------------------------------------------
 # Main Public Function (Dispatcher)
