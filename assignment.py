@@ -252,7 +252,6 @@ def _pd_raster_default(r_path, unknown, prior=None, mask=None, genplot=True, out
             assign_norm = assign / assign_sum
         else:
             assign_norm = assign # Avoid division by zero
-        assign_norm = np.reshape(assign_norm, (profile['width'], profile['height']))
         
         # Create a full raster array with NoData values
         full_assign_norm = np.full(profile['height'] * profile['width'], profile['nodata'], dtype=np.float32)
@@ -267,7 +266,11 @@ def _pd_raster_default(r_path, unknown, prior=None, mask=None, genplot=True, out
                 
     write_out(out_dir, genplot, result_stack, unknown, profile)
 
-    return result_stack
+    reshaped_stack = []
+    for r in result_stack:
+        reshaped_stack.append(r.reshape(profile['height'], profile['width']))
+
+    return reshaped_stack
 
 def _pd_raster_iso_stack(r_paths, unknown, prior=None, mask=None, genplot=True, out_dir=None):
     """Handles multiple isoscapes (list of 2-band rasters) assignment."""
