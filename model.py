@@ -121,12 +121,80 @@ def sample_normal_distribution(
 
     return sample_mean, sample_stdev
 
+@keras.saving.register_keras_serializable()
+def sum_of_mse_loss(y_true, y_pred):
+    """
+    Custom loss function that calculates the sum of MSE for two concatenated outputs.
+    Assumes the first part of the concatenated tensor is for 'mean' and the second for 'variance'.
+    """
+    # Assuming untransformed_mean was 1D and untransformed_var was 1D,
+    # y_true and y_pred will have shape (batch_size, 2) if concatenated.
+
+    # Split the concatenated tensors:
+    # Slice to get the mean component (e.g., the first element/column)
+    y_true_mean = y_true[:, 0:1]  # Shape: (batch_size, 1)
+    y_pred_mean = y_pred[:, 0:1]  # Shape: (batch_size, 1)
+
+    # Slice to get the variance component (e.g., the second element/column)
+    y_true_var = y_true[:, 1:2]   # Shape: (batch_size, 1)
+    y_pred_var = y_pred[:, 1:2]   # Shape: (batch_size, 1)
+
+    # Calculate MSE for each component
+    # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
+    mse_calculator = tf.keras.losses.MeanSquaredError()
+
+    # Calculate MSE for each component using the instantiated class
+    loss_mean = mse_calculator(y_true_mean, y_pred_mean)
+    loss_var = mse_calculator(y_true_var, y_pred_var)
+
+    # Sum the losses. Keras will handle averaging over the batch.
+    total_loss = loss_mean + loss_var
+    return total_loss
+
+@keras.saving.register_keras_serializable(package="Custom", name="KLCustomMse")
+class KLCustomMse:
+    def __init__(self):
+        pass
+
+    def mse(self, real, predicted):
+        '''
+        real: tf.Tensor of the real mean and standard deviation of sample to compare
+        predicted: tf.Tensor of the predicted mean and standard deviation to compare
+        sample: Whether or not to sample the predicted distribution to get a new
+                mean and standard deviation.
+        '''
+        y_true_mean = y_true[:, 0:1]  # Shape: (batch_size, 1)
+        y_pred_mean = y_pred[:, 0:1]  # Shape: (batch_size, 1)
+
+        # Slice to get the variance component (e.g., the second element/column)
+        y_true_var = y_true[:, 1:2]   # Shape: (batch_size, 1)
+        y_pred_var = y_pred[:, 1:2]   # Shape: (batch_size, 1)
+
+        # Calculate MSE for each component
+        # tf.keras.losses.mean_squared_error returns a loss per sample in the batch
+        loss_mean = tf.keras.losses.mean_squared_error(y_true_mean, y_pred_mean)
+        loss_var = tf.keras.losses.mean_squared_error(y_true_var, y_pred_var)
+
+        # Sum the losses. Keras will handle averaging over the batch.
+        total_loss = loss_mean + loss_var
+        return total_loss
+    
+    def __call__(self, real, predicted):
+        return self.mse(real, predicted)
+
+    def get_config(self):
+        return {}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)  # Create an instance using the config
 
 # log(σ2/σ1) + ( σ1^2+(μ1−μ2)^2 ) / 2* σ^2   − 1/2
 @keras.saving.register_keras_serializable(package="Custom", name="KLCustomLoss")
 class KLCustomLoss:
     def __init__(self, double_sided, num_to_sample):
         self.double_sided = double_sided
+        
         self.num_to_sample = num_to_sample
 
     def kl_divergence(self, real, predicted):
@@ -304,16 +372,14 @@ def train_or_update_variational_model(
             model = keras.Model(inputs=inputs, outputs=outputs)
 
             optimizer = keras.optimizers.Adam(learning_rate=lr)
-            double_sided_kl_tf = tf.constant(double_sided_kl)
-            num_samples_tf = tf.constant(kl_num_samples_from_pred_dist)
             model.compile( 
                 optimizer=optimizer, 
-                loss=KLCustomLoss(double_sided_kl_tf, num_samples_tf))
+                loss=sum_of_mse_loss)
             model.summary()
         else:
             model = keras.models.load_model(
                 model_file,
-                custom_objects={"KLCustomLoss": KLCustomLoss})
+                custom_objects={"sum_of_mse_loss": sum_of_mse_loss})
         model.save(model_file)
         dump(sp.feature_scaler, f"{model_file.strip('.keras')}.pkl")
         packaged_model = TFModel(model_file, f"{model_file.strip('.keras')}.pkl")
